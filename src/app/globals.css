@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #fafafa;
+  --color-panel: #ffffff;
+  --color-line: #e4e4e7;
+  --color-ink: #111113;
+  --color-muted: #71717a;
+  --color-accent: #18181b;
+  --color-accent-soft: #f4f4f5;
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+}
+
+body {
+  @apply bg-surface text-ink antialiased;
+}

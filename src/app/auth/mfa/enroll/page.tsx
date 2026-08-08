@@ -1,0 +1,202 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { verifyEnrollment } from "../actions";
+
+/**
+ * Mandatory TOTP enrollment. On success the server action returns
+ * single-use backup codes, displayed exactly once.
+ */
+export default function EnrollMfaPage() {
+  const router = useRouter();
+  const [qr, setQr] = useState<string | null>(null);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [factorId, setFactorId] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function start() {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        router.replace("/login");
+        return;
+      }
+
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+
+      if (factors?.totp.some((f) => f.status === "verified")) {
+        router.replace("/auth/mfa");
+        return;
+      }
+
+      await Promise.all(
+        (factors?.all ?? [])
+          .filter((f) => f.status === "unverified")
+          .map((f) => supabase.auth.mfa.unenroll({ factorId: f.id }))
+      );
+
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+        friendlyName: "Authenticator app",
+      });
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      if (!cancelled && data.type === "totp") {
+        setQr(data.totp.qr_code);
+        setSecret(data.totp.secret);
+        setFactorId(data.id);
+      }
+    }
+
+    start();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function verify(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!factorId) return;
+    setBusy(true);
+    setError(null);
+
+    const res = await verifyEnrollment(factorId, code);
+
+    if (res.error) {
+      setError(res.error);
+      setBusy(false);
+      return;
+    }
+    setBackupCodes(res.backupCodes ?? []);
+    router.refresh(); // session is aal2 now
+  }
+
+  function finish() {
+    router.replace("/dashboard");
+    router.refresh();
+  }
+
+  // ---- Step 2: show backup codes once ----
+  if (backupCodes) {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Save your backup codes</h1>
+          <p className="mt-1 text-sm text-muted">
+            Each code works once if you lose your authenticator. They
+            won&apos;t be shown again — store them somewhere safe.
+          </p>
+        </div>
+
+        {backupCodes.length > 0 ? (
+          <>
+            <ul className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-panel p-4 font-mono text-sm">
+              {backupCodes.map((c) => (
+                <li key={c} className="text-center tracking-wider">
+                  {c}
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() =>
+                navigator.clipboard.writeText(backupCodes.join("\n"))
+              }
+              className="self-center text-sm text-accent hover:underline"
+            >
+              Copy all
+            </button>
+          </>
+        ) : (
+          <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+            Backup codes couldn&apos;t be generated. You can continue, but
+            set them up again from your account before relying on MFA
+            recovery.
+          </p>
+        )}
+
+        <button
+          onClick={finish}
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          I saved them — continue
+        </button>
+      </main>
+    );
+  }
+
+  // ---- Step 1: scan + verify ----
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Set up two-factor auth</h1>
+        <p className="mt-1 text-sm text-muted">
+          Required for every account. Scan the QR code with an authenticator
+          app (1Password, Google Authenticator, Aegis…), then enter the
+          6-digit code.
+        </p>
+      </div>
+
+      {error && (
+        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
+      )}
+
+      {qr ? (
+        <>
+          <div className="self-center rounded-xl bg-white p-3">
+            {/* qr_code is an SVG data URI generated by Supabase */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qr} alt="TOTP QR code" className="h-44 w-44" />
+          </div>
+          {secret && (
+            <p className="text-center text-xs text-muted">
+              Can&apos;t scan? Enter this key manually:{" "}
+              <code className="rounded bg-panel px-1.5 py-0.5 break-all">
+                {secret}
+              </code>
+            </p>
+          )}
+          <form onSubmit={verify} className="flex flex-col gap-4">
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="\d{6}"
+              maxLength={6}
+              required
+              placeholder="123456"
+              className="rounded-lg border border-line bg-panel px-3 py-2 text-center text-lg tracking-[0.4em] outline-none focus:border-accent"
+            />
+            <button
+              disabled={busy || code.length !== 6}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {busy ? "Verifying…" : "Verify and continue"}
+            </button>
+          </form>
+        </>
+      ) : (
+        !error && <p className="text-sm text-muted">Generating your key…</p>
+      )}
+
+      <form action="/auth/signout" method="post" className="self-center">
+        <button className="text-sm text-muted hover:underline">
+          Sign out
+        </button>
+      </form>
+    </main>
+  );
+}
