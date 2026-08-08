@@ -90,7 +90,7 @@ export async function signup(formData: FormData) {
   }
   const { firstname, lastname, email, password } = parsed.data;
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -104,8 +104,24 @@ export async function signup(formData: FormData) {
     },
   });
 
+  const ALREADY_REGISTERED_MSG =
+    "An account with this email address already exists. Try signing in instead.";
+
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    // Only hit when email confirmations are disabled project-wide — with
+    // them on (the default), Supabase takes the path below instead.
+    const message =
+      error.code === "user_already_exists" ? ALREADY_REGISTERED_MSG : error.message;
+    redirect(`/signup?error=${encodeURIComponent(message)}`);
+  }
+
+  // Anti-enumeration: signing up with an email that already belongs to a
+  // CONFIRMED user returns success with no error, so the response alone
+  // can't tell you whether the account exists. Instead Supabase swaps in
+  // an empty `identities` array (a brand-new signup always has exactly
+  // one, for the "email" provider) — that's the actual signal.
+  if (data.user?.identities?.length === 0) {
+    redirect(`/signup?error=${encodeURIComponent(ALREADY_REGISTERED_MSG)}`);
   }
 
   redirect("/signup?sent=1");
