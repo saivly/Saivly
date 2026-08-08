@@ -2,6 +2,7 @@
 
 // Renders login + signup as two panels in one component, animating between them instead of navigating.
 import { useEffect, useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login, signup } from "./actions";
@@ -48,7 +49,6 @@ export default function AuthPanels({
   const [mode, setMode] = useState<Mode>(initialMode);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
-  const [signupCoolingDown, setSignupCoolingDown] = useState(false);
   const [signupValues, setSignupValues] = useState(emptySignupValues);
   const [signupTouched, setSignupTouched] = useState<Record<SignupField, boolean>>({
     firstname: false,
@@ -103,11 +103,6 @@ export default function AuthPanels({
 
   function touchLoginField(field: LoginField) {
     setLoginTouched((touched) => ({ ...touched, [field]: true }));
-  }
-
-  function handleSignupClick() {
-    setSignupCoolingDown(true);
-    setTimeout(() => setSignupCoolingDown(false), 2000);
   }
 
   async function signInWithPasskey() {
@@ -304,15 +299,10 @@ export default function AuthPanels({
                   })}
                 </ul>
               </label>
-              <button
-                formAction={signup}
-                onClick={handleSignupClick}
-                disabled={signupCoolingDown || !signupResult.success}
+              <SignupSubmitButton
+                formValid={signupResult.success}
                 tabIndex={signupActive ? undefined : -1}
-                className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-50"
-              >
-                Create account
-              </button>
+              />
             </form>
           </div>
         </div>
@@ -433,6 +423,31 @@ export default function AuthPanels({
         </div>
       </div>
     </main>
+  );
+}
+
+// useFormStatus only reports the enclosing <form>'s real pending state when
+// called from a component distinct from the one rendering the <form> itself —
+// hence pulling this out instead of inlining the button above. Disabling via
+// an onClick-driven timer (the old approach) raced the browser's native
+// submit-on-click and could cancel the very submission it was meant to guard.
+function SignupSubmitButton({
+  formValid,
+  tabIndex,
+}: {
+  formValid: boolean;
+  tabIndex?: number;
+}) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      formAction={signup}
+      disabled={pending || !formValid}
+      tabIndex={tabIndex}
+      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-85 disabled:opacity-50"
+    >
+      {pending ? "Creating account…" : "Create account"}
+    </button>
   );
 }
 
