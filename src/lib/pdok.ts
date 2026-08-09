@@ -6,12 +6,16 @@
 // Docs: https://www.pdok.nl/restful-api/-/article/pdok-locatieserver
 // No API key or registration needed.
 
+import { nlProvinceCodeFromName } from "./provinces";
+
 const PDOK_FREE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
 
 export type DutchAddress = {
   street: string;
   city: string;
   postalCode: string;
+  /** 2-letter NL province code (see src/lib/provinces.ts), when recognized. */
+  province?: string;
 };
 
 type PdokDoc = {
@@ -21,6 +25,7 @@ type PdokDoc = {
   huisnummer?: number;
   huisletter?: string;
   huisnummertoevoeging?: string;
+  provincienaam?: string;
 };
 
 type PdokFreeResponse = {
@@ -33,7 +38,13 @@ export async function lookupDutchAddress(
   houseNumber: string
 ): Promise<DutchAddress | null> {
   const normalizedPostcode = postcode.replace(/\s+/g, "").toUpperCase();
-  const normalizedHouseNumber = houseNumber.trim().replace(/[^0-9]/g, "");
+  // Dutch house numbers can carry a letter or addition after the number
+  // (e.g. "41-2" for number 41, 2nd floor, or "41A") — PDOK tracks those as
+  // separate huisletter/huisnummertoevoeging fields, not part of huisnummer
+  // itself. Stripping *all* non-digits used to turn "41-2" into "412",
+  // which matches no address and surfaced as a lookup error. Take just the
+  // leading digit run instead.
+  const normalizedHouseNumber = houseNumber.trim().match(/^\d+/)?.[0] ?? "";
 
   // Bail before hitting the network on obviously-incomplete input — the
   // caller fires this on every blur while the user is still typing.
@@ -69,5 +80,6 @@ export async function lookupDutchAddress(
     street: [doc.straatnaam, houseNumberFull].filter(Boolean).join(" "),
     city: doc.woonplaatsnaam,
     postalCode: doc.postcode ?? normalizedPostcode,
+    province: nlProvinceCodeFromName(doc.provincienaam),
   };
 }

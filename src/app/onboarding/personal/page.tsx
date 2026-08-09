@@ -19,7 +19,7 @@ export default async function PersonalInfoStep({
   const { data: existing } = await supabase
     .from("profiles")
     .select(
-      "date_of_birth, phone_number, residential_street, residential_city, residential_postal_code, residential_country, nationality"
+      "date_of_birth, phone_number, residential_street, residential_city, residential_province, residential_postal_code, residential_country, nationality"
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -48,6 +48,7 @@ export default async function PersonalInfoStep({
           phoneNumber: existing?.phone_number ?? "",
           residentialStreet: existing?.residential_street ?? "",
           residentialCity: existing?.residential_city ?? "",
+          residentialProvince: existing?.residential_province ?? "",
           residentialPostalCode: existing?.residential_postal_code ?? "",
           residentialCountry: existing?.residential_country ?? "NL",
           nationality: existing?.nationality ?? "",

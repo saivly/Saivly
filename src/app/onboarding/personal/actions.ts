@@ -37,6 +37,9 @@ export async function savePersonalInfo(formData: FormData) {
     phoneNumber: ((formData.get("phoneNumber") as string) ?? "").trim(),
     residentialStreet: ((formData.get("residentialStreet") as string) ?? "").trim(),
     residentialCity: ((formData.get("residentialCity") as string) ?? "").trim(),
+    residentialProvince: (
+      (formData.get("residentialProvince") as string) ?? ""
+    ).trim(),
     residentialPostalCode: (
       (formData.get("residentialPostalCode") as string) ?? ""
     ).trim(),
@@ -54,6 +57,7 @@ export async function savePersonalInfo(formData: FormData) {
     phoneNumber,
     residentialStreet,
     residentialCity,
+    residentialProvince,
     residentialPostalCode,
     residentialCountry,
     nationality,
@@ -74,6 +78,7 @@ export async function savePersonalInfo(formData: FormData) {
       phone_number: phoneNumber,
       residential_street: residentialStreet,
       residential_city: residentialCity,
+      residential_province: residentialProvince || null,
       residential_postal_code: residentialPostalCode,
       residential_country: residentialCountry,
       nationality,
@@ -110,6 +115,7 @@ export async function savePersonalInfo(formData: FormData) {
               city: residentialCity,
               postalCode: residentialPostalCode,
               country: residentialCountry,
+              stateOrProvince: residentialProvince || undefined,
             },
           })
         : null;

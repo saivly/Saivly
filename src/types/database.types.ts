@@ -4,7 +4,8 @@
  * columns; organisations + organisation_members are new, many-to-many.
  * 0004_residential_address_adyen.sql: birth_* -> residential_* on
  * profiles, + first_name/last_name/adyen_legal_entity_id.
- * 0005_profiles_email.sql: profiles.email, trigger-synced from auth.users.)
+ * 0005_profiles_email.sql: profiles.email, trigger-synced from auth.users.
+ * 0006_residential_province.sql: profiles.residential_province.)
  * Once you have a live project, regenerate from the real schema with:
  *   npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
  */
@@ -25,6 +26,7 @@ export type Database = {
           residential_city: string | null;
           residential_postal_code: string | null;
           residential_country: string | null;
+          residential_province: string | null;
           nationality: string | null;
           personal_completed_at: string | null;
           adyen_legal_entity_id: string | null;
@@ -43,6 +45,7 @@ export type Database = {
           residential_city?: string | null;
           residential_postal_code?: string | null;
           residential_country?: string | null;
+          residential_province?: string | null;
           nationality?: string | null;
           personal_completed_at?: string | null;
           adyen_legal_entity_id?: string | null;

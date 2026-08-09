@@ -1,6 +1,7 @@
 import * as zod from 'zod';
 import { PASSWORD_REGEX, PASSWORD_HINT } from './password-policy';
 import { COUNTRY_CODES } from './countries';
+import { provincesForCountry } from './provinces';
 
 export const signupSchema = zod.object({
     firstname: zod.string().min(1, { message: 'First name is required' }),
@@ -36,31 +37,51 @@ function isAdult(dob: string): boolean {
     return date <= eighteenYearsAgo;
 }
 
-export const personalInfoSchema = zod.object({
-    dateOfBirth: zod
-        .string()
-        .min(1, { message: 'Date of birth is required.' })
-        .refine((v) => !Number.isNaN(new Date(v).getTime()), {
-            message: 'Enter a valid date.',
-        })
-        .refine((v) => new Date(v) <= new Date(), {
-            message: 'Date of birth can’t be in the future.',
-        })
-        .refine(isAdult, { message: 'You must be at least 18 years old.' }),
-    phoneNumber: zod
-        .string()
-        .min(1, { message: 'Phone number is required.' })
-        .regex(PHONE_PATTERN, { message: 'Enter a valid phone number.' }),
-    residentialStreet: zod.string().trim().min(1, { message: 'Street address is required.' }),
-    residentialCity: zod.string().trim().min(1, { message: 'City is required.' }),
-    residentialPostalCode: zod
-        .string()
-        .trim()
-        .min(1, { message: 'Postal code is required.' })
-        .max(12, { message: 'Postal code is too long.' }),
-    residentialCountry: isoCountry,
-    nationality: isoCountry,
-});
+export const personalInfoSchema = zod
+    .object({
+        dateOfBirth: zod
+            .string()
+            .min(1, { message: 'Date of birth is required.' })
+            .refine((v) => !Number.isNaN(new Date(v).getTime()), {
+                message: 'Enter a valid date.',
+            })
+            .refine((v) => new Date(v) <= new Date(), {
+                message: 'Date of birth can’t be in the future.',
+            })
+            .refine(isAdult, { message: 'You must be at least 18 years old.' }),
+        phoneNumber: zod
+            .string()
+            .min(1, { message: 'Phone number is required.' })
+            .regex(PHONE_PATTERN, { message: 'Enter a valid phone number.' }),
+        residentialStreet: zod.string().trim().min(1, { message: 'Street address is required.' }),
+        residentialCity: zod.string().trim().min(1, { message: 'City is required.' }),
+        // Countries with a known subdivision list (NL/GB/US, see provincesForCountry)
+        // must submit one of its 2-letter codes; every other country gets a free-text
+        // region name, so the field itself stays optional here and is enforced below.
+        residentialProvince: zod
+            .string()
+            .trim()
+            .max(40, { message: 'Province is too long.' })
+            .optional()
+            .or(zod.literal('')),
+        residentialPostalCode: zod
+            .string()
+            .trim()
+            .min(1, { message: 'Postal code is required.' })
+            .max(12, { message: 'Postal code is too long.' }),
+        residentialCountry: isoCountry,
+        nationality: isoCountry,
+    })
+    .superRefine((data, ctx) => {
+        const options = provincesForCountry(data.residentialCountry);
+        if (options && !options.some((p) => p.code === data.residentialProvince)) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['residentialProvince'],
+                message: 'Select a province.',
+            });
+        }
+    });
 
 export const companyInfoSchema = zod
     .object({

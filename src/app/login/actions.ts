@@ -94,8 +94,20 @@ export async function signup(formData: FormData) {
     email,
     password,
     options: {
-      // Where the confirmation email's link lands (see auth/confirm/route.ts)
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/confirm`,
+      // Where the confirmation email's link lands (see auth/confirm/route.ts).
+      // `next` sends a freshly-confirmed user to /login instead of the
+      // route's default fallback (/dashboard) — same pattern as the
+      // password-reset link in requestPasswordReset() below.
+      //
+      // NOTE: only takes effect if the "Confirm signup" template in
+      // Supabase Dashboard -> Auth -> Email Templates uses the custom
+      // {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next={{ .RedirectTo }}
+      // link and forwards {{ .RedirectTo }}. The dashboard's *default*
+      // template instead uses {{ .ConfirmationURL }}, which points at
+      // Supabase's own /auth/v1/verify endpoint (bypassing this app's
+      // /auth/confirm route entirely) and redirects to whatever "Site URL"
+      // is set in Auth settings once verified — not this `next` value.
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/confirm?next=${encodeURIComponent("/login")}`,
       data: {
         full_name: `${firstname} ${lastname}`.trim() || null,
         first_name: firstname || null,

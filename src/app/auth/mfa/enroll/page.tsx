@@ -46,6 +46,10 @@ export default function EnrollMfaPage() {
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
         friendlyName: "Authenticator app",
+        // Without this, Supabase falls back to the project's Site URL
+        // hostname (e.g. "localhost" in dev) as the issuer shown in the
+        // user's authenticator app instead of the product name.
+        issuer: "Saivly",
       });
       if (error) {
         setError(error.message);

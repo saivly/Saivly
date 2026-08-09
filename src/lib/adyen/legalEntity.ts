@@ -12,6 +12,7 @@ export type AdyenIndividualInput = {
     city: string;
     postalCode: string;
     country: string; // ISO 3166-1 alpha-2
+    stateOrProvince?: string; // 2-letter code, see src/lib/provinces.ts
   };
 };
 
@@ -37,6 +38,9 @@ export async function createAdyenIndividual(
           city: input.residentialAddress.city,
           postalCode: input.residentialAddress.postalCode,
           country: input.residentialAddress.country,
+          ...(input.residentialAddress.stateOrProvince
+            ? { stateOrProvince: input.residentialAddress.stateOrProvince }
+            : {}),
         },
         phone: {
           number: input.phoneNumber,
