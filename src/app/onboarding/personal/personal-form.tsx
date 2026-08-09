@@ -19,12 +19,6 @@ type Existing = {
 const inputClasses =
   "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm";
 
-// Notably larger than inputClasses — the flag emoji prefixed onto each
-// country option (see CountrySelect below) reads as tiny at the shared
-// text-sm desktop size, so these selects get their own bigger scale.
-const countrySelectClasses =
-  "rounded-lg border border-line bg-panel px-3 py-2.5 text-xl outline-none transition-colors focus:border-ink sm:text-lg";
-
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
 
 /** Chevron for our appearance-none selects — closer in and larger than the
@@ -55,14 +49,27 @@ function CountrySelect({
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
+  // <option> text can't be styled — a flag emoji inside it is stuck at the
+  // same size as the country name next to it. To make the flag noticeably
+  // bigger without also blowing up the text (and staying the same size as
+  // every other field), the option list stays plain text and a standalone,
+  // larger flag glyph is layered on top of the closed control instead.
   return (
     <div className="relative">
+      {value && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xl leading-none"
+        >
+          {countryFlag(value)}
+        </span>
+      )}
       <select
         name={name}
         required
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${countrySelectClasses} w-full appearance-none pr-8`}
+        className={`${inputClasses} w-full appearance-none pr-8 ${value ? "pl-9" : ""}`}
       >
         {placeholder && (
           <option value="" disabled>
@@ -71,7 +78,7 @@ function CountrySelect({
         )}
         {COUNTRIES.map((c) => (
           <option key={c.code} value={c.code}>
-            {countryFlag(c.code)} {c.name}
+            {c.name}
           </option>
         ))}
       </select>

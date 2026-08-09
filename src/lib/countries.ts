@@ -1,7 +1,7 @@
 // ISO 3166-1 alpha-2 codes + English short names. Used for nationality,
 // place-of-birth country, and company country dropdowns across
 // /onboarding. Stored as the 2-letter code, not the display name.
-export const COUNTRIES: { code: string; name: string }[] = [
+const COUNTRIES_UNSORTED: { code: string; name: string }[] = [
   { code: "NL", name: "Netherlands" },
   { code: "BE", name: "Belgium" },
   { code: "DE", name: "Germany" },
@@ -68,6 +68,13 @@ export const COUNTRIES: { code: string; name: string }[] = [
   { code: "CW", name: "Curaçao" },
   { code: "AW", name: "Aruba" },
 ];
+
+// Sorted alphabetically by display name — every dropdown built from this
+// (country of residence, nationality, company country) lists countries in
+// the order a user would expect to scan, not the source order above.
+export const COUNTRIES = [...COUNTRIES_UNSORTED].sort((a, b) =>
+  a.name.localeCompare(b.name)
+);
 
 export const COUNTRY_CODES = COUNTRIES.map((c) => c.code) as [string, ...string[]];
 
