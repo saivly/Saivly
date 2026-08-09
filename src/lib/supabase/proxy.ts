@@ -1,19 +1,24 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { Database } from "@/types/database.types";
+import { getOnboardingStatus } from "@/lib/onboarding";
 
 /**
  * Session refresher + route guard used by the root proxy (middleware).
  *
  * Enforcement ladder:
- *  1. No session            -> /login
- *  2. Session but not AAL2  -> /auth/mfa/enroll (no TOTP factor yet)
- *                              /auth/mfa        (factor exists, needs code)
- *  3. AAL2                  -> pass through
+ *  1. No session               -> /login
+ *  2. Session but not AAL2     -> /auth/mfa/enroll (no TOTP factor yet)
+ *                                 /auth/mfa        (factor exists, needs code)
+ *  3. AAL2, onboarding unfinished -> /onboarding
+ *  4. AAL2, onboarding done       -> pass through (and bounce away from
+ *                                     /onboarding itself, done is done)
  *
  * TOTP is MANDATORY: there is no way to reach a protected route at aal1.
  */
 
 const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth", "/error"];
+const ONBOARDING_BASE = "/onboarding";
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -40,7 +45,7 @@ function redirectTo(
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
@@ -82,6 +87,20 @@ export async function updateSession(request: NextRequest) {
       const target =
         aal?.nextLevel === "aal2" ? "/auth/mfa" : "/auth/mfa/enroll";
       return redirectTo(request, target, supabaseResponse, pathname);
+    }
+
+    // 3. AAL2 but onboarding isn't finished -> force it, except on the
+    //    onboarding flow itself (or every step would redirect to step 1).
+    const onOnboardingPath =
+      pathname === ONBOARDING_BASE || pathname.startsWith(ONBOARDING_BASE + "/");
+    const onboarding = await getOnboardingStatus(supabase, user.sub);
+
+    if (!onboarding.allDone && !onOnboardingPath) {
+      return redirectTo(request, ONBOARDING_BASE, supabaseResponse);
+    }
+    // 4. Already onboarded -> no reason to revisit the wizard.
+    if (onboarding.allDone && onOnboardingPath) {
+      return redirectTo(request, "/dashboard", supabaseResponse);
     }
   }
 

@@ -26,14 +26,14 @@ export default async function Dashboard() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold">
             {profile?.full_name || "Dashboard"}
           </h1>
-          <p className="text-sm text-muted">{user.email}</p>
+          <p className="truncate text-sm text-muted">{user.email}</p>
         </div>
-        <form action="/auth/signout" method="post">
+        <form action="/auth/signout" method="post" className="shrink-0">
           <button className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-panel">
             Sign out
           </button>
@@ -50,7 +50,9 @@ export default async function Dashboard() {
             name="task"
             required
             placeholder="Add a task"
-            className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+            // text-base (16px) on mobile avoids iOS Safari's auto-zoom-on-focus;
+            // sm: back down to match the panel's text-sm everywhere else.
+            className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-base outline-none focus:border-accent sm:text-sm"
           />
           <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90">
             Add
@@ -61,9 +63,9 @@ export default async function Dashboard() {
           {(todos ?? []).map((todo) => (
             <li
               key={todo.id}
-              className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm"
+              className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-sm"
             >
-              <form action={toggleTodo}>
+              <form action={toggleTodo} className="min-w-0">
                 <input type="hidden" name="id" value={todo.id} />
                 <input
                   type="hidden"
@@ -71,14 +73,14 @@ export default async function Dashboard() {
                   value={String(!todo.is_complete)}
                 />
                 <button
-                  className={
+                  className={`block w-full truncate text-left ${
                     todo.is_complete ? "text-muted line-through" : ""
-                  }
+                  }`}
                 >
                   {todo.task}
                 </button>
               </form>
-              <form action={deleteTodo}>
+              <form action={deleteTodo} className="shrink-0">
                 <input type="hidden" name="id" value={todo.id} />
                 <button className="text-muted hover:text-danger">✕</button>
               </form>

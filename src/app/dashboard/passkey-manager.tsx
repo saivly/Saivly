@@ -66,12 +66,14 @@ export default function PasskeyManager() {
         {(passkeys ?? []).map((pk) => (
           <li
             key={pk.id}
-            className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm"
+            className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-sm"
           >
-            <span>{pk.friendly_name || "Passkey"}</span>
+            <span className="min-w-0 truncate">
+              {pk.friendly_name || "Passkey"}
+            </span>
             <button
               onClick={() => removePasskey(pk.id)}
-              className="text-muted hover:text-danger"
+              className="shrink-0 text-muted hover:text-danger"
             >
               Remove
             </button>
