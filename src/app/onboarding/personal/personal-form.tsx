@@ -19,11 +19,11 @@ type Existing = {
 const inputClasses =
   "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm";
 
-// One step up from inputClasses — the flag emoji prefixed onto each country
-// option (see CountrySelect below) reads as tiny at the shared text-sm
-// desktop size, so these selects get their own, slightly larger scale.
+// Notably larger than inputClasses — the flag emoji prefixed onto each
+// country option (see CountrySelect below) reads as tiny at the shared
+// text-sm desktop size, so these selects get their own bigger scale.
 const countrySelectClasses =
-  "rounded-lg border border-line bg-panel px-3 py-2.5 text-lg outline-none transition-colors focus:border-ink sm:text-base";
+  "rounded-lg border border-line bg-panel px-3 py-2.5 text-xl outline-none transition-colors focus:border-ink sm:text-lg";
 
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
 
@@ -82,7 +82,10 @@ function CountrySelect({
 
 export default function PersonalForm({ existing }: { existing: Existing }) {
   const [country, setCountry] = useState(existing.residentialCountry || "NL");
-  const [nationality, setNationality] = useState(existing.nationality);
+  // Defaults to the country of residence — most shoppers' nationality
+  // matches it, and it means this select (like the one above) always shows
+  // a flag instead of sitting on the blank "Select…" placeholder.
+  const [nationality, setNationality] = useState(existing.nationality || country);
   const [postalCode, setPostalCode] = useState(existing.residentialPostalCode);
   const [houseNumber, setHouseNumber] = useState("");
   const [street, setStreet] = useState(existing.residentialStreet);
@@ -138,6 +141,39 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
           name="dateOfBirth"
           required
           defaultValue={existing.dateOfBirth}
+          className={inputClasses}
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1.5 text-sm">
+          Country of residence
+          <CountrySelect
+            name="residentialCountry"
+            value={country}
+            onChange={handleCountryChange}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm">
+          Nationality
+          <CountrySelect
+            name="nationality"
+            value={nationality}
+            onChange={setNationality}
+            placeholder="Select…"
+          />
+        </label>
+      </div>
+
+      <label className="flex flex-col gap-1.5 text-sm">
+        Phone number
+        <input
+          type="tel"
+          name="phoneNumber"
+          required
+          autoComplete="tel"
+          placeholder={phonePlaceholder(country)}
+          defaultValue={existing.phoneNumber}
           className={inputClasses}
         />
       </label>
@@ -266,39 +302,6 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
           </label>
         )}
       </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5 text-sm">
-          Country of residence
-          <CountrySelect
-            name="residentialCountry"
-            value={country}
-            onChange={handleCountryChange}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          Nationality
-          <CountrySelect
-            name="nationality"
-            value={nationality}
-            onChange={setNationality}
-            placeholder="Select…"
-          />
-        </label>
-      </div>
-
-      <label className="flex flex-col gap-1.5 text-sm">
-        Phone number
-        <input
-          type="tel"
-          name="phoneNumber"
-          required
-          autoComplete="tel"
-          placeholder={phonePlaceholder(country)}
-          defaultValue={existing.phoneNumber}
-          className={inputClasses}
-        />
-      </label>
 
       <button className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
         Continue

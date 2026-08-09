@@ -108,6 +108,18 @@ export function provinceName(country: string, code: string): string {
   return provincesForCountry(country)?.find((p) => p.code === code)?.name ?? code;
 }
 
+/**
+ * True when a stored residential_province value is one of our 2-letter
+ * codes (NL/GB/US, see PROVINCES above) rather than the free-text region
+ * name every other country's form field falls back to. Adyen's
+ * stateOrProvince expects a short subdivision code, not an arbitrary
+ * string, so callers (see actions.ts) should only forward values that
+ * pass this check.
+ */
+export function isProvinceCode(value: string): boolean {
+  return /^[A-Za-z]{2}$/.test(value);
+}
+
 // Maps PDOK's Dutch `provincienaam` values (see src/lib/pdok.ts) to our NL
 // province codes, so the residential address lookup can autofill province
 // the same way it already does street + city.
