@@ -40,7 +40,7 @@ export async function getOnboardingStatus(
 ): Promise<OnboardingStatus> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("personal_completed_at")
+    .select("personal_completed_at, adyen_legal_entity_id")
     .eq("id", userId)
     .maybeSingle();
 
@@ -49,7 +49,16 @@ export async function getOnboardingStatus(
     // unexpected, not "migration not applied yet". Fail closed.
     console.error("[onboarding] profile check failed:", profileError.message);
   }
-  const personalDone = Boolean(profile?.personal_completed_at);
+  // Both, not just personal_completed_at: the personal step also registers
+  // the user as an Adyen legal entity (src/lib/adyen.ts), and that call can
+  // fail independently (e.g. ADYEN_LEGALENTITY_API_KEY missing/invalid in
+  // an environment). savePersonalInfo only stamps personal_completed_at
+  // once adyen_legal_entity_id is confirmed, so in steady state these two
+  // agree — but check both anyway so a row from before that guarantee
+  // existed (or a manually-edited one) doesn't slip through the gate.
+  const personalDone = Boolean(
+    profile?.personal_completed_at && profile?.adyen_legal_entity_id
+  );
 
   const { data: membership, error: memberError } = await supabase
     .from("organisation_members")

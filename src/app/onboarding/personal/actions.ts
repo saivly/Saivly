@@ -61,6 +61,12 @@ export async function savePersonalInfo(formData: FormData) {
 
   // The row always exists already — created by the signup trigger
   // (migration 0001) — so this is a plain update, not an upsert.
+  //
+  // personal_completed_at is deliberately NOT set here: it's only stamped
+  // once Adyen legal-entity registration below is confirmed, so that
+  // getOnboardingStatus() (src/lib/onboarding.ts) never lets someone into
+  // the company step without an adyen_legal_entity_id. Everything else is
+  // saved unconditionally so a failed/retried attempt doesn't lose input.
   const { data: profile, error } = await supabase
     .from("profiles")
     .update({
@@ -71,7 +77,6 @@ export async function savePersonalInfo(formData: FormData) {
       residential_postal_code: residentialPostalCode,
       residential_country: residentialCountry,
       nationality,
-      personal_completed_at: new Date().toISOString(),
     })
     .eq("id", user.id)
     .select("first_name, last_name, adyen_legal_entity_id")
@@ -86,34 +91,51 @@ export async function savePersonalInfo(formData: FormData) {
   // Register with Adyen once, not on every re-edit of this step — creating
   // a legal entity mints a new id each time, and updating an existing one
   // is a separate PATCH /legalEntities/{id} call this doesn't attempt.
-  const firstName = profile.first_name ?? user.user_metadata?.first_name;
-  const lastName = profile.last_name ?? user.user_metadata?.last_name;
+  let legalEntityId = profile.adyen_legal_entity_id;
 
-  if (!profile.adyen_legal_entity_id && firstName && lastName && user.email) {
-    const legalEntityId = await createAdyenIndividual({
-      firstName,
-      lastName,
-      email: user.email,
-      phoneNumber,
-      dateOfBirth,
-      residentialAddress: {
-        street: residentialStreet,
-        city: residentialCity,
-        postalCode: residentialPostalCode,
-        country: residentialCountry,
-      },
-    });
+  if (!legalEntityId) {
+    const firstName = profile.first_name ?? user.user_metadata?.first_name;
+    const lastName = profile.last_name ?? user.user_metadata?.last_name;
 
-    // Best-effort: createAdyenIndividual already logs its own failures.
-    // Not having an ADYEN_LEGALENTITY_API_KEY configured yet shouldn't block the rest
-    // of onboarding — see src/lib/adyen.ts.
-    if (legalEntityId) {
-      await supabase
-        .from("profiles")
-        .update({ adyen_legal_entity_id: legalEntityId })
-        .eq("id", user.id);
+    legalEntityId =
+      firstName && lastName && user.email
+        ? await createAdyenIndividual({
+            firstName,
+            lastName,
+            email: user.email,
+            phoneNumber,
+            dateOfBirth,
+            residentialAddress: {
+              street: residentialStreet,
+              city: residentialCity,
+              postalCode: residentialPostalCode,
+              country: residentialCountry,
+            },
+          })
+        : null;
+
+    // Required, not best-effort: getOnboardingStatus() won't consider this
+    // step done without adyen_legal_entity_id, so don't let the user past
+    // it either. createAdyenIndividual already logs the underlying reason
+    // (e.g. ADYEN_LEGALENTITY_API_KEY missing/invalid — see src/lib/adyen.ts).
+    if (!legalEntityId) {
+      redirect(
+        `/onboarding/personal?error=${encodeURIComponent(
+          "We couldn't complete identity verification with our payment provider. Your details were saved — please try again, or contact support if this keeps happening."
+        )}`
+      );
     }
+
+    await supabase
+      .from("profiles")
+      .update({ adyen_legal_entity_id: legalEntityId })
+      .eq("id", user.id);
   }
+
+  await supabase
+    .from("profiles")
+    .update({ personal_completed_at: new Date().toISOString() })
+    .eq("id", user.id);
 
   redirect("/onboarding/company");
 }
