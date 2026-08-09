@@ -72,12 +72,13 @@ export async function lookupDutchAddress(
   const doc = data.response?.docs?.[0];
   if (!doc?.straatnaam || !doc.woonplaatsnaam) return null;
 
-  const houseNumberFull = [doc.huisnummer, doc.huisletter, doc.huisnummertoevoeging]
-    .filter(Boolean)
-    .join("");
-
+  // Street name only — the house number has its own field in the form
+  // (personal-form.tsx), which combines the two back together right before
+  // submit. Echoing PDOK's own huisnummer/huisletter/huisnummertoevoeging
+  // back into `street` would just duplicate what the user already typed,
+  // and can even disagree with it cosmetically (e.g. spacing/casing).
   return {
-    street: [doc.straatnaam, houseNumberFull].filter(Boolean).join(" "),
+    street: doc.straatnaam,
     city: doc.woonplaatsnaam,
     postalCode: doc.postcode ?? normalizedPostcode,
     province: nlProvinceCodeFromName(doc.provincienaam),

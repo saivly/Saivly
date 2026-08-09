@@ -19,6 +19,12 @@ type Existing = {
 const inputClasses =
   "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm";
 
+// One step up from inputClasses — the flag emoji prefixed onto each country
+// option (see CountrySelect below) reads as tiny at the shared text-sm
+// desktop size, so these selects get their own, slightly larger scale.
+const countrySelectClasses =
+  "rounded-lg border border-line bg-panel px-3 py-2.5 text-lg outline-none transition-colors focus:border-ink sm:text-base";
+
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
 
 /** Chevron for our appearance-none selects — closer in and larger than the
@@ -56,7 +62,7 @@ function CountrySelect({
         required
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${inputClasses} w-full appearance-none pr-8`}
+        className={`${countrySelectClasses} w-full appearance-none pr-8`}
       >
         {placeholder && (
           <option value="" disabled>
@@ -90,9 +96,11 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
   function handleCountryChange(next: string) {
     setCountry(next);
-    // A province code from the old country (e.g. "NH") is meaningless once
-    // the country changes, so don't carry it over silently.
+    // A province code (or a house number, which only this country's form
+    // even collects separately) from the old country is meaningless once
+    // the country changes, so don't carry either over silently.
     setProvince("");
+    setHouseNumber("");
   }
 
   async function runLookup(nextPostalCode: string, nextHouseNumber: string) {
@@ -153,6 +161,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
             House number
             <input
               type="text"
+              required
               value={houseNumber}
               onChange={(e) => setHouseNumber(e.target.value)}
               onBlur={() => runLookup(postalCode, houseNumber)}
@@ -173,7 +182,6 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
         Street address
         <input
           type="text"
-          name="residentialStreet"
           required
           autoComplete="street-address"
           value={street}
@@ -181,6 +189,16 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
           className={inputClasses}
         />
       </label>
+      {/* The backend only has a single street column, and the house number
+          field above (NL only) is what actually collects the number — so
+          recombine here rather than showing it back in the street box.
+          For non-NL, there's no separate house-number field and houseNumber
+          stays "", so this is just `street` unchanged. */}
+      <input
+        type="hidden"
+        name="residentialStreet"
+        value={[street, houseNumber].filter(Boolean).join(" ")}
+      />
 
       <div className={`grid gap-3 ${isNL ? "grid-cols-2" : "grid-cols-3"}`}>
         <label className="flex flex-col gap-1.5 text-sm">
