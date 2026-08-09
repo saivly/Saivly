@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { personalInfoSchema } from "@/lib/zod";
-import { createAdyenIndividual } from "@/lib/adyen";
+import { createAdyenIndividual } from "@/lib/adyen/legalEntity";
 import { lookupDutchAddress, type DutchAddress } from "@/lib/pdok";
 
 /**
