@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { COUNTRIES, countryFlag, phonePlaceholder } from "@/lib/countries";
+import { phonePlaceholder } from "@/lib/countries";
 import { provincesForCountry } from "@/lib/provinces";
 import { savePersonalInfo, lookupResidentialAddress } from "./actions";
+import { inputClasses, SelectChevron, CountrySelect } from "../_components/form-controls";
 
 type Existing = {
   dateOfBirth: string;
@@ -15,9 +16,6 @@ type Existing = {
   residentialCountry: string;
   nationality: string;
 };
-
-const inputClasses =
-  "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm";
 
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
 
@@ -35,72 +33,6 @@ const MONTHS = [
   "November",
   "December",
 ];
-
-/** Chevron for our appearance-none selects — closer in and larger than the
- * default browser arrow, which sat right at the edge and rendered tiny. */
-function SelectChevron() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-    >
-      <path d="M5.5 7.5L10 12l4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CountrySelect({
-  name,
-  value,
-  onChange,
-  placeholder,
-}: {
-  name: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}) {
-  // <option> text can't be styled — a flag emoji inside it is stuck at the
-  // same size as the country name next to it. To make the flag noticeably
-  // bigger without also blowing up the text (and staying the same size as
-  // every other field), the option list stays plain text and a standalone,
-  // larger flag glyph is layered on top of the closed control instead.
-  return (
-    <div className="relative">
-      {value && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xl leading-none"
-        >
-          {countryFlag(value)}
-        </span>
-      )}
-      <select
-        name={name}
-        required
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${inputClasses} w-full appearance-none pr-8 ${value ? "pl-9" : ""}`}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {COUNTRIES.map((c) => (
-          <option key={c.code} value={c.code}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-      <SelectChevron />
-    </div>
-  );
-}
 
 /** Day/month/year is split into three fields — day and year as free text
  * (so no browser spin buttons), month as a dropdown of names — rather than
@@ -172,7 +104,7 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
           placeholder="20"
           value={day}
           onChange={(e) => setDay(e.target.value.replace(/\D/g, ""))}
-          className={`${inputClasses} w-16 text-center`}
+          className={`${inputClasses} flex-1 text-center`}
         />
         <div className="relative flex-1">
           <select
@@ -200,7 +132,7 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
           placeholder="1993"
           value={year}
           onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))}
-          className={`${inputClasses} w-24 text-center`}
+          className={`${inputClasses} flex-1 text-center`}
         />
       </div>
       <input type="hidden" name="dateOfBirth" required value={isoValue} />

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { COUNTRIES } from "@/lib/countries";
+import { useEffect, useState } from "react";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
 import type { KvkSearchResult } from "@/lib/kvk";
+import { inputClasses, CountrySelect } from "../_components/form-controls";
 
 type Existing = {
   companyCountry: string;
@@ -14,8 +14,52 @@ type Existing = {
   companyCity: string;
 };
 
-const inputClasses =
-  "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm";
+function BuildingIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
+      <rect x="5" y="3" width="14" height="18" rx="1" strokeLinejoin="round" />
+      <path d="M9 7h1M14 7h1M9 11h1M14 11h1" strokeLinecap="round" />
+      <path d="M10 21v-4h4v4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function HashIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
+      <path d="M9 4 7 20M17 4l-2 16M4 9h16M3.5 15h16" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ScaleIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
+      <path d="M12 3v18M8 21h8" strokeLinecap="round" />
+      <path d="M5 7h6M13 7h6" strokeLinecap="round" />
+      <path d="M5 7 2.5 12a2.5 2.5 0 0 0 5 0L5 7ZM19 7l-2.5 5a2.5 2.5 0 0 0 5 0L19 7Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PinIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
+      <path d="M12 21s7-6.5 7-11.5a7 7 0 1 0-14 0C5 14.5 12 21 12 21Z" strokeLinejoin="round" />
+      <circle cx="12" cy="9.5" r="2.25" />
+    </svg>
+  );
+}
+
+function BriefcaseIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
+      <rect x="3" y="7.5" width="18" height="12" rx="1.5" strokeLinejoin="round" />
+      <path d="M8 7.5V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1.5" strokeLinejoin="round" />
+      <path d="M3 12.5h18" />
+    </svg>
+  );
+}
 
 export default function CompanyForm({
   existing,
@@ -40,8 +84,34 @@ export default function CompanyForm({
     companyPostalCode: existing.companyPostalCode,
     companyCity: existing.companyCity,
   });
+  // legalForm/mainActivity are display-only — organisations doesn't persist
+  // them, so a revisit re-fetches them from KVK below rather than storing
+  // (and keeping in sync) two more columns for what's already re-derivable
+  // from the kvkNumber we do store.
+  const [details, setDetails] = useState<{
+    legalForm: string | null;
+    mainActivity: string | null;
+  }>({ legalForm: null, mainActivity: null });
 
   const isNL = country === "NL";
+  // A company has been chosen (fresh pick, or an already-saved one on
+  // revisit) — show the read-only summary instead of raw editable fields.
+  const hasSelectedCompany = isNL && Boolean(fields.kvkNumber);
+
+  useEffect(() => {
+    if (!existing.kvkNumber) return;
+    let cancelled = false;
+    getKvkDetails(existing.kvkNumber).then((found) => {
+      if (!cancelled && found) {
+        setDetails({ legalForm: found.legalForm, mainActivity: found.mainActivity });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Only ever needed for the value this form mounted with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function runSearch() {
     if (!query.trim()) return;
@@ -67,18 +137,19 @@ export default function CompanyForm({
     setSearching(true);
     setKvkError(null);
     try {
-      const details = await getKvkDetails(kvkNumber);
-      if (!details) {
+      const found = await getKvkDetails(kvkNumber);
+      if (!found) {
         setKvkError("Couldn't load that company's details — try again or fill in by hand.");
         return;
       }
       setFields({
-        kvkNumber: details.kvkNumber,
-        companyName: details.name,
-        companyStreet: details.street ?? "",
-        companyPostalCode: details.postalCode ?? "",
-        companyCity: details.city ?? "",
+        kvkNumber: found.kvkNumber,
+        companyName: found.name,
+        companyStreet: found.street ?? "",
+        companyPostalCode: found.postalCode ?? "",
+        companyCity: found.city ?? "",
       });
+      setDetails({ legalForm: found.legalForm, mainActivity: found.mainActivity });
       setResults(null);
       setQuery("");
     } catch {
@@ -86,6 +157,11 @@ export default function CompanyForm({
     } finally {
       setSearching(false);
     }
+  }
+
+  function changeCompany() {
+    setFields((f) => ({ ...f, kvkNumber: "" }));
+    setDetails({ legalForm: null, mainActivity: null });
   }
 
   function updateField(field: keyof typeof fields, value: string) {
@@ -122,22 +198,10 @@ export default function CompanyForm({
 
       <label className="flex flex-col gap-1.5 text-sm">
         Country of business
-        <select
-          name="companyCountry"
-          required
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          className={inputClasses}
-        >
-          {COUNTRIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <CountrySelect name="companyCountry" value={country} onChange={setCountry} />
       </label>
 
-      {isNL && (
+      {isNL && !hasSelectedCompany && (
         <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3">
           <p className="text-xs font-medium tracking-wide text-muted uppercase">
             Find your company in the KVK register
@@ -198,13 +262,6 @@ export default function CompanyForm({
               ))}
             </ul>
           )}
-
-          {fields.kvkNumber && (
-            <p className="text-xs text-success">
-              Selected KVK number {fields.kvkNumber} — review the details
-              below and edit anything that needs it.
-            </p>
-          )}
         </div>
       )}
 
@@ -212,54 +269,118 @@ export default function CompanyForm({
         <input type="hidden" name="kvkNumber" value={fields.kvkNumber} />
       )}
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        Company name
-        <input
-          type="text"
-          name="companyName"
-          required
-          value={fields.companyName}
-          onChange={(e) => updateField("companyName", e.target.value)}
-          className={inputClasses}
-        />
-      </label>
+      {hasSelectedCompany ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-base font-semibold">Company details</p>
+          <div className="rounded-xl border border-line bg-panel p-5">
+            <div className="flex items-center gap-2.5">
+              <BuildingIcon className="h-5 w-5 shrink-0 text-muted" />
+              <p className="font-semibold">{fields.companyName}</p>
+            </div>
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        Street address
-        <input
-          type="text"
-          name="companyStreet"
-          required
-          value={fields.companyStreet}
-          onChange={(e) => updateField("companyStreet", e.target.value)}
-          className={inputClasses}
-        />
-      </label>
+            <dl className="mt-4 grid grid-cols-[20px_auto_1fr] items-start gap-x-2.5 gap-y-3 text-sm">
+              <HashIcon className="h-4 w-4 text-muted" />
+              <dt className="text-muted">KVK number</dt>
+              <dd className="min-w-0">{fields.kvkNumber}</dd>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5 text-sm">
-          Postal code
-          <input
-            type="text"
-            name="companyPostalCode"
-            required
-            value={fields.companyPostalCode}
-            onChange={(e) => updateField("companyPostalCode", e.target.value)}
-            className={inputClasses}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          City
-          <input
-            type="text"
-            name="companyCity"
-            required
-            value={fields.companyCity}
-            onChange={(e) => updateField("companyCity", e.target.value)}
-            className={inputClasses}
-          />
-        </label>
-      </div>
+              {details.legalForm && (
+                <>
+                  <ScaleIcon className="h-4 w-4 text-muted" />
+                  <dt className="text-muted">Legal form</dt>
+                  <dd className="min-w-0">{details.legalForm}</dd>
+                </>
+              )}
+
+              <PinIcon className="h-4 w-4 text-muted" />
+              <dt className="text-muted">Address</dt>
+              <dd className="min-w-0">
+                {[
+                  fields.companyStreet,
+                  [fields.companyPostalCode, fields.companyCity]
+                    .filter(Boolean)
+                    .join(", "),
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </dd>
+
+              {details.mainActivity && (
+                <>
+                  <BriefcaseIcon className="h-4 w-4 text-muted" />
+                  <dt className="text-muted">Main activity</dt>
+                  <dd className="min-w-0">{details.mainActivity}</dd>
+                </>
+              )}
+            </dl>
+
+            <button
+              type="button"
+              onClick={changeCompany}
+              className="mt-4 text-sm text-accent hover:underline"
+            >
+              Change company
+            </button>
+          </div>
+
+          {/* Fields above are read-only display — these carry the same
+              values through to the server action. */}
+          <input type="hidden" name="companyName" value={fields.companyName} />
+          <input type="hidden" name="companyStreet" value={fields.companyStreet} />
+          <input type="hidden" name="companyPostalCode" value={fields.companyPostalCode} />
+          <input type="hidden" name="companyCity" value={fields.companyCity} />
+        </div>
+      ) : (
+        <>
+          <label className="flex flex-col gap-1.5 text-sm">
+            Company name
+            <input
+              type="text"
+              name="companyName"
+              required
+              value={fields.companyName}
+              onChange={(e) => updateField("companyName", e.target.value)}
+              className={inputClasses}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm">
+            Street address
+            <input
+              type="text"
+              name="companyStreet"
+              required
+              value={fields.companyStreet}
+              onChange={(e) => updateField("companyStreet", e.target.value)}
+              className={inputClasses}
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5 text-sm">
+              Postal code
+              <input
+                type="text"
+                name="companyPostalCode"
+                required
+                value={fields.companyPostalCode}
+                onChange={(e) => updateField("companyPostalCode", e.target.value)}
+                className={inputClasses}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm">
+              City
+              <input
+                type="text"
+                name="companyCity"
+                required
+                value={fields.companyCity}
+                onChange={(e) => updateField("companyCity", e.target.value)}
+                className={inputClasses}
+              />
+            </label>
+          </div>
+        </>
+      )}
 
       <button className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
         Continue

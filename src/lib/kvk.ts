@@ -43,6 +43,11 @@ export type KvkCompanyDetails = {
   street: string | null;
   postalCode: string | null;
   city: string | null;
+  /** English where a known Dutch rechtsvorm is recognized (see
+   * translateLegalForm below), otherwise the raw KVK value verbatim. */
+  legalForm: string | null;
+  /** Description of the primary SBI activity (indHoofdactiviteit "Ja"). */
+  mainActivity: string | null;
 };
 
 type KvkZoekenResponse = {
@@ -57,10 +62,24 @@ type KvkZoekenResponse = {
   }[];
 };
 
+type KvkSbiActiviteit = {
+  sbiCode: string;
+  sbiOmschrijving: string;
+  indHoofdactiviteit?: string; // "Ja" | "Nee"
+};
+
+// Confirmed against a live call to the sandbox (KVK number 68750110):
+// sbiActiviteiten sits at the root, rechtsvorm under _embedded.eigenaar —
+// both easy to guess wrong, so don't "simplify" this shape without
+// re-checking against the real API.
 type KvkBasisprofielResponse = {
   kvkNummer: string;
   naam: string;
+  sbiActiviteiten?: KvkSbiActiviteit[];
   _embedded?: {
+    eigenaar?: {
+      rechtsvorm?: string;
+    };
     hoofdvestiging?: {
       adressen?: {
         type: string;
@@ -70,9 +89,40 @@ type KvkBasisprofielResponse = {
         postcode?: string;
         plaats?: string;
       }[];
+      sbiActiviteiten?: KvkSbiActiviteit[];
     };
   };
 };
+
+// Dutch "rechtsvorm" -> a friendlier English label. Ordered so multi-word,
+// more specific terms (e.g. "vereniging van eigenaars") are matched before
+// the generic term they contain ("vereniging") — .find() takes the first
+// hit, so order is load-bearing here.
+const LEGAL_FORM_TRANSLATIONS: [dutch: string, english: string][] = [
+  ["vereniging van eigenaars", "Homeowners' Association (VvE)"],
+  ["besloten vennootschap", "Private limited company (B.V.)"],
+  ["naamloze vennootschap", "Public limited company (N.V.)"],
+  ["vennootschap onder firma", "General partnership (VOF)"],
+  ["commanditaire vennootschap", "Limited partnership (CV)"],
+  ["onderlinge waarborgmaatschappij", "Mutual insurance association"],
+  ["publiekrechtelijke rechtspersoon", "Public-law legal entity"],
+  ["kerkgenootschap", "Religious institution"],
+  ["eenmanszaak", "Sole proprietorship"],
+  ["maatschap", "Partnership (maatschap)"],
+  ["coöperatie", "Cooperative"],
+  ["stichting", "Foundation"],
+  ["vereniging", "Association"],
+  ["rederij", "Shipping partnership (rederij)"],
+];
+
+/** Best-effort Dutch -> English translation; falls back to the raw KVK
+ * value verbatim for any rechtsvorm not in the table above. */
+export function translateLegalForm(rechtsvorm: string | null | undefined): string | null {
+  if (!rechtsvorm) return null;
+  const normalized = rechtsvorm.toLowerCase().trim();
+  const match = LEGAL_FORM_TRANSLATIONS.find(([dutch]) => normalized.includes(dutch));
+  return match ? match[1] : rechtsvorm;
+}
 
 /** Search Dutch companies by KVK number or trade name. */
 export async function searchKvkCompanies(query: string): Promise<KvkSearchResult[]> {
@@ -140,6 +190,13 @@ export async function getKvkCompanyDetails(
   const address =
     addresses.find((a) => a.type === "bezoekadres") ?? addresses[0];
 
+  // sbiActiviteiten is normally at the root; fall back to hoofdvestiging's
+  // copy in case a particular profile only populates it there.
+  const activities =
+    data.sbiActiviteiten ?? data._embedded?.hoofdvestiging?.sbiActiviteiten ?? [];
+  const mainActivity =
+    activities.find((a) => a.indHoofdactiviteit === "Ja") ?? activities[0];
+
   return {
     kvkNumber: data.kvkNummer,
     name: data.naam,
@@ -150,5 +207,7 @@ export async function getKvkCompanyDetails(
       : null,
     postalCode: address?.postcode ?? null,
     city: address?.plaats ?? null,
+    legalForm: translateLegalForm(data._embedded?.eigenaar?.rechtsvorm),
+    mainActivity: mainActivity?.sbiOmschrijving ?? null,
   };
 }

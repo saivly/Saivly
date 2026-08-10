@@ -151,5 +151,5 @@ export async function savePersonalInfo(formData: FormData) {
     .update({ personal_completed_at: new Date().toISOString() })
     .eq("id", user.id);
 
-  redirect("/onboarding/company");
+  redirect("/onboarding/organisation");
 }
