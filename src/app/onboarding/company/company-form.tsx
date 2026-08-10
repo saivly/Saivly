@@ -20,11 +20,15 @@ const inputClasses =
 export default function CompanyForm({
   existing,
   usingTestData,
+  organisationId,
 }: {
   existing: Existing;
   usingTestData: boolean;
+  /** Null until this organisation has actually been created (first save). */
+  organisationId: string | null;
 }) {
   const [country, setCountry] = useState(existing.companyCountry || "NL");
+  const [copied, setCopied] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -90,6 +94,32 @@ export default function CompanyForm({
 
   return (
     <form action={saveCompanyInfo} className="flex flex-col gap-4">
+      {organisationId && (
+        <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-panel p-3 text-sm">
+          <p className="font-medium">Invite a teammate</p>
+          <p className="text-muted">
+            Share this organisation&apos;s exact name and ID — they can join
+            it from their own onboarding instead of creating a new one.
+          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-md bg-surface px-2 py-1.5 text-xs">
+              {organisationId}
+            </code>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(organisationId);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="shrink-0 rounded-md border border-line px-2.5 py-1.5 text-xs font-medium hover:bg-surface"
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <label className="flex flex-col gap-1.5 text-sm">
         Country of business
         <select

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { COUNTRIES, countryFlag, phonePlaceholder } from "@/lib/countries";
 import { provincesForCountry } from "@/lib/provinces";
 import { savePersonalInfo, lookupResidentialAddress } from "./actions";
@@ -20,6 +20,21 @@ const inputClasses =
   "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm";
 
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 /** Chevron for our appearance-none selects — closer in and larger than the
  * default browser arrow, which sat right at the edge and rendered tiny. */
@@ -87,6 +102,112 @@ function CountrySelect({
   );
 }
 
+/** Day/month/year is split into three fields — day and year as free text
+ * (so no browser spin buttons), month as a dropdown of names — rather than
+ * a native `type="date"` input, whose picker UI and formatting vary across
+ * browsers/locales. The three pieces are recombined into a single ISO
+ * `YYYY-MM-DD` string for submission via a hidden input. */
+function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
+  const [initialYear = "", initialMonth = "", initialDay = ""] = (
+    defaultValue || ""
+  ).split("-");
+
+  const [day, setDay] = useState(initialDay);
+  const [month, setMonth] = useState(
+    initialMonth ? String(Number(initialMonth)) : ""
+  );
+  const [year, setYear] = useState(initialYear);
+
+  const dayNum = Number(day);
+  const monthNum = Number(month);
+  const yearNum = Number(year);
+  const isValid =
+    day !== "" &&
+    month !== "" &&
+    year.length === 4 &&
+    dayNum >= 1 &&
+    dayNum <= 31 &&
+    monthNum >= 1 &&
+    monthNum <= 12 &&
+    yearNum >= 1900;
+  // Roundtrip through Date to catch out-of-range days (e.g. 31 Feb).
+  const isRealDate =
+    isValid &&
+    (() => {
+      const d = new Date(yearNum, monthNum - 1, dayNum);
+      return (
+        d.getFullYear() === yearNum &&
+        d.getMonth() === monthNum - 1 &&
+        d.getDate() === dayNum
+      );
+    })();
+
+  const isoValue = isRealDate
+    ? `${year.padStart(4, "0")}-${String(monthNum).padStart(2, "0")}-${String(
+        dayNum
+      ).padStart(2, "0")}`
+    : "";
+
+  // All three sub-fields carry `required` for the empty case, but an
+  // impossible combination (31 February) leaves them all filled while
+  // isoValue is still "" — so surface that on the day field via the
+  // constraint-validation API rather than letting it submit silently.
+  const dayRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    dayRef.current?.setCustomValidity(
+      isValid && !isRealDate ? "That date doesn't exist." : ""
+    );
+  }, [isValid, isRealDate]);
+
+  return (
+    <div className="flex flex-col gap-1.5 text-sm">
+      Date of birth
+      <div className="flex gap-3">
+        <input
+          ref={dayRef}
+          type="text"
+          inputMode="numeric"
+          maxLength={2}
+          required
+          placeholder="20"
+          value={day}
+          onChange={(e) => setDay(e.target.value.replace(/\D/g, ""))}
+          className={`${inputClasses} w-16 text-center`}
+        />
+        <div className="relative flex-1">
+          <select
+            required
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className={`${inputClasses} w-full appearance-none pr-8`}
+          >
+            <option value="" disabled>
+              Month
+            </option>
+            {MONTHS.map((name, i) => (
+              <option key={name} value={i + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={4}
+          required
+          placeholder="1993"
+          value={year}
+          onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))}
+          className={`${inputClasses} w-24 text-center`}
+        />
+      </div>
+      <input type="hidden" name="dateOfBirth" required value={isoValue} />
+    </div>
+  );
+}
+
 export default function PersonalForm({ existing }: { existing: Existing }) {
   const [country, setCountry] = useState(existing.residentialCountry || "NL");
   // Defaults to the country of residence — most shoppers' nationality
@@ -141,16 +262,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
   return (
     <form action={savePersonalInfo} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1.5 text-sm">
-        Date of birth
-        <input
-          type="date"
-          name="dateOfBirth"
-          required
-          defaultValue={existing.dateOfBirth}
-          className={inputClasses}
-        />
-      </label>
+      <DateOfBirthFields defaultValue={existing.dateOfBirth} />
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5 text-sm">

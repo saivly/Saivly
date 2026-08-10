@@ -18,6 +18,10 @@ export default async function CompanyInfoStep({
 
   const status = await getOnboardingStatus(supabase, user.id);
   if (!status.personalDone) redirect("/onboarding/personal");
+  // Deliberately no organisationDone guard here, unlike the other steps:
+  // reaching this page with organisationDone still false is the expected
+  // "create new" path (see /onboarding/organisation) — submitting this
+  // very form is what flips it true, by creating the org + membership row.
 
   const { data: membership } = await supabase
     .from("organisation_members")
@@ -29,7 +33,7 @@ export default async function CompanyInfoStep({
   const { data: existing } = membership
     ? await supabase
         .from("organisations")
-        .select("country, kvk_number, name, street, postal_code, city")
+        .select("id, country, kvk_number, name, street, postal_code, city")
         .eq("id", membership.organisation_id)
         .maybeSingle()
     : { data: null };
@@ -45,7 +49,7 @@ export default async function CompanyInfoStep({
           Company information
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 3 — tell us about the business you&apos;re setting up.
+          Step 3 of 4 — tell us about the business you&apos;re setting up.
         </p>
       </div>
 
@@ -65,6 +69,7 @@ export default async function CompanyInfoStep({
           companyCity: existing?.city ?? "",
         }}
         usingTestData={usingTestData}
+        organisationId={existing?.id ?? null}
       />
     </div>
   );

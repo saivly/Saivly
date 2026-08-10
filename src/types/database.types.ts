@@ -5,7 +5,9 @@
  * 0004_residential_address_adyen.sql: birth_* -> residential_* on
  * profiles, + first_name/last_name/adyen_legal_entity_id.
  * 0005_profiles_email.sql: profiles.email, trigger-synced from auth.users.
- * 0006_residential_province.sql: profiles.residential_province.)
+ * 0006_residential_province.sql: profiles.residential_province.
+ * 0007_passkey_prompt.sql: profiles.passkey_prompt_seen_at.
+ * 0008_join_organisation.sql: join_organisation() RPC.)
  * Once you have a live project, regenerate from the real schema with:
  *   npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
  */
@@ -30,6 +32,7 @@ export type Database = {
           nationality: string | null;
           personal_completed_at: string | null;
           adyen_legal_entity_id: string | null;
+          passkey_prompt_seen_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -49,6 +52,7 @@ export type Database = {
           nationality?: string | null;
           personal_completed_at?: string | null;
           adyen_legal_entity_id?: string | null;
+          passkey_prompt_seen_at?: string | null;
         };
         Relationships: [];
       };
@@ -188,6 +192,10 @@ export type Database = {
       };
       is_org_member: {
         Args: { org_id: string };
+        Returns: boolean;
+      };
+      join_organisation: {
+        Args: { target_org_id: string; claimed_name: string };
         Returns: boolean;
       };
     };

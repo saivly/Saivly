@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database.types";
-import { getOnboardingStatus } from "@/lib/onboarding";
+import { getOnboardingStatus, hasSeenPasskeyPrompt } from "@/lib/onboarding";
 
 /**
  * Session refresher + route guard used by the root proxy (middleware).
@@ -10,15 +10,20 @@ import { getOnboardingStatus } from "@/lib/onboarding";
  *  1. No session               -> /login
  *  2. Session but not AAL2     -> /auth/mfa/enroll (no TOTP factor yet)
  *                                 /auth/mfa        (factor exists, needs code)
- *  3. AAL2, onboarding unfinished -> /onboarding
- *  4. AAL2, onboarding done       -> pass through (and bounce away from
+ *  3. AAL2, onboarding unfinished, passkey prompt unseen -> /auth/passkey
+ *  4. AAL2, onboarding unfinished -> /onboarding
+ *  5. AAL2, onboarding done       -> pass through (and bounce away from
  *                                     /onboarding itself, done is done)
  *
  * TOTP is MANDATORY: there is no way to reach a protected route at aal1.
+ * A passkey is not — /auth/passkey is a skippable, one-time interstitial
+ * shown only to users still going through onboarding (step 3), never
+ * re-shown to already-onboarded users.
  */
 
 const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth", "/error"];
 const ONBOARDING_BASE = "/onboarding";
+const PASSKEY_PROMPT_PATH = "/auth/passkey";
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -89,17 +94,29 @@ export async function updateSession(request: NextRequest) {
       return redirectTo(request, target, supabaseResponse, pathname);
     }
 
-    // 3. AAL2 but onboarding isn't finished -> force it, except on the
+    // 4. AAL2 but onboarding isn't finished -> force it, except on the
     //    onboarding flow itself (or every step would redirect to step 1).
     const onOnboardingPath =
       pathname === ONBOARDING_BASE || pathname.startsWith(ONBOARDING_BASE + "/");
     const onboarding = await getOnboardingStatus(supabase, user.sub);
 
-    if (!onboarding.allDone && !onOnboardingPath) {
-      return redirectTo(request, ONBOARDING_BASE, supabaseResponse);
-    }
-    // 4. Already onboarded -> no reason to revisit the wizard.
-    if (onboarding.allDone && onOnboardingPath) {
+    if (!onboarding.allDone) {
+      // 3. Still onboarding and hasn't seen the passkey prompt yet ->
+      //    show it once, ahead of the wizard itself. Scoped to
+      //    unfinished onboarding on purpose: already-onboarded users
+      //    never hit this, so it can't reappear as a surprise interstitial
+      //    for existing accounts once this feature ships.
+      //    (/auth/passkey itself never reaches this branch — it's under
+      //    the "/auth" prefix in PUBLIC_PATHS, same as /auth/mfa/enroll.)
+      const promptSeen = await hasSeenPasskeyPrompt(supabase, user.sub);
+      if (!promptSeen) {
+        return redirectTo(request, PASSKEY_PROMPT_PATH, supabaseResponse);
+      }
+      if (!onOnboardingPath) {
+        return redirectTo(request, ONBOARDING_BASE, supabaseResponse);
+      }
+    } else if (onOnboardingPath) {
+      // 5. Already onboarded -> no reason to revisit the wizard.
       return redirectTo(request, "/dashboard", supabaseResponse);
     }
   }

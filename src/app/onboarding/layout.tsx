@@ -22,6 +22,7 @@ export default async function TeamOnboardingLayout({
   const status = await getOnboardingStatus(supabase, user.id);
   const stepDone: Record<string, boolean> = {
     personal: status.personalDone,
+    organisation: status.organisationDone,
     company: status.companyDone,
     subscription: status.subscriptionDone,
   };
