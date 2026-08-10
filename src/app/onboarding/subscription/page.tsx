@@ -49,7 +49,7 @@ export default async function SubscriptionStep({
           Choose a plan
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 4 of 4 — you can change this later from your account settings.
+          Step 3 of 3 — you can change this later from your account settings.
         </p>
       </div>
 

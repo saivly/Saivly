@@ -78,6 +78,14 @@ export const COUNTRIES = [...COUNTRIES_UNSORTED].sort((a, b) =>
 
 export const COUNTRY_CODES = COUNTRIES.map((c) => c.code) as [string, ...string[]];
 
+// Organisations we accept today — kept in sync with provincesForCountry's
+// NL/GB/US-only subdivision data (src/lib/provinces.ts) and enforced
+// server-side too, via companyCountryCode in src/lib/zod.ts.
+export const COMPANY_COUNTRY_CODES = ["NL", "GB", "US"] as const;
+export const COMPANY_COUNTRIES = COUNTRIES.filter((c) =>
+  (COMPANY_COUNTRY_CODES as readonly string[]).includes(c.code)
+);
+
 export function countryName(code: string): string {
   return COUNTRIES.find((c) => c.code === code)?.name ?? code;
 }

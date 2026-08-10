@@ -1,6 +1,6 @@
 import * as zod from 'zod';
 import { PASSWORD_REGEX, PASSWORD_HINT } from './password-policy';
-import { COUNTRY_CODES } from './countries';
+import { COUNTRY_CODES, COMPANY_COUNTRY_CODES } from './countries';
 import { provincesForCountry } from './provinces';
 
 export const signupSchema = zod.object({
@@ -24,6 +24,11 @@ export const loginSchema = zod.object({
 // ---------------------------------------------------------------
 
 const isoCountry = zod.enum(COUNTRY_CODES, { message: 'Select a country.' });
+// Organisations only, not shoppers — residentialCountry/nationality above
+// keep the full COUNTRY_CODES list.
+const companyCountryCode = zod.enum(COMPANY_COUNTRY_CODES, {
+    message: 'We only support organisations from the Netherlands, United Kingdom, or United States right now.',
+});
 
 // Lenient on purpose — phone formats vary too widely across countries to
 // validate strictly client-side. Just enough to catch obvious junk.
@@ -85,7 +90,7 @@ export const personalInfoSchema = zod
 
 export const companyInfoSchema = zod
     .object({
-        companyCountry: isoCountry,
+        companyCountry: companyCountryCode,
         kvkNumber: zod
             .string()
             .trim()

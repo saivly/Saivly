@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
 import type { KvkSearchResult } from "@/lib/kvk";
-import { inputClasses, CountrySelect } from "../_components/form-controls";
+import { inputClasses, CountrySelect } from "../form-controls";
+import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/countries";
 
 type Existing = {
   companyCountry: string;
@@ -71,7 +73,14 @@ export default function CompanyForm({
   /** Null until this organisation has actually been created (first save). */
   organisationId: string | null;
 }) {
-  const [country, setCountry] = useState(existing.companyCountry || "NL");
+  // Clamp to NL/GB/US: a pre-existing org saved before that restriction
+  // existed could carry any country code, which wouldn't match any option
+  // in the now-restricted CountrySelect below.
+  const [country, setCountry] = useState(
+    (COMPANY_COUNTRY_CODES as readonly string[]).includes(existing.companyCountry)
+      ? existing.companyCountry
+      : "NL"
+  );
   const [copied, setCopied] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
@@ -122,12 +131,10 @@ export default function CompanyForm({
       const found = await searchKvk(query);
       setResults(found);
       if (found.length === 0) {
-        setKvkError("No matches. Try the KVK number, or fill in the details below by hand.");
+        setKvkError("No matches. Try the KVK number instead.");
       }
     } catch {
-      setKvkError(
-        "KVK lookup is temporarily unavailable — you can still fill in the details below by hand."
-      );
+      setKvkError("KVK lookup is temporarily unavailable — try again in a moment.");
     } finally {
       setSearching(false);
     }
@@ -139,7 +146,7 @@ export default function CompanyForm({
     try {
       const found = await getKvkDetails(kvkNumber);
       if (!found) {
-        setKvkError("Couldn't load that company's details — try again or fill in by hand.");
+        setKvkError("Couldn't load that company's details — try again.");
         return;
       }
       setFields({
@@ -153,7 +160,7 @@ export default function CompanyForm({
       setResults(null);
       setQuery("");
     } catch {
-      setKvkError("Couldn't load that company's details — try again or fill in by hand.");
+      setKvkError("Couldn't load that company's details — try again.");
     } finally {
       setSearching(false);
     }
@@ -198,7 +205,12 @@ export default function CompanyForm({
 
       <label className="flex flex-col gap-1.5 text-sm">
         Country of business
-        <CountrySelect name="companyCountry" value={country} onChange={setCountry} />
+        <CountrySelect
+          name="companyCountry"
+          value={country}
+          onChange={setCountry}
+          options={COMPANY_COUNTRIES}
+        />
       </label>
 
       {isNL && !hasSelectedCompany && (
@@ -329,6 +341,11 @@ export default function CompanyForm({
           <input type="hidden" name="companyPostalCode" value={fields.companyPostalCode} />
           <input type="hidden" name="companyCity" value={fields.companyCity} />
         </div>
+      ) : isNL ? (
+        // NL always goes through the KVK register above — no manual-entry
+        // fallback. Submitting without picking a result fails companyName's
+        // required check server-side and bounces back with that error.
+        null
       ) : (
         <>
           <label className="flex flex-col gap-1.5 text-sm">
@@ -385,6 +402,19 @@ export default function CompanyForm({
       <button className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
         Continue
       </button>
+
+      {/* Only meaningful before the org actually exists: once created (or
+          joined), /onboarding/organisation's own guard just bounces past
+          it again since that fork is already resolved — so don't offer a
+          "go back and reconsider" that wouldn't actually undo anything. */}
+      {!organisationId && (
+        <Link
+          href="/onboarding/organisation"
+          className="self-start text-sm text-muted hover:underline"
+        >
+          ← Create a new organisation or join an existing one instead
+        </Link>
+      )}
     </form>
   );
 }

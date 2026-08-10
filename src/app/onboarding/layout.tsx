@@ -20,10 +20,13 @@ export default async function TeamOnboardingLayout({
   if (!user) redirect("/login");
 
   const status = await getOnboardingStatus(supabase, user.id);
+  // Keyed by ONBOARDING_STEPS' step.key, not by URL — "organisation" is
+  // the merged create-vs-join + company-details step, so it's only "done"
+  // once companyDone is (which also implies organisationDone: an org has
+  // to exist, created or joined, before it can have company info at all).
   const stepDone: Record<string, boolean> = {
     personal: status.personalDone,
-    organisation: status.organisationDone,
-    company: status.companyDone,
+    organisation: status.companyDone,
     subscription: status.subscriptionDone,
   };
 

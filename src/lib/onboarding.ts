@@ -1,16 +1,41 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 
-// Single source of truth for step order/labels — driving both the proxy's
-// redirect target and the sidebar in /onboarding/layout.tsx.
-export const ONBOARDING_STEPS = [
-  { path: "personal", label: "Personal info" },
-  { path: "organisation", label: "Organisation" },
-  { path: "company", label: "Company info" },
-  { path: "subscription", label: "Subscription" },
-] as const;
+// The actual URLs a user moves through, in order — driving
+// firstIncompleteStep()'s redirect target below. "organisation" and
+// "company" are two distinct pages (the create-vs-join fork, and — for
+// the create path — the company details form), so this stays
+// fine-grained even though the sidebar groups them into one visual step
+// (see ONBOARDING_STEPS below).
+export type OnboardingStepPath = "personal" | "organisation" | "company" | "subscription";
 
-export type OnboardingStepPath = (typeof ONBOARDING_STEPS)[number]["path"];
+// Sidebar-facing grouping — driving the step numbering/labels in
+// /onboarding/layout.tsx + onboarding-sidebar.tsx. "Organisation info"
+// covers three URLs (the create-vs-join fork, its join sub-page, and the
+// company form) as a single step: picking a side of that fork and, for
+// the create path, filling in company details are one conceptual task.
+export const ONBOARDING_STEPS = [
+  {
+    key: "personal",
+    label: "Personal info",
+    paths: ["personal"],
+    // Where the sidebar links a *done* (but not currently active) step —
+    // i.e. where "revisit/edit this" should land.
+    revisitPath: "personal",
+  },
+  {
+    key: "organisation",
+    label: "Organisation info",
+    paths: ["organisation", "organisation/join", "company"],
+    revisitPath: "company",
+  },
+  {
+    key: "subscription",
+    label: "Subscription",
+    paths: ["subscription"],
+    revisitPath: "subscription",
+  },
+] as const;
 
 export type OnboardingStatus = {
   personalDone: boolean;

@@ -22,13 +22,20 @@ export default function OnboardingSidebar({
       </h2>
       <ol className="flex flex-row gap-2 overflow-x-auto md:flex-col md:gap-1 md:overflow-visible">
         {steps.map((step, i) => {
-          const href = `/onboarding/${step.path}`;
-          const active = pathname === href;
-          const done = stepDone[step.path];
+          // A step can span several URLs (see ONBOARDING_STEPS) — active if
+          // the current page is any of them.
+          const active = (step.paths as readonly string[]).some(
+            (p) => pathname === `/onboarding/${p}`
+          );
+          const done = stepDone[step.key];
           // Reachable = already done (revisit/edit) or the current step.
           // Steps ahead of where the user actually is aren't links — typing
           // the URL directly still gets redirected back by the page itself.
           const reachable = done || active;
+          // While active, link to wherever the user already is (a no-op);
+          // once done-but-not-active, land on the step's canonical
+          // revisit/edit page rather than back at its first URL.
+          const href = active ? pathname : `/onboarding/${step.revisitPath}`;
 
           const content = (
             <div
@@ -46,7 +53,7 @@ export default function OnboardingSidebar({
           );
 
           return (
-            <li key={step.path} className="shrink-0 md:shrink md:w-full">
+            <li key={step.key} className="shrink-0 md:shrink md:w-full">
               {reachable ? (
                 <Link href={href} aria-current={active ? "step" : undefined}>
                   {content}

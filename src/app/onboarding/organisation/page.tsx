@@ -80,7 +80,7 @@ export default async function OrganisationChoiceStep() {
           Do you want to create a new organisation?
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 4 — every account belongs to an organisation. Start one,
+          Step 2 of 3 — every account belongs to an organisation. Start one,
           or join a teammate&apos;s.
         </p>
       </div>

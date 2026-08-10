@@ -29,11 +29,15 @@ export function CountrySelect({
   value,
   onChange,
   placeholder,
+  options = COUNTRIES,
 }: {
   name: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Defaults to every country — pass a subset (e.g. COMPANY_COUNTRIES) to
+   * restrict which ones this particular dropdown offers. */
+  options?: { code: string; name: string }[];
 }) {
   // <option> text can't be styled — a flag emoji inside it is stuck at the
   // same size as the country name next to it. To make the flag noticeably
@@ -62,7 +66,7 @@ export function CountrySelect({
             {placeholder}
           </option>
         )}
-        {COUNTRIES.map((c) => (
+        {options.map((c) => (
           <option key={c.code} value={c.code}>
             {c.name}
           </option>
