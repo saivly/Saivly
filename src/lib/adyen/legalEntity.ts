@@ -52,6 +52,40 @@ export async function createAdyenIndividual(
   });
 
   console.log(result);
-  
+
   return result.ok ? result.data.id : null;
+}
+
+type OnboardingLinkResponse = { url: string };
+
+/**
+ * Adyen-hosted onboarding page for a legal entity — this is where the
+ * shopper confirms/uploads identity documents and payout bank details.
+ * The returned URL expires after 4 minutes and works once, so call this
+ * right before redirecting, never ahead of time / cache it.
+ * https://docs.adyen.com/api-explorer/legalentity/latest/post/legalEntities/_id_/onboardingLinks
+ */
+export async function createAdyenOnboardingLink(
+  legalEntityId: string,
+  redirectUrl: string
+): Promise<string | null> {
+  const result = await adyenRequest<OnboardingLinkResponse>(
+    "legalEntity",
+    `/legalEntities/${legalEntityId}/onboardingLinks`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        redirectUrl,
+        settings: {
+          // Every legal entity this app creates is an individual (see
+          // createAdyenIndividual above) — skip Adyen's own "here's what
+          // you're about to do" intro screen since /onboarding/adyen
+          // already covers that before the shopper ever leaves our site.
+          hideOnboardingIntroductionIndividual: true,
+        },
+      }),
+    }
+  );
+
+  return result.ok ? result.data.url : null;
 }

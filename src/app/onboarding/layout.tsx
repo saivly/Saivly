@@ -27,6 +27,7 @@ export default async function TeamOnboardingLayout({
   const stepDone: Record<string, boolean> = {
     personal: status.personalDone,
     organisation: status.companyDone,
+    adyen: status.adyenDone,
     subscription: status.subscriptionDone,
   };
 

@@ -7,7 +7,8 @@
  * 0005_profiles_email.sql: profiles.email, trigger-synced from auth.users.
  * 0006_residential_province.sql: profiles.residential_province.
  * 0007_passkey_prompt.sql: profiles.passkey_prompt_seen_at.
- * 0008_join_organisation.sql: join_organisation() RPC.)
+ * 0008_join_organisation.sql: join_organisation() RPC.
+ * 0009_adyen_onboarding.sql: profiles.adyen_onboarding_completed_at.)
  * Once you have a live project, regenerate from the real schema with:
  *   npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
  */
@@ -32,6 +33,7 @@ export type Database = {
           nationality: string | null;
           personal_completed_at: string | null;
           adyen_legal_entity_id: string | null;
+          adyen_onboarding_completed_at: string | null;
           passkey_prompt_seen_at: string | null;
           created_at: string;
           updated_at: string;
@@ -52,6 +54,7 @@ export type Database = {
           nationality?: string | null;
           personal_completed_at?: string | null;
           adyen_legal_entity_id?: string | null;
+          adyen_onboarding_completed_at?: string | null;
           passkey_prompt_seen_at?: string | null;
         };
         Relationships: [];

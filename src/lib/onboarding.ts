@@ -7,7 +7,12 @@ import type { Database } from "@/types/database.types";
 // the create path — the company details form), so this stays
 // fine-grained even though the sidebar groups them into one visual step
 // (see ONBOARDING_STEPS below).
-export type OnboardingStepPath = "personal" | "organisation" | "company" | "subscription";
+export type OnboardingStepPath =
+  | "personal"
+  | "organisation"
+  | "company"
+  | "adyen"
+  | "subscription";
 
 // Sidebar-facing grouping — driving the step numbering/labels in
 // /onboarding/layout.tsx + onboarding-sidebar.tsx. "Organisation info"
@@ -30,6 +35,12 @@ export const ONBOARDING_STEPS = [
     revisitPath: "company",
   },
   {
+    key: "adyen",
+    label: "Adyen verification",
+    paths: ["adyen"],
+    revisitPath: "adyen",
+  },
+  {
     key: "subscription",
     label: "Subscription",
     paths: ["subscription"],
@@ -44,6 +55,10 @@ export type OnboardingStatus = {
   // row exists, regardless of which path put it there.
   organisationDone: boolean;
   companyDone: boolean;
+  // Went through the Adyen-hosted onboarding redirect and came back — see
+  // migration 0009. Not the same as Adyen having approved their KYC;
+  // that's a separate async outcome, not tracked here yet.
+  adyenDone: boolean;
   subscriptionDone: boolean;
   allDone: boolean;
 };
@@ -52,6 +67,7 @@ const ALL_DONE: OnboardingStatus = {
   personalDone: true,
   organisationDone: true,
   companyDone: true,
+  adyenDone: true,
   subscriptionDone: true,
   allDone: true,
 };
@@ -71,7 +87,7 @@ export async function getOnboardingStatus(
 ): Promise<OnboardingStatus> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("personal_completed_at, adyen_legal_entity_id")
+    .select("personal_completed_at, adyen_legal_entity_id, adyen_onboarding_completed_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -90,6 +106,7 @@ export async function getOnboardingStatus(
   const personalDone = Boolean(
     profile?.personal_completed_at && profile?.adyen_legal_entity_id
   );
+  const adyenDone = Boolean(profile?.adyen_onboarding_completed_at);
 
   const { data: membership, error: memberError } = await supabase
     .from("organisation_members")
@@ -117,6 +134,7 @@ export async function getOnboardingStatus(
       personalDone,
       organisationDone: false,
       companyDone: false,
+      adyenDone,
       subscriptionDone: false,
       allDone: false,
     };
@@ -139,18 +157,20 @@ export async function getOnboardingStatus(
     personalDone,
     organisationDone: true,
     companyDone,
+    adyenDone,
     subscriptionDone,
-    allDone: personalDone && companyDone && subscriptionDone,
+    allDone: personalDone && companyDone && adyenDone && subscriptionDone,
   };
 }
 
-/** First step the user hasn't finished yet, or null once all four are done. */
+/** First step the user hasn't finished yet, or null once every step is done. */
 export function firstIncompleteStep(
   status: OnboardingStatus
 ): OnboardingStepPath | null {
   if (!status.personalDone) return "personal";
   if (!status.organisationDone) return "organisation";
   if (!status.companyDone) return "company";
+  if (!status.adyenDone) return "adyen";
   if (!status.subscriptionDone) return "subscription";
   return null;
 }

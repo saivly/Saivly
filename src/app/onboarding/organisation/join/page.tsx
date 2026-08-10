@@ -31,7 +31,7 @@ export default async function JoinOrganisationStep({
           Join an existing organisation
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 3 — ask whoever set up your organisation for its exact
+          Step 2 of 4 — ask whoever set up your organisation for its exact
           name and ID. They can find the ID on their own company step.
         </p>
       </div>

@@ -49,7 +49,7 @@ export default async function CompanyInfoStep({
           Company information
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 3 — tell us about the business you&apos;re setting up.
+          Step 2 of 4 — tell us about the business you&apos;re setting up.
         </p>
       </div>
 

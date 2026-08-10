@@ -26,6 +26,7 @@ export default async function SubscriptionStep({
   const status = await getOnboardingStatus(supabase, user.id);
   if (!status.personalDone) redirect("/onboarding/personal");
   if (!status.companyDone) redirect("/onboarding/company");
+  if (!status.adyenDone) redirect("/onboarding/adyen");
 
   const { data: membership } = await supabase
     .from("organisation_members")
@@ -49,7 +50,7 @@ export default async function SubscriptionStep({
           Choose a plan
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 3 of 3 — you can change this later from your account settings.
+          Step 4 of 4 — you can change this later from your account settings.
         </p>
       </div>
 

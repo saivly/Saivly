@@ -15,6 +15,7 @@ export async function saveSubscription(formData: FormData) {
   const status = await getOnboardingStatus(supabase, user.id);
   if (!status.personalDone) redirect("/onboarding/personal");
   if (!status.companyDone) redirect("/onboarding/company");
+  if (!status.adyenDone) redirect("/onboarding/adyen");
 
   const { data: membership } = await supabase
     .from("organisation_members")

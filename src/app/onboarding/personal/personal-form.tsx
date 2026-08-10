@@ -104,9 +104,9 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
           placeholder="20"
           value={day}
           onChange={(e) => setDay(e.target.value.replace(/\D/g, ""))}
-          className={`${inputClasses} flex-1 text-center`}
+          className={`${inputClasses} flex-[2] text-center`}
         />
-        <div className="relative flex-1">
+        <div className="relative flex-[5]">
           <select
             required
             value={month}
@@ -132,7 +132,7 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
           placeholder="1993"
           value={year}
           onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))}
-          className={`${inputClasses} flex-1 text-center`}
+          className={`${inputClasses} flex-[3] text-center`}
         />
       </div>
       <input type="hidden" name="dateOfBirth" required value={isoValue} />

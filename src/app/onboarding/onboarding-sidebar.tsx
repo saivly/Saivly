@@ -18,7 +18,7 @@ export default function OnboardingSidebar({
   return (
     <nav className="shrink-0 md:w-56">
       <h2 className="mb-4 text-sm font-medium tracking-wide text-muted uppercase">
-        Setup
+        Onboarding
       </h2>
       <ol className="flex flex-row gap-2 overflow-x-auto md:flex-col md:gap-1 md:overflow-visible">
         {steps.map((step, i) => {

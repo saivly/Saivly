@@ -31,7 +31,7 @@ export default async function PersonalInfoStep({
           Personal information
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 1 of 3 — a few details we&apos;re required to collect about
+          Step 1 of 4 — a few details we&apos;re required to collect about
           you.
         </p>
       </div>

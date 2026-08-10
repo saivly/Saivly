@@ -138,5 +138,5 @@ export async function saveCompanyInfo(formData: FormData) {
     }
   }
 
-  redirect("/onboarding/subscription");
+  redirect("/onboarding/adyen");
 }
