@@ -1,9 +1,12 @@
 
-const KVK_TEST_BASE_URL = "https://api.kvk.nl/test/api";
-// const KVK_PROD_BASE_URL = "https://api.kvk.nl/api";
+
 
 function kvkConfig(): { apiKey: string; baseUrl: string } {
-  const apiKey: any = process.env.KVK_API_KEY;
+  const KVK_TEST_BASE_URL = "https://api.kvk.nl/test/api";
+  // const KVK_PROD_BASE_URL = "https://api.kvk.nl/api";
+
+  
+  const apiKey: any = process.env.KVK_TEST_API_KEY;
   return { apiKey: apiKey, baseUrl: KVK_TEST_BASE_URL };
 }
 
