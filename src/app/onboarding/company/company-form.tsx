@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
 import type { KvkSearchResult } from "@/lib/kvk";
-import { inputClasses, CountrySelect } from "../form-controls";
+import { inputClasses, CountrySelect, SelectChevron } from "../form-controls";
 import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/countries";
 
 type Existing = {
@@ -252,27 +252,29 @@ export default function CompanyForm({
           {kvkError && <p className="text-xs text-danger">{kvkError}</p>}
 
           {results && results.length > 0 && (
-            <ul className="flex flex-col gap-1">
-              {results.map((r) => (
-                <li key={r.kvkNumber}>
-                  <button
-                    type="button"
-                    onClick={() => pick(r.kvkNumber)}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-left text-sm hover:bg-surface"
-                  >
-                    <span className="min-w-0 truncate">
-                      {r.name}
-                      {r.city && (
-                        <span className="text-muted"> — {r.city}</span>
-                      )}
-                    </span>
-                    <span className="shrink-0 text-xs text-muted">
-                      {r.kvkNumber}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="relative">
+              <select
+                value=""
+                disabled={searching}
+                onChange={(e) => {
+                  if (e.target.value) pick(e.target.value);
+                }}
+                className={`${inputClasses} w-full appearance-none pr-8`}
+              >
+                <option value="" disabled>
+                  {results.length === 1
+                    ? "1 match — select it to continue"
+                    : `${results.length} matches — choose the right one`}
+                </option>
+                {results.map((r) => (
+                  <option key={r.kvkNumber} value={r.kvkNumber}>
+                    {r.name}
+                    {r.city ? ` — ${r.city}` : ""} ({r.kvkNumber})
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
           )}
         </div>
       )}

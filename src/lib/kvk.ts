@@ -1,33 +1,10 @@
-// Server-only client for the Dutch Chamber of Commerce (KVK) API —
-// used on the /onboarding company step to look up a Dutch business
-// by KVK number or trade name instead of having the user type it in by hand.
-//
-// Docs: https://developers.kvk.nl/documentation
-//
-// Auth is a flat `apikey` header, no OAuth/certificate needed.
-//   - Production: set KVK_API_KEY (request one at developers.kvk.nl —
-//     "aanvragen" an API key, free for the Zoeken + Basisprofiel APIs).
-//   - Local dev: if KVK_API_KEY is unset outside production, this module
-//     falls back to KVK's own published test key against their sandbox
-//     (fixed fictional dataset — e.g. KVK number 68750110 returns "Test BV
-//     Donald"). That fallback is intentionally disabled once
-//     NODE_ENV=production so a forgotten env var fails loudly instead of
-//     quietly serving fake companies.
-const KVK_TEST_API_KEY = "l7xx1f2691f2520d487b902f4e0b57a0b197";
+
 const KVK_TEST_BASE_URL = "https://api.kvk.nl/test/api";
-const KVK_PROD_BASE_URL = "https://api.kvk.nl/api";
+// const KVK_PROD_BASE_URL = "https://api.kvk.nl/api";
 
 function kvkConfig(): { apiKey: string; baseUrl: string } {
-  const apiKey = process.env.KVK_API_KEY;
-  if (apiKey) {
-    return { apiKey, baseUrl: process.env.KVK_API_BASE_URL ?? KVK_PROD_BASE_URL };
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "KVK_API_KEY is not set. Request a key at https://developers.kvk.nl and add it to your production environment."
-    );
-  }
-  return { apiKey: KVK_TEST_API_KEY, baseUrl: KVK_TEST_BASE_URL };
+  const apiKey: any = process.env.KVK_API_KEY;
+  return { apiKey: apiKey, baseUrl: KVK_TEST_BASE_URL };
 }
 
 export type KvkSearchResult = {
@@ -68,10 +45,6 @@ type KvkSbiActiviteit = {
   indHoofdactiviteit?: string; // "Ja" | "Nee"
 };
 
-// Confirmed against a live call to the sandbox (KVK number 68750110):
-// sbiActiviteiten sits at the root, rechtsvorm under _embedded.eigenaar —
-// both easy to guess wrong, so don't "simplify" this shape without
-// re-checking against the real API.
 type KvkBasisprofielResponse = {
   kvkNummer: string;
   naam: string;
@@ -94,10 +67,6 @@ type KvkBasisprofielResponse = {
   };
 };
 
-// Dutch "rechtsvorm" -> a friendlier English label. Ordered so multi-word,
-// more specific terms (e.g. "vereniging van eigenaars") are matched before
-// the generic term they contain ("vereniging") — .find() takes the first
-// hit, so order is load-bearing here.
 const LEGAL_FORM_TRANSLATIONS: [dutch: string, english: string][] = [
   ["vereniging van eigenaars", "Homeowners' Association (VvE)"],
   ["besloten vennootschap", "Private limited company (B.V.)"],
@@ -115,8 +84,6 @@ const LEGAL_FORM_TRANSLATIONS: [dutch: string, english: string][] = [
   ["rederij", "Shipping partnership (rederij)"],
 ];
 
-/** Best-effort Dutch -> English translation; falls back to the raw KVK
- * value verbatim for any rechtsvorm not in the table above. */
 export function translateLegalForm(rechtsvorm: string | null | undefined): string | null {
   if (!rechtsvorm) return null;
   const normalized = rechtsvorm.toLowerCase().trim();
@@ -131,9 +98,15 @@ export async function searchKvkCompanies(query: string): Promise<KvkSearchResult
 
   const { apiKey, baseUrl } = kvkConfig();
   const isNumeric = /^\d{8}$/.test(trimmed);
-  const params = new URLSearchParams(
-    isNumeric ? { kvkNummer: trimmed } : { naam: trimmed }
-  );
+  const params = new URLSearchParams({
+    ...(isNumeric ? { kvkNummer: trimmed } : { naam: trimmed }),
+    // A name is ambiguous by nature (that's the whole reason to search
+    // instead of typing the KVK number directly) — cap to a handful of
+    // candidates the user can actually scan in a dropdown, rather than
+    // the API's own default page size.
+    pagina: "1",
+    resultatenPerPagina: "5",
+  });
 
   const res = await fetch(`${baseUrl}/v2/zoeken?${params}`, {
     headers: { apikey: apiKey },
@@ -165,7 +138,7 @@ export async function searchKvkCompanies(query: string): Promise<KvkSearchResult
       type: r.type,
     });
   }
-  return results.slice(0, 10);
+  return results.slice(0, 5);
 }
 
 /** Fetch full details (name + address) for one company, by KVK number. */
