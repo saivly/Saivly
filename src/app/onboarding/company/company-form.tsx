@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
 import type { KvkSearchResult } from "@/lib/kvk";
-import { inputClasses, CountrySelect, SelectChevron } from "../form-controls";
+import { inputClasses, CountrySelect } from "../form-controls";
 import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/countries";
 
 type Existing = {
@@ -123,12 +123,21 @@ export default function CompanyForm({
   }, []);
 
   async function runSearch() {
-    if (!query.trim()) return;
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    // A KVK number identifies exactly one company — no point showing a
+    // picker with a single, foregone option. Go straight to it.
+    if (/^\d{8}$/.test(trimmed)) {
+      await pick(trimmed);
+      return;
+    }
+
     setSearching(true);
     setKvkError(null);
     setResults(null);
     try {
-      const found = await searchKvk(query);
+      const found = await searchKvk(trimmed);
       setResults(found);
       if (found.length === 0) {
         setKvkError("No matches. Try the KVK number instead.");
@@ -213,7 +222,7 @@ export default function CompanyForm({
         />
       </label>
 
-      {isNL && !hasSelectedCompany && (
+      {isNL && (
         <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3">
           <p className="text-xs font-medium tracking-wide text-muted uppercase">
             Find your company in the KVK register
@@ -251,30 +260,32 @@ export default function CompanyForm({
 
           {kvkError && <p className="text-xs text-danger">{kvkError}</p>}
 
+          {/* All options shown directly, not tucked behind a closed
+              dropdown — a name is ambiguous, so the whole point is letting
+              you scan and compare them in one glance. */}
           {results && results.length > 0 && (
-            <div className="relative">
-              <select
-                value=""
-                disabled={searching}
-                onChange={(e) => {
-                  if (e.target.value) pick(e.target.value);
-                }}
-                className={`${inputClasses} w-full appearance-none pr-8`}
-              >
-                <option value="" disabled>
-                  {results.length === 1
-                    ? "1 match — select it to continue"
-                    : `${results.length} matches — choose the right one`}
-                </option>
-                {results.map((r) => (
-                  <option key={r.kvkNumber} value={r.kvkNumber}>
-                    {r.name}
-                    {r.city ? ` — ${r.city}` : ""} ({r.kvkNumber})
-                  </option>
-                ))}
-              </select>
-              <SelectChevron />
-            </div>
+            <ul className="flex flex-col gap-1">
+              {results.map((r) => (
+                <li key={r.kvkNumber}>
+                  <button
+                    type="button"
+                    onClick={() => pick(r.kvkNumber)}
+                    disabled={searching}
+                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-left text-sm hover:bg-surface disabled:opacity-50"
+                  >
+                    <span className="min-w-0 truncate">
+                      {r.name}
+                      {r.city && (
+                        <span className="text-muted"> — {r.city}</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted">
+                      {r.kvkNumber}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}
@@ -401,7 +412,14 @@ export default function CompanyForm({
         </>
       )}
 
-      <button className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
+      {/* NL has no manual-entry fallback (see the null branch above), so
+          there's nothing to submit until a KVK search result is actually
+          picked — fade the button out rather than leaving it looking
+          clickable ahead of that. */}
+      <button
+        disabled={isNL && !hasSelectedCompany}
+        className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+      >
         Continue
       </button>
 

@@ -5,7 +5,6 @@ function kvkConfig(): { apiKey: string; baseUrl: string } {
   const KVK_TEST_BASE_URL = "https://api.kvk.nl/test/api";
   // const KVK_PROD_BASE_URL = "https://api.kvk.nl/api";
 
-  
   const apiKey: any = process.env.KVK_TEST_API_KEY;
   return { apiKey: apiKey, baseUrl: KVK_TEST_BASE_URL };
 }
@@ -23,10 +22,7 @@ export type KvkCompanyDetails = {
   street: string | null;
   postalCode: string | null;
   city: string | null;
-  /** English where a known Dutch rechtsvorm is recognized (see
-   * translateLegalForm below), otherwise the raw KVK value verbatim. */
   legalForm: string | null;
-  /** Description of the primary SBI activity (indHoofdactiviteit "Ja"). */
   mainActivity: string | null;
 };
 
@@ -103,18 +99,12 @@ export async function searchKvkCompanies(query: string): Promise<KvkSearchResult
   const isNumeric = /^\d{8}$/.test(trimmed);
   const params = new URLSearchParams({
     ...(isNumeric ? { kvkNummer: trimmed } : { naam: trimmed }),
-    // A name is ambiguous by nature (that's the whole reason to search
-    // instead of typing the KVK number directly) — cap to a handful of
-    // candidates the user can actually scan in a dropdown, rather than
-    // the API's own default page size.
     pagina: "1",
     resultatenPerPagina: "5",
   });
 
   const res = await fetch(`${baseUrl}/v2/zoeken?${params}`, {
     headers: { apikey: apiKey },
-    // Search results change rarely enough that a short cache is fine, and
-    // meaningfully cuts latency when a user re-types/corrects a query.
     next: { revalidate: 60 },
   });
 
@@ -124,10 +114,9 @@ export async function searchKvkCompanies(query: string): Promise<KvkSearchResult
   }
 
   const data = (await res.json()) as KvkZoekenResponse;
-  // Dedupe by kvkNummer — a search can return multiple vestigingen
-  // (branches) per company; we only need one entry to pick from.
   const seen = new Set<string>();
   const results: KvkSearchResult[] = [];
+
   for (const r of data.resultaten ?? []) {
     if (seen.has(r.kvkNummer)) continue;
     seen.add(r.kvkNummer);
