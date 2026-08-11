@@ -412,7 +412,7 @@ export default function CompanyForm({
           href="/onboarding/organisation"
           className="self-start text-sm text-muted hover:underline"
         >
-          ← Create a new organisation or join an existing one instead
+          ← Back
         </Link>
       )}
     </form>

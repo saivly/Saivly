@@ -81,7 +81,7 @@ export default async function OrganisationChoiceStep() {
         </h1>
         <p className="mt-2 text-sm text-muted">
           Step 2 of 4 — every account belongs to an organisation. Start one,
-          or join a teammate&apos;s.
+          or join an existing one!
         </p>
       </div>
 
