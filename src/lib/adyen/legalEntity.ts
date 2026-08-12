@@ -165,22 +165,22 @@ export async function createAdyenOrganization(
           postalCode: input.registeredAddress.postalCode,
           country: input.registeredAddress.country,
         },
-        ...(organizationType === "associationIncorporated"
+        // `vatAbsenceReason` (used here for associationIncorporated orgs,
+        // which are VAT-exempt by category) doesn't exist on this field in
+        // LEM v4 — it was a v1–v3 property, dropped from TaxInformation in
+        // v4 (confirmed against the v4 API Explorer schema: country,
+        // number, numberAbsent [Australia-only], type — no reason field).
+        // Adyen rejects it with a 422 "unknown fields: [vatAbsenceReason]".
+        // RSIN is the only tax id v4 actually has a slot for here, so just
+        // report it when known and omit taxInformation otherwise — same
+        // treatment regardless of organization type.
+        ...(input.rsin
           ? {
               taxInformation: [
-                {
-                  country: input.countryOfGoverningLaw,
-                  vatAbsenceReason: "industryExemption",
-                },
+                { country: input.countryOfGoverningLaw, number: input.rsin },
               ],
             }
-          : input.rsin
-            ? {
-                taxInformation: [
-                  { country: input.countryOfGoverningLaw, number: input.rsin },
-                ],
-              }
-            : {}),
+          : {}),
       },
       // One association per selected relationship type — jobTitle mirrors
       // that association's own type (see AdyenOrganizationInput above),

@@ -104,14 +104,22 @@ function DateOfBirthFields({
   // Same messages as personalInfoSchema (lib/zod.ts) — kept in sync by
   // hand since this half of the validation never leaves the browser (the
   // hidden input below is what the server actually re-validates).
+  //
+  // Only judge date-shape/range once all three pieces are filled in
+  // (isComplete) — day/month/year are three separate inputs sharing one
+  // `touched` flag, so blurring day alone (month/year still empty) must
+  // not read as "this date doesn't exist" when there's no date yet to
+  // judge, just an incomplete one.
   let error: string | null = null;
   if (touched) {
     if (allEmpty) error = "Date of birth is required.";
-    else if (!isRealDate) error = "That date doesn't exist.";
-    else if (new Date(isoValue) > new Date())
-      error = "Date of birth can’t be in the future.";
-    else if (!isAdult(isoValue))
-      error = "You must be at least 18 years old.";
+    else if (isComplete) {
+      if (!isRealDate) error = "That date doesn't exist.";
+      else if (new Date(isoValue) > new Date())
+        error = "Date of birth can’t be in the future.";
+      else if (!isAdult(isoValue))
+        error = "You must be at least 18 years old.";
+    }
   }
 
   useEffect(() => {
@@ -130,7 +138,6 @@ function DateOfBirthFields({
           inputMode="numeric"
           maxLength={2}
           required
-          placeholder="20"
           value={day}
           onChange={(e) => setDay(e.target.value.replace(/\D/g, ""))}
           onBlur={() => setTouched(true)}
@@ -162,7 +169,6 @@ function DateOfBirthFields({
           inputMode="numeric"
           maxLength={4}
           required
-          placeholder="1993"
           value={year}
           onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))}
           onBlur={() => setTouched(true)}
@@ -206,10 +212,24 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
   const [province, setProvince] = useState(existing.residentialProvince);
   const [looking, setLooking] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  // Whether the address lookup has resolved (found or not) for the *current*
+  // postcode + house number. Gates manual editing of street/city for NL:
+  // those fields are meant to come from the lookup, not be typed ahead of
+  // it. Starts true when editing an already-saved NL address (nothing to
+  // re-check yet), false otherwise — including on first arrival, where
+  // houseNumber is always blank (see below) so no lookup has run yet.
+  const [lookupDone, setLookupDone] = useState(
+    Boolean(existing.residentialStreet)
+  );
   const [dateOfBirth, setDateOfBirth] = useState("");
 
   const isNL = country === "NL";
   const provinceOptions = provincesForCountry(country);
+  // Street/city are populated by the postcode+house-number lookup for NL —
+  // lock them (readOnly, not disabled, so the value still submits) until
+  // that lookup has actually resolved, so there's no window to type a
+  // street that was never checked against the postcode.
+  const addressLocked = isNL && !lookupDone;
 
   // Live client-side mirror of personalInfoSchema, same pattern as
   // login/auth-panels.tsx and ../company/company-form.tsx: re-parse on
@@ -243,6 +263,22 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
     // the country changes, so don't carry either over silently.
     setProvince("");
     setHouseNumber("");
+    // Force a fresh lookup for the newly-selected country's address —
+    // only matters when landing on NL (addressLocked is always false
+    // otherwise), harmless either way.
+    setLookupDone(false);
+  }
+
+  function handlePostalCodeChange(value: string) {
+    setPostalCode(value);
+    // The street/city currently shown (if any) belong to the *previous*
+    // postcode — re-lock until a lookup confirms the new one.
+    if (isNL) setLookupDone(false);
+  }
+
+  function handleHouseNumberChange(value: string) {
+    setHouseNumber(value);
+    if (isNL) setLookupDone(false);
   }
 
   async function runLookup(nextPostalCode: string, nextHouseNumber: string) {
@@ -258,6 +294,8 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
         setCity(found.city);
         if (found.province) setProvince(found.province);
       } else {
+        // Not found — unlock street/city for manual entry rather than
+        // leaving the user stuck with no way to proceed.
         setLookupError(
           "No address found for that postcode + house number — fill it in by hand."
         );
@@ -268,6 +306,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
       );
     } finally {
       setLooking(false);
+      setLookupDone(true);
     }
   }
 
@@ -325,7 +364,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
               type="text"
               required
               value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
+              onChange={(e) => handlePostalCodeChange(e.target.value)}
               onBlur={() => {
                 touch("residentialPostalCode");
                 runLookup(postalCode, houseNumber);
@@ -347,7 +386,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
               type="text"
               required
               value={houseNumber}
-              onChange={(e) => setHouseNumber(e.target.value)}
+              onChange={(e) => handleHouseNumberChange(e.target.value)}
               onBlur={() => {
                 touch("residentialStreet");
                 runLookup(postalCode, houseNumber);
@@ -375,13 +414,23 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
           value={street}
           onChange={(e) => setStreet(e.target.value)}
           onBlur={() => touch("residentialStreet")}
+          readOnly={addressLocked}
           aria-invalid={!!fieldError("residentialStreet")}
-          className={inputClasses}
+          className={`${inputClasses} ${addressLocked ? "cursor-not-allowed opacity-60" : ""}`}
         />
-        {/* House number (NL) feeds the same submitted field — only show
-            the message once here, not duplicated under both boxes. */}
-        {fieldError("residentialStreet") && (
-          <span className="text-xs text-danger">{fieldError("residentialStreet")}</span>
+        {/* Locked (NL, no confirmed lookup yet): explain why instead of the
+            generic "required" error — this isn't a validation failure, it's
+            waiting on the postcode + house number lookup above. */}
+        {addressLocked ? (
+          <span className="text-xs text-muted">
+            Fill in the postcode and house number above — we&apos;ll look this up for you.
+          </span>
+        ) : (
+          // House number (NL) feeds the same submitted field — only show
+          // the message once here, not duplicated under both boxes.
+          fieldError("residentialStreet") && (
+            <span className="text-xs text-danger">{fieldError("residentialStreet")}</span>
+          )
         )}
       </label>
       {/* The backend only has a single street column, and the house number
@@ -406,10 +455,11 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
             value={city}
             onChange={(e) => setCity(e.target.value)}
             onBlur={() => touch("residentialCity")}
+            readOnly={addressLocked}
             aria-invalid={!!fieldError("residentialCity")}
-            className={inputClasses}
+            className={`${inputClasses} ${addressLocked ? "cursor-not-allowed opacity-60" : ""}`}
           />
-          {fieldError("residentialCity") && (
+          {!addressLocked && fieldError("residentialCity") && (
             <span className="text-xs text-danger">{fieldError("residentialCity")}</span>
           )}
         </label>
