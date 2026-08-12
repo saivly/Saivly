@@ -1,6 +1,6 @@
 "use client";
 
-import { COUNTRIES, countryFlag } from "@/lib/countries";
+import { COUNTRIES, countryFlag } from "@/lib/onboarding/countries";
 
 // Shared between every /onboarding form (personal, company, …) so their
 // inputs/selects look identical.

@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { flattenError } from "zod";
 import Link from "next/link";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
-import type { KvkSearchResult } from "@/lib/kvk";
+import type { KvkSearchResult } from "@/lib/onboarding/kvk";
 import { inputClasses, CountrySelect, SelectChevron } from "../form-controls";
-import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/countries";
+import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/onboarding/countries";
+import { companyInfoSchema } from "@/lib/zod";
 
 type Existing = {
   companyCountry: string;
@@ -71,6 +74,25 @@ const RELATIONSHIP_OPTIONS = [
   { value: "uboThroughControl", label: "Ultimate beneficial owner — through control (e.g. voting rights)" },
 ] as const;
 
+// useFormStatus only reports the enclosing <form>'s real pending state
+// when called from a component distinct from the one rendering the
+// <form> itself (see the same pattern in login/auth-panels.tsx) — hence
+// pulling this out instead of inlining the button below. This click
+// kicks off the whole organisation-legal-entity/account-holder/balance-
+// account chain in Adyen (saveCompanyInfo), so a second click landing
+// before the first finishes could very well mint duplicates there.
+function ContinueButton({ disabledUntilReady }: { disabledUntilReady: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      disabled={pending || disabledUntilReady}
+      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+    >
+      {pending ? "Saving…" : "Continue"}
+    </button>
+  );
+}
+
 export default function CompanyForm({
   existing,
   usingTestData,
@@ -95,7 +117,6 @@ export default function CompanyForm({
   // revisit/edit, so there's no prior answer to prefill here.
   const [relationshipType, setRelationshipType] = useState("");
   const [jobTitle, setJobTitle] = useState("");
-  const [copied, setCopied] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -120,6 +141,31 @@ export default function CompanyForm({
   // A company has been chosen (fresh pick, or an already-saved one on
   // revisit) — show the read-only summary instead of raw editable fields.
   const hasSelectedCompany = isNL && Boolean(fields.kvkNumber);
+
+  // Live client-side mirror of companyInfoSchema (lib/zod.ts — same schema
+  // saveCompanyInfo re-validates with server-side), same pattern as
+  // login/auth-panels.tsx: re-parse on every change, but only surface a
+  // field's error once the user has actually left it, so errors don't
+  // flash red before they've had a chance to type anything.
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  function touch(field: string) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
+  const parsed = companyInfoSchema.safeParse({
+    companyCountry: country,
+    relationshipType,
+    jobTitle,
+    kvkNumber: fields.kvkNumber,
+    companyName: fields.companyName,
+    companyStreet: fields.companyStreet,
+    companyPostalCode: fields.companyPostalCode,
+    companyCity: fields.companyCity,
+  });
+  const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
+  function fieldError(field: keyof typeof fieldErrors) {
+    if (!touched[field]) return undefined;
+    return fieldErrors[field]?.[0];
+  }
 
   useEffect(() => {
     if (!existing.kvkNumber) return;
@@ -200,32 +246,6 @@ export default function CompanyForm({
 
   return (
     <form action={saveCompanyInfo} className="flex flex-col gap-4">
-      {organisationId && (
-        <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-panel p-3 text-sm">
-          <p className="font-medium">Invite a teammate</p>
-          <p className="text-muted">
-            Share this organisation&apos;s exact name and ID — they can join
-            it from their own onboarding instead of creating a new one.
-          </p>
-          <div className="mt-1 flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-md bg-surface px-2 py-1.5 text-xs">
-              {organisationId}
-            </code>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(organisationId);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              className="shrink-0 rounded-md border border-line px-2.5 py-1.5 text-xs font-medium hover:bg-surface"
-            >
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-        </div>
-      )}
-
       <label className="flex flex-col gap-1.5 text-sm">
         Country of business
         <CountrySelect
@@ -244,6 +264,8 @@ export default function CompanyForm({
             required
             value={relationshipType}
             onChange={(e) => setRelationshipType(e.target.value)}
+            onBlur={() => touch("relationshipType")}
+            aria-invalid={!!fieldError("relationshipType")}
             className={`${inputClasses} w-full appearance-none pr-8`}
           >
             <option value="" disabled>
@@ -257,6 +279,9 @@ export default function CompanyForm({
           </select>
           <SelectChevron />
         </div>
+        {fieldError("relationshipType") && (
+          <span className="text-xs text-danger">{fieldError("relationshipType")}</span>
+        )}
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
@@ -268,8 +293,13 @@ export default function CompanyForm({
           placeholder="e.g. Managing Director"
           value={jobTitle}
           onChange={(e) => setJobTitle(e.target.value)}
+          onBlur={() => touch("jobTitle")}
+          aria-invalid={!!fieldError("jobTitle")}
           className={inputClasses}
         />
+        {fieldError("jobTitle") && (
+          <span className="text-xs text-danger">{fieldError("jobTitle")}</span>
+        )}
       </label>
 
       {isNL && (
@@ -419,8 +449,13 @@ export default function CompanyForm({
               required
               value={fields.companyName}
               onChange={(e) => updateField("companyName", e.target.value)}
+              onBlur={() => touch("companyName")}
+              aria-invalid={!!fieldError("companyName")}
               className={inputClasses}
             />
+            {fieldError("companyName") && (
+              <span className="text-xs text-danger">{fieldError("companyName")}</span>
+            )}
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
@@ -431,8 +466,13 @@ export default function CompanyForm({
               required
               value={fields.companyStreet}
               onChange={(e) => updateField("companyStreet", e.target.value)}
+              onBlur={() => touch("companyStreet")}
+              aria-invalid={!!fieldError("companyStreet")}
               className={inputClasses}
             />
+            {fieldError("companyStreet") && (
+              <span className="text-xs text-danger">{fieldError("companyStreet")}</span>
+            )}
           </label>
 
           <div className="grid grid-cols-2 gap-3">
@@ -444,8 +484,13 @@ export default function CompanyForm({
                 required
                 value={fields.companyPostalCode}
                 onChange={(e) => updateField("companyPostalCode", e.target.value)}
+                onBlur={() => touch("companyPostalCode")}
+                aria-invalid={!!fieldError("companyPostalCode")}
                 className={inputClasses}
               />
+              {fieldError("companyPostalCode") && (
+                <span className="text-xs text-danger">{fieldError("companyPostalCode")}</span>
+              )}
             </label>
             <label className="flex flex-col gap-1.5 text-sm">
               City
@@ -455,8 +500,13 @@ export default function CompanyForm({
                 required
                 value={fields.companyCity}
                 onChange={(e) => updateField("companyCity", e.target.value)}
+                onBlur={() => touch("companyCity")}
+                aria-invalid={!!fieldError("companyCity")}
                 className={inputClasses}
               />
+              {fieldError("companyCity") && (
+                <span className="text-xs text-danger">{fieldError("companyCity")}</span>
+              )}
             </label>
           </div>
         </>
@@ -465,13 +515,9 @@ export default function CompanyForm({
       {/* NL has no manual-entry fallback (see the null branch above), so
           there's nothing to submit until a KVK search result is actually
           picked — fade the button out rather than leaving it looking
-          clickable ahead of that. */}
-      <button
-        disabled={isNL && !hasSelectedCompany}
-        className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-      >
-        Continue
-      </button>
+          clickable ahead of that (and again while the submission itself
+          is in flight, see ContinueButton). */}
+      <ContinueButton disabledUntilReady={isNL && !hasSelectedCompany} />
 
       {/* Only meaningful before the org actually exists: once created (or
           joined), /onboarding/organisation's own guard just bounces past

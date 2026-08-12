@@ -1,7 +1,7 @@
 import * as zod from 'zod';
 import { PASSWORD_REGEX, PASSWORD_HINT } from './password-policy';
-import { COUNTRY_CODES, COMPANY_COUNTRY_CODES } from './countries';
-import { provincesForCountry } from './provinces';
+import { COUNTRY_CODES, COMPANY_COUNTRY_CODES } from './onboarding/countries';
+import { provincesForCountry } from './onboarding/provinces';
 
 export const signupSchema = zod.object({
     firstname: zod.string().min(1, { message: 'First name is required' }),

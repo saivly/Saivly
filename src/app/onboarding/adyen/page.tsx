@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding";
+import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding/onboarding";
 import { startAdyenVerification } from "./actions";
+import ContinueButton from "./continue-button";
 
 function ShieldIcon({ className }: { className?: string }) {
   return (
@@ -100,9 +101,7 @@ export default async function AdyenVerificationStep({
       </p>
 
       <form action={startAdyenVerification}>
-        <button className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:w-auto">
-          Continue to Adyen
-        </button>
+        <ContinueButton />
       </form>
     </div>
   );

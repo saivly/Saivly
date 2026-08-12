@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getOnboardingStatus, ONBOARDING_STEPS } from "@/lib/onboarding";
+import { getOnboardingStatus, ONBOARDING_STEPS } from "@/lib/onboarding/onboarding";
 import OnboardingSidebar from "./onboarding-sidebar";
 
 // stepDone (and the sidebar checkmarks it drives) is per-user, per-request

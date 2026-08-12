@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding";
+import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding/onboarding";
 
 /** /onboarding has no content of its own — bounce to the right step. */
 export default async function TeamOnboardingIndex() {

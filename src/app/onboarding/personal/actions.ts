@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { personalInfoSchema } from "@/lib/zod";
 import { createAdyenIndividual } from "@/lib/adyen/legalEntity";
-import { lookupDutchAddress, type DutchAddress } from "@/lib/pdok";
-import { isProvinceCode } from "@/lib/provinces";
+import { lookupDutchAddress, type DutchAddress } from "@/lib/onboarding/pdok";
+import { isProvinceCode } from "@/lib/onboarding/provinces";
 
 /**
  * Thin RPC wrapper so the client form (personal-form.tsx) can call PDOK

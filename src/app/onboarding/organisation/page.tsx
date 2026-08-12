@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding";
+import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding/onboarding";
 
 function BuildingIcon({ className }: { className?: string }) {
   return (

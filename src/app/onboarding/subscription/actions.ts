@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getOnboardingStatus } from "@/lib/onboarding";
+import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import { subscriptionSchema } from "@/lib/zod";
 
 export async function saveSubscription(formData: FormData) {

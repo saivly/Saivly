@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ONBOARDING_STEPS } from "@/lib/onboarding";
+import type { ONBOARDING_STEPS } from "@/lib/onboarding/onboarding";
 
 type Step = (typeof ONBOARDING_STEPS)[number];
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { phonePlaceholder } from "@/lib/countries";
-import { provincesForCountry } from "@/lib/provinces";
+import { phonePlaceholder } from "@/lib/onboarding/countries";
+import { provincesForCountry } from "@/lib/onboarding/provinces";
 import { savePersonalInfo, lookupResidentialAddress } from "./actions";
 import { inputClasses, SelectChevron, CountrySelect } from "../form-controls";
 

@@ -2,14 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getOnboardingStatus } from "@/lib/onboarding";
+import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import { companyInfoSchema } from "@/lib/zod";
 import {
   searchKvkCompanies,
   getKvkCompanyDetails,
   type KvkSearchResult,
   type KvkCompanyDetails,
-} from "@/lib/kvk";
+} from "@/lib/onboarding/kvk";
 import { createAdyenOrganization, type AdyenEntityRelationshipType } from "@/lib/adyen/legalEntity";
 import { createAdyenAccountHolder, createAdyenBalanceAccount } from "@/lib/adyen/balancePlatform";
 

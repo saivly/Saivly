@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database.types";
-import { getOnboardingStatus, hasSeenPasskeyPrompt } from "@/lib/onboarding";
+import { getOnboardingStatus, hasSeenPasskeyPrompt } from "@/lib/onboarding/onboarding";
 
 /**
  * Session refresher + route guard used by the root proxy (middleware).

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getOnboardingStatus } from "@/lib/onboarding";
+import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import { PLAN_OPTIONS } from "@/lib/zod";
 import { saveSubscription } from "./actions";
 
