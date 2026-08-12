@@ -76,6 +76,7 @@ async function ensureAdyenOrganisationReady(
     postalCode: string;
     city: string;
     relationshipType: AdyenEntityRelationshipType;
+    jobTitle: string;
   }
 ): Promise<AdyenChainResult> {
   const { data: org, error: readError } = await supabase
@@ -106,6 +107,7 @@ async function ensureAdyenOrganisationReady(
       },
       associatedIndividualLegalEntityId: individualLegalEntityId,
       relationshipType: company.relationshipType,
+      jobTitle: company.jobTitle,
     });
     if (!organizationLegalEntityId) {
       return {
@@ -178,6 +180,7 @@ export async function saveCompanyInfo(formData: FormData) {
   const parsed = companyInfoSchema.safeParse({
     companyCountry: (formData.get("companyCountry") as string) ?? "",
     relationshipType: (formData.get("relationshipType") as string) ?? "",
+    jobTitle: ((formData.get("jobTitle") as string) ?? "").trim(),
     kvkNumber: ((formData.get("kvkNumber") as string) ?? "").trim(),
     companyName: ((formData.get("companyName") as string) ?? "").trim(),
     companyStreet: ((formData.get("companyStreet") as string) ?? "").trim(),
@@ -195,6 +198,7 @@ export async function saveCompanyInfo(formData: FormData) {
   const {
     companyCountry,
     relationshipType,
+    jobTitle,
     kvkNumber,
     companyName,
     companyStreet,
@@ -313,6 +317,7 @@ export async function saveCompanyInfo(formData: FormData) {
         postalCode: companyPostalCode,
         city: companyCity,
         relationshipType,
+        jobTitle,
       }
     );
 

@@ -91,11 +91,12 @@ export default function CompanyForm({
       ? existing.companyCountry
       : "NL"
   );
-  // Not persisted anywhere (organisations has no column for it) — it only
-  // ever feeds entityAssociations on the org's *first* Adyen setup (see
-  // saveCompanyInfo), which is skipped entirely on a later revisit/edit,
-  // so there's no prior answer to prefill here.
+  // Neither persisted anywhere (organisations has no columns for them) —
+  // they only ever feed entityAssociations on the org's *first* Adyen
+  // setup (see saveCompanyInfo), which is skipped entirely on a later
+  // revisit/edit, so there's no prior answer to prefill here.
   const [relationshipType, setRelationshipType] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [copied, setCopied] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
@@ -258,6 +259,19 @@ export default function CompanyForm({
           </select>
           <SelectChevron />
         </div>
+      </label>
+
+      <label className="flex flex-col gap-1.5 text-sm">
+        Job title
+        <input
+          type="text"
+          name="jobTitle"
+          required
+          placeholder="e.g. Managing Director"
+          value={jobTitle}
+          onChange={(e) => setJobTitle(e.target.value)}
+          className={inputClasses}
+        />
       </label>
 
       {isNL && (

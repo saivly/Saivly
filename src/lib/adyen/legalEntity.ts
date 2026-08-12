@@ -134,6 +134,9 @@ export type AdyenOrganizationInput = {
   /** How that individual relates to the org — collected on the company
    * step (see company-form.tsx's "Your relationship to the company"). */
   relationshipType: AdyenEntityRelationshipType;
+  /** entityAssociations[].jobTitle — collected alongside relationshipType
+   * on the same step ("Job title"). */
+  jobTitle: string;
 };
 
 type OrganizationLegalEntityResponse = { id: string };
@@ -165,7 +168,11 @@ export async function createAdyenOrganization(
         },
       },
       entityAssociations: [
-        { legalEntityId: input.associatedIndividualLegalEntityId, type: input.relationshipType },
+        {
+          legalEntityId: input.associatedIndividualLegalEntityId,
+          type: input.relationshipType,
+          jobTitle: input.jobTitle,
+        },
       ],
     }),
   });
