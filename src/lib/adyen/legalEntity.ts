@@ -152,16 +152,19 @@ type OrganizationLegalEntityResponse = { id: string };
 export async function createAdyenOrganization(
   input: AdyenOrganizationInput
 ): Promise<string | null> {
+  const organizationType = mapRechtsvormToOrganizationType(input.rechtsvorm);
+
   const result = await adyenRequest<OrganizationLegalEntityResponse>("legalEntity", "/legalEntities", {
     method: "POST",
     body: JSON.stringify({
       type: "organization",
       organization: {
         legalName: input.legalName,
+        doingBusinessAsAbsent: true,
         countryOfGoverningLaw: input.countryOfGoverningLaw,
         registrationNumber: input.registrationNumber || undefined,
         dateOfIncorporation: input.dateOfIncorporation || undefined,
-        type: mapRechtsvormToOrganizationType(input.rechtsvorm),
+        type: organizationType,
         registeredAddress: {
           street: input.registeredAddress.street,
           city: input.registeredAddress.city,
@@ -171,13 +174,27 @@ export async function createAdyenOrganization(
         // "type" is only needed to disambiguate countries with more than
         // one tax id (Singapore, Sweden, UK, US) — the Netherlands has
         // just the one (RSIN), so it's omitted here.
-        ...(input.rsin
+        //
+        // Home associations (VvE) and other associations have no tax
+        // information to report even when KVK does supply an RSIN for
+        // them, so associationIncorporated always reports the absence
+        // reason instead of a tax number, taking priority over input.rsin.
+        ...(organizationType === "associationIncorporated"
           ? {
               taxInformation: [
-                { country: input.countryOfGoverningLaw, number: input.rsin },
+                {
+                  country: input.countryOfGoverningLaw,
+                  vatAbsenceReason: "industryExemption",
+                },
               ],
             }
-          : {}),
+          : input.rsin
+            ? {
+                taxInformation: [
+                  { country: input.countryOfGoverningLaw, number: input.rsin },
+                ],
+              }
+            : {}),
       },
       // One association per selected relationship type — jobTitle mirrors
       // that association's own type (see AdyenOrganizationInput above),
@@ -197,7 +214,10 @@ type OnboardingLinkResponse = { url: string };
 
 /**
  * Adyen-hosted onboarding page for a legal entity — this is where the
- * shopper confirms/uploads identity documents and payout bank details.
+ * shopper confirms/uploads identity documents (bank account collection is
+ * suppressed for the organisation's account holder — see
+ * sendToTransferInstrument in balancePlatform.ts; that capability, not
+ * anything in this "settings" object, is what actually controls it).
  * The returned URL expires after 4 minutes and works once, so call this
  * right before redirecting, never ahead of time / cache it.
  * https://docs.adyen.com/api-explorer/legalentity/latest/post/legalEntities/_id_/onboardingLinks
@@ -213,9 +233,6 @@ export async function createAdyenOnboardingLink(
       method: "POST",
       body: JSON.stringify({
         redirectUrl,
-        settings: {
-          transferInstrumentLimit: 0,
-        },
       }),
     }
   );
