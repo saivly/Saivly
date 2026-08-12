@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -20,6 +21,13 @@ export async function GET(request: Request) {
       .from("profiles")
       .update({ adyen_onboarding_completed_at: new Date().toISOString() })
       .eq("id", user.id);
+    // This particular hop is already a real HTTP redirect (Adyen's own
+    // server sends the browser here, then this route redirects onward),
+    // so the client router cache staleness that affects the other steps'
+    // server-action redirects isn't really in play — still invalidated
+    // for consistency, in case a client-side <Link> back into
+    // /onboarding is reachable afterward.
+    revalidatePath("/onboarding", "layout");
   }
 
   return NextResponse.redirect(new URL("/onboarding", request.url));

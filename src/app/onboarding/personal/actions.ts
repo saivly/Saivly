@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { personalInfoSchema } from "@/lib/zod";
 import { createAdyenIndividual } from "@/lib/adyen/legalEntity";
@@ -151,5 +152,13 @@ export async function savePersonalInfo(formData: FormData) {
     .update({ personal_completed_at: new Date().toISOString() })
     .eq("id", user.id);
 
+  // The onboarding layout (sidebar checkmarks) reads fresh status on every
+  // server render, but Next's client-side router cache can still serve an
+  // earlier render of that shared layout after this redirect — explicitly
+  // invalidate it so "Personal info" shows done immediately, not on some
+  // later unrelated navigation. Same call belongs in every other step's
+  // completion action (company, adyen, join, subscription) for the same
+  // reason.
+  revalidatePath("/onboarding", "layout");
   redirect("/onboarding/organisation");
 }

@@ -116,7 +116,6 @@ export default function CompanyForm({
   // setup (see saveCompanyInfo), which is skipped entirely on a later
   // revisit/edit, so there's no prior answer to prefill here.
   const [relationshipType, setRelationshipType] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -154,7 +153,6 @@ export default function CompanyForm({
   const parsed = companyInfoSchema.safeParse({
     companyCountry: country,
     relationshipType,
-    jobTitle,
     kvkNumber: fields.kvkNumber,
     companyName: fields.companyName,
     companyStreet: fields.companyStreet,
@@ -281,24 +279,6 @@ export default function CompanyForm({
         </div>
         {fieldError("relationshipType") && (
           <span className="text-xs text-danger">{fieldError("relationshipType")}</span>
-        )}
-      </label>
-
-      <label className="flex flex-col gap-1.5 text-sm">
-        Job title
-        <input
-          type="text"
-          name="jobTitle"
-          required
-          placeholder="e.g. Managing Director"
-          value={jobTitle}
-          onChange={(e) => setJobTitle(e.target.value)}
-          onBlur={() => touch("jobTitle")}
-          aria-invalid={!!fieldError("jobTitle")}
-          className={inputClasses}
-        />
-        {fieldError("jobTitle") && (
-          <span className="text-xs text-danger">{fieldError("jobTitle")}</span>
         )}
       </label>
 

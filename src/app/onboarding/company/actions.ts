@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import { companyInfoSchema } from "@/lib/zod";
@@ -184,7 +185,6 @@ export async function saveCompanyInfo(formData: FormData) {
   const parsed = companyInfoSchema.safeParse({
     companyCountry: (formData.get("companyCountry") as string) ?? "",
     relationshipType: (formData.get("relationshipType") as string) ?? "",
-    jobTitle: ((formData.get("jobTitle") as string) ?? "").trim(),
     kvkNumber: ((formData.get("kvkNumber") as string) ?? "").trim(),
     companyName: ((formData.get("companyName") as string) ?? "").trim(),
     companyStreet: ((formData.get("companyStreet") as string) ?? "").trim(),
@@ -202,7 +202,6 @@ export async function saveCompanyInfo(formData: FormData) {
   const {
     companyCountry,
     relationshipType,
-    jobTitle,
     kvkNumber,
     companyName,
     companyStreet,
@@ -327,7 +326,10 @@ export async function saveCompanyInfo(formData: FormData) {
         postalCode: companyPostalCode,
         city: companyCity,
         relationshipType,
-        jobTitle,
+        // Adyen still wants a jobTitle per entityAssociation, but we no
+        // longer ask for one separately — the relationship type itself
+        // (e.g. "signatory") stands in for it.
+        jobTitle: relationshipType,
         rsin,
         dateOfIncorporation,
       }
@@ -338,5 +340,8 @@ export async function saveCompanyInfo(formData: FormData) {
     }
   }
 
+  // See personal/actions.ts for why this is needed on every step's
+  // completion redirect, not just this one.
+  revalidatePath("/onboarding", "layout");
   redirect("/onboarding/adyen");
 }

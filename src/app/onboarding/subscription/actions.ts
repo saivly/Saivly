@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import { subscriptionSchema } from "@/lib/zod";
@@ -51,6 +52,10 @@ export async function saveSubscription(formData: FormData) {
   }
 
   // Last step — onboarding is now fully complete, proxy sends anything
-  // under /onboarding to /dashboard from here on anyway.
+  // under /onboarding to /dashboard from here on anyway. Still
+  // invalidate the layout (see personal/actions.ts) in case a cached
+  // /onboarding/* render is reachable via the client router (e.g. back
+  // button) before the proxy's own redirect kicks in on the next request.
+  revalidatePath("/onboarding", "layout");
   redirect("/dashboard");
 }

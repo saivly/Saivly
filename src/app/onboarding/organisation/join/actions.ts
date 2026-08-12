@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import {
@@ -67,5 +68,8 @@ export async function joinOrganisation(formData: FormData) {
     );
   }
 
+  // See personal/actions.ts for why this is needed on every step's
+  // completion redirect, not just this one.
+  revalidatePath("/onboarding", "layout");
   redirect("/onboarding");
 }

@@ -103,8 +103,6 @@ export const companyInfoSchema = zod
         relationshipType: zod.enum(ENTITY_RELATIONSHIP_TYPES, {
             message: 'Select your relationship to the company.',
         }),
-        // entityAssociations[].jobTitle on the Adyen side.
-        jobTitle: zod.string().trim().min(1, { message: 'Job title is required.' }),
         kvkNumber: zod
             .string()
             .trim()

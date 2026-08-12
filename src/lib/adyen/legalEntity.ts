@@ -133,8 +133,9 @@ export type AdyenOrganizationInput = {
   /** How that individual relates to the org — collected on the company
    * step (see company-form.tsx's "Your relationship to the company"). */
   relationshipType: AdyenEntityRelationshipType;
-  /** entityAssociations[].jobTitle — collected alongside relationshipType
-   * on the same step ("Job title"). */
+  /** entityAssociations[].jobTitle — Adyen requires one per association,
+   * but the company step doesn't collect a separate job title from the
+   * user, so callers just pass relationshipType through as this too. */
   jobTitle: string;
   /** KVK's RSIN (Dutch tax/legal-entity id, distinct from the KVK
    * registration number) — null outside NL, where there's no RSIN. */
