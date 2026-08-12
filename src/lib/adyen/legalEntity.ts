@@ -107,14 +107,13 @@ export function mapRechtsvormToOrganizationType(
 // values for organizations: director, signatory, trustOwnership,
 // uboThroughOwnership, uboThroughControl, ultimateParentCompany, or
 // immediateParentCompany." ultimateParentCompany/immediateParentCompany
-// are deliberately left out here: those describe the *associated* entity
-// itself being a parent company, which can't apply to
-// associatedIndividualLegalEntityId — that's always an individual (the
-// shopper), never another organization.
+// are left out here: those describe the *associated* entity itself being
+// a parent company, which can't apply to associatedIndividualLegalEntityId
+// — that's always an individual (the shopper), never another
+// organization. director/trustOwnership are also excluded, by request —
+// only the options below are offered on the company step.
 export type AdyenEntityRelationshipType =
-  | "director"
   | "signatory"
-  | "trustOwnership"
   | "uboThroughOwnership"
   | "uboThroughControl";
 

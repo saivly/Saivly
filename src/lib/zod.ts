@@ -92,9 +92,7 @@ export const personalInfoSchema = zod
 // keep both in sync. Restricted to the subset Adyen allows when the
 // *current* legal entity is type "organization" (ours always is).
 const ENTITY_RELATIONSHIP_TYPES = [
-    'director',
     'signatory',
-    'trustOwnership',
     'uboThroughOwnership',
     'uboThroughControl',
 ] as const;

@@ -66,11 +66,9 @@ function BriefcaseIcon({ className }: { className?: string }) {
 // Mirrors AdyenEntityRelationshipType (src/lib/adyen/legalEntity.ts) and
 // ENTITY_RELATIONSHIP_TYPES (src/lib/zod.ts) — keep all three in sync.
 const RELATIONSHIP_OPTIONS = [
-  { value: "director", label: "Director" },
   { value: "signatory", label: "Signatory — authorized to sign on the company's behalf" },
   { value: "uboThroughOwnership", label: "Ultimate beneficial owner — through ownership (25%+ shares)" },
   { value: "uboThroughControl", label: "Ultimate beneficial owner — through control (e.g. voting rights)" },
-  { value: "trustOwnership", label: "Owner via a trust" },
 ] as const;
 
 export default function CompanyForm({

@@ -3,6 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus, ONBOARDING_STEPS } from "@/lib/onboarding";
 import OnboardingSidebar from "./onboarding-sidebar";
 
+// stepDone (and the sidebar checkmarks it drives) is per-user, per-request
+// state — the App Router's client-side navigation cache would otherwise
+// happily reuse an earlier render of this layout (e.g. from before a step
+// completed) when the user clicks between steps with <Link>. Force this
+// whole segment to always re-render server-side instead of ever serving
+// a cached copy.
+export const dynamic = "force-dynamic";
+
 /**
  * Shared shell for every /onboarding/* step: sidebar step-tracker +
  * content area. The proxy already keeps unauthenticated/aal1/fully-onboarded
