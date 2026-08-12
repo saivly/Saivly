@@ -88,13 +88,17 @@ export const personalInfoSchema = zod
         }
     });
 
-// Mirrors AdyenEntityRelationshipType in src/lib/adyen/legalEntity.ts —
-// keep both in sync. Restricted to the subset Adyen allows when the
-// *current* legal entity is type "organization" (ours always is).
+// The first three mirror AdyenEntityRelationshipType in
+// src/lib/adyen/legalEntity.ts — keep both in sync. Restricted to the
+// subset Adyen allows when the *current* legal entity is type
+// "organization" (ours always is). 'all' isn't a real Adyen value — it's
+// a form-only sentinel meaning "send all three", expanded back out to
+// the real values in company/actions.ts before it ever reaches Adyen.
 const ENTITY_RELATIONSHIP_TYPES = [
     'signatory',
     'uboThroughOwnership',
     'uboThroughControl',
+    'all',
 ] as const;
 
 export const companyInfoSchema = zod

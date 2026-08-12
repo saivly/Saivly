@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding/onboarding";
@@ -30,9 +31,12 @@ const EXPECTATIONS = [
 
 /**
  * "Adyen verification" step — between organisation/company info and
- * subscription (see ONBOARDING_STEPS in @/lib/onboarding). Purely
- * explanatory + a Continue button: the actual work happens on Adyen's
+ * subscription (see ONBOARDING_STEPS in @/lib/onboarding). Not done yet:
+ * explanatory + a Continue button, the actual work happens on Adyen's
  * hosted page, which startAdyenVerification() (actions.ts) redirects to.
+ * Already done: a completed-state view instead of redirecting away, since
+ * step 4's sidebar entry links back here and that link needs somewhere
+ * to land.
  */
 export default async function AdyenVerificationStep({
   searchParams,
@@ -50,10 +54,53 @@ export default async function AdyenVerificationStep({
   const status = await getOnboardingStatus(supabase, user.id);
   if (!status.personalDone) redirect("/onboarding/personal");
   if (!status.companyDone) redirect("/onboarding/company");
-  // Nothing to revisit here (no persisted form) — once done, move on.
+
+  // Once done, this used to bounce straight past — but step 4
+  // (subscription) links back here via the sidebar, and that link has to
+  // actually land somewhere: show a completed state instead of
+  // redirecting away from it every time.
   if (status.adyenDone) {
     const next = firstIncompleteStep(status);
-    redirect(next ? `/onboarding/${next}` : "/dashboard");
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Verify your identity with Adyen
+          </h1>
+          <p className="mt-2 text-sm text-muted">
+            Step 3 of 4 — you&apos;ve completed this step.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-panel p-5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
+            <CheckIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="font-semibold">You&apos;re verified with Adyen</p>
+            <p className="mt-1 text-sm text-muted">
+              Your organisation went through Adyen&apos;s hosted verification.
+              If Adyen needs anything else from you, they&apos;ll ask —
+              otherwise there&apos;s nothing more to do here.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <form action={startAdyenVerification}>
+            <button className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent-soft">
+              Review with Adyen again
+            </button>
+          </form>
+          <Link
+            href={next ? `/onboarding/${next}` : "/dashboard"}
+            className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Continue
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (

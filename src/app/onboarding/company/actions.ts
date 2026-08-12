@@ -55,6 +55,22 @@ async function getOwnOrganisationId(
 
 type AdyenChainResult = { ok: true } | { ok: false; error: string };
 
+// "all" is a form-only sentinel (see ENTITY_RELATIONSHIP_TYPES in
+// lib/zod.ts) — companyInfoSchema accepts it as a valid relationshipType
+// value, but Adyen has no such value, so it's expanded back out into the
+// three real ones here, right before it reaches createAdyenOrganization.
+const ALL_RELATIONSHIP_TYPES: AdyenEntityRelationshipType[] = [
+  "signatory",
+  "uboThroughOwnership",
+  "uboThroughControl",
+];
+
+function expandRelationshipTypes(value: string): AdyenEntityRelationshipType[] {
+  return value === "all"
+    ? ALL_RELATIONSHIP_TYPES
+    : [value as AdyenEntityRelationshipType];
+}
+
 /**
  * Organisation legal entity -> account holder -> balance account, in
  * that order, with each id persisted the moment it's created — not
@@ -76,8 +92,7 @@ async function ensureAdyenOrganisationReady(
     street: string;
     postalCode: string;
     city: string;
-    relationshipType: AdyenEntityRelationshipType;
-    jobTitle: string;
+    relationshipTypes: AdyenEntityRelationshipType[];
     rsin: string | null;
     dateOfIncorporation: string | null;
   }
@@ -109,8 +124,7 @@ async function ensureAdyenOrganisationReady(
         country: company.country,
       },
       associatedIndividualLegalEntityId: individualLegalEntityId,
-      relationshipType: company.relationshipType,
-      jobTitle: company.jobTitle,
+      relationshipTypes: company.relationshipTypes,
       rsin: company.rsin,
       dateOfIncorporation: company.dateOfIncorporation,
     });
@@ -325,11 +339,11 @@ export async function saveCompanyInfo(formData: FormData) {
         street: companyStreet,
         postalCode: companyPostalCode,
         city: companyCity,
-        relationshipType,
-        // Adyen still wants a jobTitle per entityAssociation, but we no
-        // longer ask for one separately — the relationship type itself
-        // (e.g. "signatory") stands in for it.
-        jobTitle: relationshipType,
+        // "all" expands to all three real Adyen values — one
+        // entityAssociation gets created per entry (see
+        // createAdyenOrganization), each with its own type standing in
+        // for its own jobTitle too.
+        relationshipTypes: expandRelationshipTypes(relationshipType),
         rsin,
         dateOfIncorporation,
       }

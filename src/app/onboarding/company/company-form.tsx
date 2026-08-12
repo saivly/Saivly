@@ -72,6 +72,7 @@ const RELATIONSHIP_OPTIONS = [
   { value: "signatory", label: "Signatory — authorized to sign on the company's behalf" },
   { value: "uboThroughOwnership", label: "Ultimate beneficial owner — through ownership (25%+ shares)" },
   { value: "uboThroughControl", label: "Ultimate beneficial owner — through control (e.g. voting rights)" },
+  { value: "all", label: "All of the above" },
 ] as const;
 
 // useFormStatus only reports the enclosing <form>'s real pending state

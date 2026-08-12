@@ -127,12 +127,12 @@ export type AdyenOrganizationInput = {
   /** The shopper's own individual legal entity (personal step). */
   associatedIndividualLegalEntityId: string;
   /** How that individual relates to the org — collected on the company
-   * step (see company-form.tsx's "Your relationship to the company"). */
-  relationshipType: AdyenEntityRelationshipType;
-  /** entityAssociations[].jobTitle — Adyen requires one per association,
-   * but the company step doesn't collect a separate job title from the
-   * user, so callers just pass relationshipType through as this too. */
-  jobTitle: string;
+   * step ("Your relationship to the company"). Usually one value, but the
+   * form also offers "All of the above", which the caller expands into
+   * this whole array (see expandRelationshipTypes in ../company/actions.ts)
+   * — one entityAssociation gets created per entry, all pointing at the
+   * same individual. */
+  relationshipTypes: AdyenEntityRelationshipType[];
   /** KVK's RSIN (Dutch tax/legal-entity id, distinct from the KVK
    * registration number) — null outside NL, where there's no RSIN. */
   rsin: string | null;
@@ -179,13 +179,14 @@ export async function createAdyenOrganization(
             }
           : {}),
       },
-      entityAssociations: [
-        {
-          legalEntityId: input.associatedIndividualLegalEntityId,
-          type: input.relationshipType,
-          jobTitle: input.jobTitle,
-        },
-      ],
+      // One association per selected relationship type — jobTitle mirrors
+      // that association's own type (see AdyenOrganizationInput above),
+      // not a single value shared across all of them.
+      entityAssociations: input.relationshipTypes.map((type) => ({
+        legalEntityId: input.associatedIndividualLegalEntityId,
+        type,
+        jobTitle: type,
+      })),
     }),
   });
 
