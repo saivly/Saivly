@@ -10,7 +10,7 @@ import {
   type KvkSearchResult,
   type KvkCompanyDetails,
 } from "@/lib/kvk";
-import { createAdyenOrganization } from "@/lib/adyen/legalEntity";
+import { createAdyenOrganization, type AdyenEntityRelationshipType } from "@/lib/adyen/legalEntity";
 import { createAdyenAccountHolder, createAdyenBalanceAccount } from "@/lib/adyen/balancePlatform";
 
 /**
@@ -75,6 +75,7 @@ async function ensureAdyenOrganisationReady(
     street: string;
     postalCode: string;
     city: string;
+    relationshipType: AdyenEntityRelationshipType;
   }
 ): Promise<AdyenChainResult> {
   const { data: org, error: readError } = await supabase
@@ -104,6 +105,7 @@ async function ensureAdyenOrganisationReady(
         country: company.country,
       },
       associatedIndividualLegalEntityId: individualLegalEntityId,
+      relationshipType: company.relationshipType,
     });
     if (!organizationLegalEntityId) {
       return {
@@ -175,6 +177,7 @@ export async function saveCompanyInfo(formData: FormData) {
 
   const parsed = companyInfoSchema.safeParse({
     companyCountry: (formData.get("companyCountry") as string) ?? "",
+    relationshipType: (formData.get("relationshipType") as string) ?? "",
     kvkNumber: ((formData.get("kvkNumber") as string) ?? "").trim(),
     companyName: ((formData.get("companyName") as string) ?? "").trim(),
     companyStreet: ((formData.get("companyStreet") as string) ?? "").trim(),
@@ -191,6 +194,7 @@ export async function saveCompanyInfo(formData: FormData) {
 
   const {
     companyCountry,
+    relationshipType,
     kvkNumber,
     companyName,
     companyStreet,
@@ -308,6 +312,7 @@ export async function saveCompanyInfo(formData: FormData) {
         street: companyStreet,
         postalCode: companyPostalCode,
         city: companyCity,
+        relationshipType,
       }
     );
 

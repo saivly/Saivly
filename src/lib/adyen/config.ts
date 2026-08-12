@@ -31,10 +31,6 @@ const ADYEN_SERVICES: Record<AdyenServiceName, AdyenServiceDef> = {
   // transfers: { apiKeyEnv: "ADYEN_TRANSFERS_API_KEY", ... },
 };
 
-// Not a secret — the balance platform your account holders belong to
-// (set in the Adyen Customer Area). Only required if your API credentials
-// span multiple balance platforms; see createAccountHolder() in
-// balancePlatform.ts.
 export const ADYEN_BALANCE_PLATFORM_NAME = process.env.ADYEN_BALANCE_PLATFORM_NAME;
 
 export type AdyenConfig = { apiKey: string; baseUrl: string };

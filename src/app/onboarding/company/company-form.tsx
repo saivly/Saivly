@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
 import type { KvkSearchResult } from "@/lib/kvk";
-import { inputClasses, CountrySelect } from "../form-controls";
+import { inputClasses, CountrySelect, SelectChevron } from "../form-controls";
 import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/countries";
 
 type Existing = {
@@ -63,6 +63,16 @@ function BriefcaseIcon({ className }: { className?: string }) {
   );
 }
 
+// Mirrors AdyenEntityRelationshipType (src/lib/adyen/legalEntity.ts) and
+// ENTITY_RELATIONSHIP_TYPES (src/lib/zod.ts) — keep all three in sync.
+const RELATIONSHIP_OPTIONS = [
+  { value: "director", label: "Director" },
+  { value: "signatory", label: "Signatory — authorized to sign on the company's behalf" },
+  { value: "uboThroughOwnership", label: "Ultimate beneficial owner — through ownership (25%+ shares)" },
+  { value: "uboThroughControl", label: "Ultimate beneficial owner — through control (e.g. voting rights)" },
+  { value: "trustOwnership", label: "Owner via a trust" },
+] as const;
+
 export default function CompanyForm({
   existing,
   usingTestData,
@@ -81,6 +91,11 @@ export default function CompanyForm({
       ? existing.companyCountry
       : "NL"
   );
+  // Not persisted anywhere (organisations has no column for it) — it only
+  // ever feeds entityAssociations on the org's *first* Adyen setup (see
+  // saveCompanyInfo), which is skipped entirely on a later revisit/edit,
+  // so there's no prior answer to prefill here.
+  const [relationshipType, setRelationshipType] = useState("");
   const [copied, setCopied] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
@@ -220,6 +235,29 @@ export default function CompanyForm({
           onChange={setCountry}
           options={COMPANY_COUNTRIES}
         />
+      </label>
+
+      <label className="flex flex-col gap-1.5 text-sm">
+        Your relationship to the company
+        <div className="relative">
+          <select
+            name="relationshipType"
+            required
+            value={relationshipType}
+            onChange={(e) => setRelationshipType(e.target.value)}
+            className={`${inputClasses} w-full appearance-none pr-8`}
+          >
+            <option value="" disabled>
+              Select…
+            </option>
+            {RELATIONSHIP_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
       </label>
 
       {isNL && (

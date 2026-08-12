@@ -101,6 +101,23 @@ export function mapRechtsvormToOrganizationType(
   return match ? match[1] : "privateCompany";
 }
 
+// entityAssociations[].type, restricted to the subset valid when the
+// *current* legal entity (the one this array lives on) is type
+// "organization" — confirmed against the v4 field description: "Possible
+// values for organizations: director, signatory, trustOwnership,
+// uboThroughOwnership, uboThroughControl, ultimateParentCompany, or
+// immediateParentCompany." ultimateParentCompany/immediateParentCompany
+// are deliberately left out here: those describe the *associated* entity
+// itself being a parent company, which can't apply to
+// associatedIndividualLegalEntityId — that's always an individual (the
+// shopper), never another organization.
+export type AdyenEntityRelationshipType =
+  | "director"
+  | "signatory"
+  | "trustOwnership"
+  | "uboThroughOwnership"
+  | "uboThroughControl";
+
 export type AdyenOrganizationInput = {
   legalName: string; // KVK statutaireNaam, or the manually-entered company name outside NL
   rechtsvorm: string | null; // raw KVK rechtsvorm — null outside NL, mapped above
@@ -112,9 +129,11 @@ export type AdyenOrganizationInput = {
     postalCode: string;
     country: string; // ISO 3166-1 alpha-2
   };
-  /** The shopper's own individual legal entity (personal step) — linked
-   * as both signatory and UBO-through-ownership. */
+  /** The shopper's own individual legal entity (personal step). */
   associatedIndividualLegalEntityId: string;
+  /** How that individual relates to the org — collected on the company
+   * step (see company-form.tsx's "Your relationship to the company"). */
+  relationshipType: AdyenEntityRelationshipType;
 };
 
 type OrganizationLegalEntityResponse = { id: string };
@@ -146,8 +165,7 @@ export async function createAdyenOrganization(
         },
       },
       entityAssociations: [
-        { legalEntityId: input.associatedIndividualLegalEntityId, type: "signatory" },
-        { legalEntityId: input.associatedIndividualLegalEntityId, type: "uboThroughOwnership" },
+        { legalEntityId: input.associatedIndividualLegalEntityId, type: input.relationshipType },
       ],
     }),
   });

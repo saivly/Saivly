@@ -88,9 +88,23 @@ export const personalInfoSchema = zod
         }
     });
 
+// Mirrors AdyenEntityRelationshipType in src/lib/adyen/legalEntity.ts —
+// keep both in sync. Restricted to the subset Adyen allows when the
+// *current* legal entity is type "organization" (ours always is).
+const ENTITY_RELATIONSHIP_TYPES = [
+    'director',
+    'signatory',
+    'trustOwnership',
+    'uboThroughOwnership',
+    'uboThroughControl',
+] as const;
+
 export const companyInfoSchema = zod
     .object({
         companyCountry: companyCountryCode,
+        relationshipType: zod.enum(ENTITY_RELATIONSHIP_TYPES, {
+            message: 'Select your relationship to the company.',
+        }),
         kvkNumber: zod
             .string()
             .trim()
