@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { flattenError } from "zod";
 import { phonePlaceholder } from "@/lib/onboarding/countries";
 import { provincesForCountry } from "@/lib/onboarding/provinces";
 import { savePersonalInfo, lookupResidentialAddress } from "./actions";
 import { inputClasses, SelectChevron, CountrySelect } from "../form-controls";
+import { personalInfoSchema } from "@/lib/zod";
 
 type Existing = {
   dateOfBirth: string;
@@ -34,12 +37,29 @@ const MONTHS = [
   "December",
 ];
 
+function isAdult(iso: string): boolean {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return false;
+  const eighteenYearsAgo = new Date();
+  eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+  return date <= eighteenYearsAgo;
+}
+
 /** Day/month/year is split into three fields — day and year as free text
  * (so no browser spin buttons), month as a dropdown of names — rather than
  * a native `type="date"` input, whose picker UI and formatting vary across
  * browsers/locales. The three pieces are recombined into a single ISO
- * `YYYY-MM-DD` string for submission via a hidden input. */
-function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
+ * `YYYY-MM-DD` string, reported to the parent (for the Continue button's
+ * validity gate) via onValidityChange rather than read back out of the
+ * hidden input, since the parent needs to know *before* a submit attempt.
+ */
+function DateOfBirthFields({
+  defaultValue,
+  onValidityChange,
+}: {
+  defaultValue: string;
+  onValidityChange: (isoValue: string) => void;
+}) {
   const [initialYear = "", initialMonth = "", initialDay = ""] = (
     defaultValue || ""
   ).split("-");
@@ -49,22 +69,23 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
     initialMonth ? String(Number(initialMonth)) : ""
   );
   const [year, setYear] = useState(initialYear);
+  const [touched, setTouched] = useState(false);
 
   const dayNum = Number(day);
   const monthNum = Number(month);
   const yearNum = Number(year);
-  const isValid =
+  const allEmpty = day === "" && month === "" && year === "";
+  const isComplete =
     day !== "" &&
     month !== "" &&
     year.length === 4 &&
     dayNum >= 1 &&
     dayNum <= 31 &&
     monthNum >= 1 &&
-    monthNum <= 12 &&
-    yearNum >= 1900;
+    monthNum <= 12;
   // Roundtrip through Date to catch out-of-range days (e.g. 31 Feb).
   const isRealDate =
-    isValid &&
+    isComplete &&
     (() => {
       const d = new Date(yearNum, monthNum - 1, dayNum);
       return (
@@ -80,23 +101,31 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
       ).padStart(2, "0")}`
     : "";
 
-  // All three sub-fields carry `required` for the empty case, but an
-  // impossible combination (31 February) leaves them all filled while
-  // isoValue is still "" — so surface that on the day field via the
-  // constraint-validation API rather than letting it submit silently.
-  const dayRef = useRef<HTMLInputElement>(null);
+  // Same messages as personalInfoSchema (lib/zod.ts) — kept in sync by
+  // hand since this half of the validation never leaves the browser (the
+  // hidden input below is what the server actually re-validates).
+  let error: string | null = null;
+  if (touched) {
+    if (allEmpty) error = "Date of birth is required.";
+    else if (!isRealDate) error = "That date doesn't exist.";
+    else if (new Date(isoValue) > new Date())
+      error = "Date of birth can’t be in the future.";
+    else if (!isAdult(isoValue))
+      error = "You must be at least 18 years old.";
+  }
+
   useEffect(() => {
-    dayRef.current?.setCustomValidity(
-      isValid && !isRealDate ? "That date doesn't exist." : ""
-    );
-  }, [isValid, isRealDate]);
+    onValidityChange(isoValue);
+    // onValidityChange is a fresh closure every render (it reads other
+    // form state) — only isoValue itself should re-trigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isoValue]);
 
   return (
     <div className="flex flex-col gap-1.5 text-sm">
       Date of birth
       <div className="flex gap-3">
         <input
-          ref={dayRef}
           type="text"
           inputMode="numeric"
           maxLength={2}
@@ -104,6 +133,8 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
           placeholder="20"
           value={day}
           onChange={(e) => setDay(e.target.value.replace(/\D/g, ""))}
+          onBlur={() => setTouched(true)}
+          aria-invalid={!!error}
           className={`${inputClasses} flex-[2] text-center`}
         />
         <div className="relative flex-[5]">
@@ -111,6 +142,8 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
             required
             value={month}
             onChange={(e) => setMonth(e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={!!error}
             className={`${inputClasses} w-full appearance-none pr-8`}
           >
             <option value="" disabled>
@@ -132,11 +165,30 @@ function DateOfBirthFields({ defaultValue }: { defaultValue: string }) {
           placeholder="1993"
           value={year}
           onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))}
+          onBlur={() => setTouched(true)}
+          aria-invalid={!!error}
           className={`${inputClasses} flex-[3] text-center`}
         />
       </div>
-      <input type="hidden" name="dateOfBirth" required value={isoValue} />
+      {error && <span className="text-xs text-danger">{error}</span>}
+      <input type="hidden" name="dateOfBirth" value={isoValue} />
     </div>
+  );
+}
+
+// useFormStatus only reports the enclosing <form>'s real pending state
+// when called from a component distinct from the one rendering the
+// <form> itself (see the same pattern in login/auth-panels.tsx and
+// ../company/company-form.tsx).
+function ContinueButton({ formValid }: { formValid: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      disabled={pending || !formValid}
+      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+    >
+      {pending ? "Saving…" : "Continue"}
+    </button>
   );
 }
 
@@ -146,6 +198,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
   // matches it, and it means this select (like the one above) always shows
   // a flag instead of sitting on the blank "Select…" placeholder.
   const [nationality, setNationality] = useState(existing.nationality || country);
+  const [phoneNumber, setPhoneNumber] = useState(existing.phoneNumber);
   const [postalCode, setPostalCode] = useState(existing.residentialPostalCode);
   const [houseNumber, setHouseNumber] = useState("");
   const [street, setStreet] = useState(existing.residentialStreet);
@@ -153,9 +206,35 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
   const [province, setProvince] = useState(existing.residentialProvince);
   const [looking, setLooking] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [dateOfBirth, setDateOfBirth] = useState("");
 
   const isNL = country === "NL";
   const provinceOptions = provincesForCountry(country);
+
+  // Live client-side mirror of personalInfoSchema, same pattern as
+  // login/auth-panels.tsx and ../company/company-form.tsx: re-parse on
+  // every change, but only surface a field's error once the user has
+  // actually left it, so errors don't flash red before they've had a
+  // chance to type anything.
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  function touch(field: string) {
+    setTouched((t) => ({ ...t, [field]: true }));
+  }
+  const parsed = personalInfoSchema.safeParse({
+    dateOfBirth,
+    phoneNumber,
+    residentialStreet: [street, houseNumber].filter(Boolean).join(" "),
+    residentialCity: city,
+    residentialProvince: province,
+    residentialPostalCode: postalCode,
+    residentialCountry: country,
+    nationality,
+  });
+  const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
+  function fieldError(field: keyof typeof fieldErrors) {
+    if (!touched[field]) return undefined;
+    return fieldErrors[field]?.[0];
+  }
 
   function handleCountryChange(next: string) {
     setCountry(next);
@@ -194,7 +273,10 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
   return (
     <form action={savePersonalInfo} className="flex flex-col gap-4">
-      <DateOfBirthFields defaultValue={existing.dateOfBirth} />
+      <DateOfBirthFields
+        defaultValue={existing.dateOfBirth}
+        onValidityChange={setDateOfBirth}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5 text-sm">
@@ -224,9 +306,15 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
           required
           autoComplete="tel"
           placeholder={phonePlaceholder(country)}
-          defaultValue={existing.phoneNumber}
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          onBlur={() => touch("phoneNumber")}
+          aria-invalid={!!fieldError("phoneNumber")}
           className={inputClasses}
         />
+        {fieldError("phoneNumber") && (
+          <span className="text-xs text-danger">{fieldError("phoneNumber")}</span>
+        )}
       </label>
 
       {isNL && (
@@ -238,11 +326,20 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
               required
               value={postalCode}
               onChange={(e) => setPostalCode(e.target.value)}
-              onBlur={() => runLookup(postalCode, houseNumber)}
+              onBlur={() => {
+                touch("residentialPostalCode");
+                runLookup(postalCode, houseNumber);
+              }}
+              aria-invalid={!!fieldError("residentialPostalCode")}
               autoComplete="postal-code"
               placeholder="1234 AB"
               className={inputClasses}
             />
+            {fieldError("residentialPostalCode") && (
+              <span className="text-xs text-danger">
+                {fieldError("residentialPostalCode")}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
             House number
@@ -251,7 +348,11 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
               required
               value={houseNumber}
               onChange={(e) => setHouseNumber(e.target.value)}
-              onBlur={() => runLookup(postalCode, houseNumber)}
+              onBlur={() => {
+                touch("residentialStreet");
+                runLookup(postalCode, houseNumber);
+              }}
+              aria-invalid={!!fieldError("residentialStreet")}
               placeholder="12 or 41-2"
               className={inputClasses}
             />
@@ -273,8 +374,15 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
           autoComplete="street-address"
           value={street}
           onChange={(e) => setStreet(e.target.value)}
+          onBlur={() => touch("residentialStreet")}
+          aria-invalid={!!fieldError("residentialStreet")}
           className={inputClasses}
         />
+        {/* House number (NL) feeds the same submitted field — only show
+            the message once here, not duplicated under both boxes. */}
+        {fieldError("residentialStreet") && (
+          <span className="text-xs text-danger">{fieldError("residentialStreet")}</span>
+        )}
       </label>
       {/* The backend only has a single street column, and the house number
           field above (NL only) is what actually collects the number — so
@@ -297,8 +405,13 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
             autoComplete="address-level2"
             value={city}
             onChange={(e) => setCity(e.target.value)}
+            onBlur={() => touch("residentialCity")}
+            aria-invalid={!!fieldError("residentialCity")}
             className={inputClasses}
           />
+          {fieldError("residentialCity") && (
+            <span className="text-xs text-danger">{fieldError("residentialCity")}</span>
+          )}
         </label>
 
         <label className="flex flex-col gap-1.5 text-sm">
@@ -310,6 +423,8 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
                 required
                 value={province}
                 onChange={(e) => setProvince(e.target.value)}
+                onBlur={() => touch("residentialProvince")}
+                aria-invalid={!!fieldError("residentialProvince")}
                 className={`${inputClasses} w-full appearance-none pr-8`}
               >
                 <option value="" disabled>
@@ -330,9 +445,14 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
               autoComplete="address-level1"
               value={province}
               onChange={(e) => setProvince(e.target.value)}
+              onBlur={() => touch("residentialProvince")}
+              aria-invalid={!!fieldError("residentialProvince")}
               placeholder="Province / region"
               className={inputClasses}
             />
+          )}
+          {fieldError("residentialProvince") && (
+            <span className="text-xs text-danger">{fieldError("residentialProvince")}</span>
           )}
         </label>
 
@@ -348,15 +468,20 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
               autoComplete="postal-code"
               value={postalCode}
               onChange={(e) => setPostalCode(e.target.value)}
+              onBlur={() => touch("residentialPostalCode")}
+              aria-invalid={!!fieldError("residentialPostalCode")}
               className={inputClasses}
             />
+            {fieldError("residentialPostalCode") && (
+              <span className="text-xs text-danger">
+                {fieldError("residentialPostalCode")}
+              </span>
+            )}
           </label>
         )}
       </div>
 
-      <button className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
-        Continue
-      </button>
+      <ContinueButton formValid={parsed.success} />
     </form>
   );
 }

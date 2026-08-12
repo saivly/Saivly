@@ -66,22 +66,31 @@ type KvkBasisprofielResponse = {
   materieleRegistratie?: { datumAanvang?: string };
   sbiActiviteiten?: KvkSbiActiviteit[];
   _embedded?: {
+    // Entities with no separate physical establishment (e.g. a Vereniging
+    // van Eigenaars registered as a plain rechtspersoon) have no
+    // hoofdvestiging at all — their address sits directly on eigenaar
+    // instead. Confirmed against a live basisprofiel response (KVK
+    // 90000749, "Global Conron" / VvE) where _embedded only ever had
+    // "eigenaar", not "hoofdvestiging" — don't assume the latter exists.
     eigenaar?: {
       rsin?: string;
       rechtsvorm?: string;
+      adressen?: KvkAdres[];
     };
     hoofdvestiging?: {
-      adressen?: {
-        type: string;
-        straatnaam?: string;
-        huisnummer?: number;
-        huisnummerToevoeging?: string;
-        postcode?: string;
-        plaats?: string;
-      }[];
+      adressen?: KvkAdres[];
       sbiActiviteiten?: KvkSbiActiviteit[];
     };
   };
+};
+
+type KvkAdres = {
+  type: string;
+  straatnaam?: string;
+  huisnummer?: number;
+  huisnummerToevoeging?: string;
+  postcode?: string;
+  plaats?: string;
 };
 
 /** KVK dates are YYYYMMDD with no separators; Adyen expects YYYY-MM-DD. */
@@ -151,7 +160,10 @@ export async function getKvkCompanyDetails(
   }
 
   const data = (await res.json()) as KvkBasisprofielResponse;
-  const addresses = data._embedded?.hoofdvestiging?.adressen ?? [];
+  const addresses =
+    data._embedded?.hoofdvestiging?.adressen ??
+    data._embedded?.eigenaar?.adressen ??
+    [];
   const address =
     addresses.find((a) => a.type === "bezoekadres") ?? addresses[0];
 

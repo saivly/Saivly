@@ -84,10 +84,6 @@ const RECHTSVORM_TO_ORGANIZATION_TYPE: [dutch: string, type: AdyenOrganizationTy
   ["commanditaire vennootschap", "partnershipIncorporated"],
   ["maatschap", "partnershipIncorporated"],
   ["rederij", "partnershipIncorporated"],
-  // Naamloze vennootschap (NV) structurally maps to a public company, but
-  // "listedPublicCompany" is specifically for exchange-listed ones — KVK's
-  // rechtsvorm alone doesn't say whether that's the case, and most NVs
-  // in the register aren't, so treat it like any other private company.
   ["naamloze vennootschap", "privateCompany"],
   ["besloten vennootschap", "privateCompany"],
   ["eenmanszaak", "privateCompany"],

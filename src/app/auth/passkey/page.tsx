@@ -129,6 +129,20 @@ export default function PasskeyPromptPage() {
         return;
       }
 
+      // /auth/passkey sits under the public "/auth" prefix, so the proxy
+      // (src/lib/supabase/proxy.ts) never gates it the way it gates every
+      // other protected route — it only ever *links* here after TOTP is
+      // done. A logged-in-but-not-yet-AAL2 session (mid MFA enrollment,
+      // or someone typing this URL directly) could otherwise land on this
+      // page and get asked about passkeys before finishing the mandatory
+      // TOTP step. Re-check AAL2 here too, same ladder the proxy enforces.
+      if (cancelled) return;
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal?.currentLevel !== "aal2") {
+        router.replace(aal?.nextLevel === "aal2" ? "/auth/mfa" : "/auth/mfa/enroll");
+        return;
+      }
+
       // Already has one — e.g. added earlier from the dashboard — so
       // there's nothing to ask; record it seen and move straight on.
       const { data: passkeys } = await supabase.auth.passkey.list();
