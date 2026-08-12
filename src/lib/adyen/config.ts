@@ -3,7 +3,7 @@
 // Transfers, ... are separate products), so config is keyed per service
 // rather than assuming one global apiKey/baseUrl pair.
 
-export type AdyenServiceName = "legalEntity";
+export type AdyenServiceName = "legalEntity" | "balancePlatform";
 
 type AdyenServiceDef = {
   sandboxApiKey: string;
@@ -19,9 +19,23 @@ const ADYEN_SERVICES: Record<AdyenServiceName, AdyenServiceDef> = {
     sandboxBaseUrl: "https://kyc-test.adyen.com/lem/v4",
     productionBaseUrl: "https://kyc-live.adyen.com/lem/v4",
   },
-  // balancePlatform: { apiKeyEnv: "ADYEN_BALANCEPLATFORM_API_KEY", ... },
+  // "Configuration API" in Adyen's own docs, commonly called the Balance
+  // Platform API — separate product/credentials from Legal Entity
+  // Management above. Creates account holders + balance accounts.
+  balancePlatform: {
+    sandboxApiKey: "ADYEN_SANDBOX_BALANCEPLATFORM_API_KEY",
+    productionApiKey: "ADYEN_PRODUCTION_BALANCEPLATFORM_API_KEY",
+    sandboxBaseUrl: "https://balanceplatform-api-test.adyen.com/bcl/v2",
+    productionBaseUrl: "https://balanceplatform-api-live.adyen.com/bcl/v2",
+  },
   // transfers: { apiKeyEnv: "ADYEN_TRANSFERS_API_KEY", ... },
 };
+
+// Not a secret — the balance platform your account holders belong to
+// (set in the Adyen Customer Area). Only required if your API credentials
+// span multiple balance platforms; see createAccountHolder() in
+// balancePlatform.ts.
+export const ADYEN_BALANCE_PLATFORM_NAME = process.env.ADYEN_BALANCE_PLATFORM_NAME;
 
 export type AdyenConfig = { apiKey: string; baseUrl: string };
 

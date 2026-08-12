@@ -21,8 +21,8 @@ function CheckIcon({ className }: { className?: string }) {
 }
 
 const EXPECTATIONS = [
-  "Confirm your personal and contact details",
-  "Upload a photo ID or other verification document, if asked",
+  "Confirm your organisation's and your own personal details",
+  "Upload a photo ID or business document, if asked",
   "Add the bank account you'd like payouts sent to",
   "Takes most people just a few minutes",
 ];
@@ -65,7 +65,7 @@ export default async function AdyenVerificationStep({
           Step 3 of 4 — to complete onboarding, we partner with{" "}
           <span className="font-medium text-ink">Adyen</span> — the payments
           infrastructure used by platforms like eBay, Uber, and Spotify — to
-          verify your information and keep payouts secure.
+          verify your organisation and keep payouts secure.
         </p>
       </div>
 

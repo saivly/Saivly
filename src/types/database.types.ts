@@ -8,7 +8,9 @@
  * 0006_residential_province.sql: profiles.residential_province.
  * 0007_passkey_prompt.sql: profiles.passkey_prompt_seen_at.
  * 0008_join_organisation.sql: join_organisation() RPC.
- * 0009_adyen_onboarding.sql: profiles.adyen_onboarding_completed_at.)
+ * 0009_adyen_onboarding.sql: profiles.adyen_onboarding_completed_at.
+ * 0010_organisation_adyen.sql: organisations.adyen_organization_legal_entity_id
+ * / adyen_account_holder_id / adyen_balance_account_id.)
  * Once you have a live project, regenerate from the real schema with:
  *   npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
  */
@@ -117,6 +119,9 @@ export type Database = {
           postal_code: string | null;
           city: string | null;
           company_completed_at: string | null;
+          adyen_organization_legal_entity_id: string | null;
+          adyen_account_holder_id: string | null;
+          adyen_balance_account_id: string | null;
           plan: "free" | "pro" | "enterprise" | null;
           subscription_completed_at: string | null;
           created_at: string;
@@ -131,6 +136,9 @@ export type Database = {
           postal_code?: string | null;
           city?: string | null;
           company_completed_at?: string | null;
+          adyen_organization_legal_entity_id?: string | null;
+          adyen_account_holder_id?: string | null;
+          adyen_balance_account_id?: string | null;
           plan?: "free" | "pro" | "enterprise" | null;
           subscription_completed_at?: string | null;
         };
@@ -142,6 +150,9 @@ export type Database = {
           postal_code?: string | null;
           city?: string | null;
           company_completed_at?: string | null;
+          adyen_organization_legal_entity_id?: string | null;
+          adyen_account_holder_id?: string | null;
+          adyen_balance_account_id?: string | null;
           plan?: "free" | "pro" | "enterprise" | null;
           subscription_completed_at?: string | null;
         };

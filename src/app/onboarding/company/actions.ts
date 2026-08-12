@@ -10,6 +10,8 @@ import {
   type KvkSearchResult,
   type KvkCompanyDetails,
 } from "@/lib/kvk";
+import { createAdyenOrganization } from "@/lib/adyen/legalEntity";
+import { createAdyenAccountHolder, createAdyenBalanceAccount } from "@/lib/adyen/balancePlatform";
 
 /**
  * Thin RPC wrappers so the client form (company-form.tsx) can call the KVK
@@ -48,6 +50,116 @@ async function getOwnOrganisationId(
     .limit(1)
     .maybeSingle();
   return data?.organisation_id ?? null;
+}
+
+type AdyenChainResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Organisation legal entity -> account holder -> balance account, in
+ * that order, with each id persisted the moment it's created — not
+ * batched at the end. That makes a retry after a partial failure resume
+ * from wherever it actually stopped instead of creating a duplicate
+ * organization legal entity in Adyen every time the shopper hits
+ * Continue again. company_completed_at is only stamped once all three
+ * ids are in place (freshly created or found already there on resume).
+ */
+async function ensureAdyenOrganisationReady(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organisationId: string,
+  individualLegalEntityId: string,
+  company: {
+    legalName: string;
+    rechtsvorm: string | null;
+    registrationNumber: string;
+    country: string;
+    street: string;
+    postalCode: string;
+    city: string;
+  }
+): Promise<AdyenChainResult> {
+  const { data: org, error: readError } = await supabase
+    .from("organisations")
+    .select("adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id")
+    .eq("id", organisationId)
+    .maybeSingle();
+
+  if (readError) {
+    return { ok: false, error: readError.message };
+  }
+
+  let organizationLegalEntityId = org?.adyen_organization_legal_entity_id ?? null;
+  let accountHolderId = org?.adyen_account_holder_id ?? null;
+  let balanceAccountId = org?.adyen_balance_account_id ?? null;
+
+  if (!organizationLegalEntityId) {
+    organizationLegalEntityId = await createAdyenOrganization({
+      legalName: company.legalName,
+      rechtsvorm: company.rechtsvorm,
+      registrationNumber: company.registrationNumber,
+      countryOfGoverningLaw: company.country,
+      registeredAddress: {
+        street: company.street,
+        city: company.city,
+        postalCode: company.postalCode,
+        country: company.country,
+      },
+      associatedIndividualLegalEntityId: individualLegalEntityId,
+    });
+    if (!organizationLegalEntityId) {
+      return {
+        ok: false,
+        error:
+          "We couldn't register your organisation with our payment provider. Please try again.",
+      };
+    }
+    const { error } = await supabase
+      .from("organisations")
+      .update({ adyen_organization_legal_entity_id: organizationLegalEntityId })
+      .eq("id", organisationId);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (!accountHolderId) {
+    accountHolderId = await createAdyenAccountHolder(organizationLegalEntityId, company.legalName);
+    if (!accountHolderId) {
+      return {
+        ok: false,
+        error:
+          "Your organisation was registered, but we couldn't set up its payout account. Please try again.",
+      };
+    }
+    const { error } = await supabase
+      .from("organisations")
+      .update({ adyen_account_holder_id: accountHolderId })
+      .eq("id", organisationId);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (!balanceAccountId) {
+    balanceAccountId = await createAdyenBalanceAccount(accountHolderId, company.legalName);
+    if (!balanceAccountId) {
+      return {
+        ok: false,
+        error:
+          "Your organisation's payout account was created, but we couldn't finish setting it up. Please try again.",
+      };
+    }
+    const { error } = await supabase
+      .from("organisations")
+      .update({ adyen_balance_account_id: balanceAccountId })
+      .eq("id", organisationId);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  // All three in place (whichever were just created vs. already there
+  // from an earlier partial attempt) — the company step is now done.
+  const { error: completedError } = await supabase
+    .from("organisations")
+    .update({ company_completed_at: new Date().toISOString() })
+    .eq("id", organisationId);
+  if (completedError) return { ok: false, error: completedError.message };
+
+  return { ok: true };
 }
 
 export async function saveCompanyInfo(formData: FormData) {
@@ -93,22 +205,33 @@ export async function saveCompanyInfo(formData: FormData) {
     street: companyStreet,
     postal_code: companyPostalCode,
     city: companyCity,
-    company_completed_at: new Date().toISOString(),
   };
 
   const existingOrgId = await getOwnOrganisationId(supabase, user.id);
+  let organisationId: string;
+  // Already fully set up in Adyen — an edit to an already-completed
+  // company step shouldn't re-run entity/account-holder/balance-account
+  // creation (that would mint duplicates in Adyen for every re-save).
+  let alreadyAdyenReady = false;
 
   if (existingOrgId) {
-    // Revisiting/editing an org they already own — update in place.
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("organisations")
       .update(orgFields)
-      .eq("id", existingOrgId);
+      .eq("id", existingOrgId)
+      .select("adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id")
+      .single();
     if (error) {
       redirect(
         `/onboarding/company?error=${encodeURIComponent(error.message)}`
       );
     }
+    organisationId = existingOrgId;
+    alreadyAdyenReady = Boolean(
+      updated?.adyen_organization_legal_entity_id &&
+        updated?.adyen_account_holder_id &&
+        updated?.adyen_balance_account_id
+    );
   } else {
     // First time through — create the org, then join it as owner.
     // The id is generated here (rather than left to the DB default +
@@ -117,7 +240,7 @@ export async function saveCompanyInfo(formData: FormData) {
     // the insert itself regardless, but there's no reason to rely on
     // RETURNING being exempt from the table's SELECT policy when we can
     // just... not need it.
-    const organisationId = crypto.randomUUID();
+    organisationId = crypto.randomUUID();
 
     const { error: orgError } = await supabase
       .from("organisations")
@@ -135,6 +258,61 @@ export async function saveCompanyInfo(formData: FormData) {
       redirect(
         `/onboarding/company?error=${encodeURIComponent(memberError.message)}`
       );
+    }
+  }
+
+  if (!alreadyAdyenReady) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("adyen_legal_entity_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const individualLegalEntityId = profile?.adyen_legal_entity_id;
+    if (!individualLegalEntityId) {
+      // Shouldn't happen — personalDone requires this — but the org
+      // legal entity's entityAssociations needs an id to point at.
+      redirect(
+        `/onboarding/company?error=${encodeURIComponent(
+          "We couldn't find your identity verification record. Go back to Personal info and save it again, then retry."
+        )}`
+      );
+    }
+
+    // KVK's "statutaire naam" (formal registered name) and rechtsvorm
+    // (legal form) feed Adyen's organization.legalName/type — re-fetched
+    // here from the kvkNumber rather than trusted from the submitted
+    // form, since these go straight into a compliance-facing API call.
+    // Outside NL there's no KVK register to check, so the manually
+    // entered company name stands in for legalName and rechtsvorm stays
+    // null (mapRechtsvormToOrganizationType's fallback: privateCompany).
+    let legalName = companyName;
+    let rechtsvorm: string | null = null;
+    if (kvkNumber) {
+      const kvkDetails = await getKvkCompanyDetails(kvkNumber);
+      if (kvkDetails) {
+        legalName = kvkDetails.statutoryName ?? companyName;
+        rechtsvorm = kvkDetails.legalForm;
+      }
+    }
+
+    const result = await ensureAdyenOrganisationReady(
+      supabase,
+      organisationId,
+      individualLegalEntityId,
+      {
+        legalName,
+        rechtsvorm,
+        registrationNumber: kvkNumber ?? "",
+        country: companyCountry,
+        street: companyStreet,
+        postalCode: companyPostalCode,
+        city: companyCity,
+      }
+    );
+
+    if (!result.ok) {
+      redirect(`/onboarding/company?error=${encodeURIComponent(result.error)}`);
     }
   }
 

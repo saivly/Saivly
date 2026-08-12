@@ -1,6 +1,5 @@
 
 
-
 function kvkConfig(): { apiKey: string; baseUrl: string } {
   const KVK_TEST_BASE_URL = "https://api.kvk.nl/test/api";
   // const KVK_PROD_BASE_URL = "https://api.kvk.nl/api";
@@ -19,6 +18,10 @@ export type KvkSearchResult = {
 export type KvkCompanyDetails = {
   kvkNumber: string;
   name: string;
+  /** KVK's "statutaire naam" — the formal registered name, which can
+   * differ from the trade name above. This, not `name`, is what feeds
+   * Adyen's organization.legalName (see saveCompanyInfo). */
+  statutoryName: string | null;
   street: string | null;
   postalCode: string | null;
   city: string | null;
@@ -47,6 +50,7 @@ type KvkSbiActiviteit = {
 type KvkBasisprofielResponse = {
   kvkNummer: string;
   naam: string;
+  statutaireNaam?: string;
   sbiActiviteiten?: KvkSbiActiviteit[];
   _embedded?: {
     eigenaar?: {
@@ -65,30 +69,6 @@ type KvkBasisprofielResponse = {
     };
   };
 };
-
-const LEGAL_FORM_TRANSLATIONS: [dutch: string, english: string][] = [
-  ["vereniging van eigenaars", "Homeowners' Association (VvE)"],
-  ["besloten vennootschap", "Private limited company (B.V.)"],
-  ["naamloze vennootschap", "Public limited company (N.V.)"],
-  ["vennootschap onder firma", "General partnership (VOF)"],
-  ["commanditaire vennootschap", "Limited partnership (CV)"],
-  ["onderlinge waarborgmaatschappij", "Mutual insurance association"],
-  ["publiekrechtelijke rechtspersoon", "Public-law legal entity"],
-  ["kerkgenootschap", "Religious institution"],
-  ["eenmanszaak", "Sole proprietorship"],
-  ["maatschap", "Partnership (maatschap)"],
-  ["coöperatie", "Cooperative"],
-  ["stichting", "Foundation"],
-  ["vereniging", "Association"],
-  ["rederij", "Shipping partnership (rederij)"],
-];
-
-export function translateLegalForm(rechtsvorm: string | null | undefined): string | null {
-  if (!rechtsvorm) return null;
-  const normalized = rechtsvorm.toLowerCase().trim();
-  const match = LEGAL_FORM_TRANSLATIONS.find(([dutch]) => normalized.includes(dutch));
-  return match ? match[1] : rechtsvorm;
-}
 
 /** Search Dutch companies by KVK number or trade name. */
 export async function searchKvkCompanies(query: string): Promise<KvkSearchResult[]> {
@@ -165,6 +145,7 @@ export async function getKvkCompanyDetails(
   return {
     kvkNumber: data.kvkNummer,
     name: data.naam,
+    statutoryName: data.statutaireNaam ?? null,
     street: address
       ? [address.straatnaam, address.huisnummer, address.huisnummerToevoeging]
           .filter(Boolean)
@@ -172,7 +153,7 @@ export async function getKvkCompanyDetails(
       : null,
     postalCode: address?.postcode ?? null,
     city: address?.plaats ?? null,
-    legalForm: translateLegalForm(data._embedded?.eigenaar?.rechtsvorm),
+    legalForm: data._embedded?.eigenaar?.rechtsvorm ?? null,
     mainActivity: mainActivity?.sbiOmschrijving ?? null,
   };
 }
