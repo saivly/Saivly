@@ -109,19 +109,29 @@ export default function AuthPanels({
     setPasskeyBusy(true);
     setPasskeyError(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPasskey();
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPasskey();
 
-    if (error) {
-      setPasskeyError(error.message);
+      if (error) {
+        setPasskeyError(error.message);
+        setPasskeyBusy(false);
+        return;
+      }
+
+      // Passkeys only get you to aal1, same as a password — the proxy
+      // routes to the right MFA step (or straight through if already aal2).
+      router.push(safeNext(next));
+      router.refresh();
+    } catch (err) {
+      // signInWithPasskey() can throw (network blip, browser without
+      // WebAuthn support hitting an edge the library doesn't wrap, etc.),
+      // not just resolve with {error} — without this catch the button
+      // stays stuck on "Waiting for browser…" forever with no way to retry.
+      console.error("[passkey] sign-in failed:", err);
+      setPasskeyError("Couldn't sign in with a passkey — try again or use your password.");
       setPasskeyBusy(false);
-      return;
     }
-
-    // Passkeys only get you to aal1, same as a password — the proxy routes
-    // to the right MFA step (or straight through if already aal2).
-    router.push(safeNext(next));
-    router.refresh();
   }
 
   // Keep the address bar in sync without triggering a route transition,

@@ -11,13 +11,22 @@ export default function PasskeyManager() {
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.passkey.list();
-    if (error) {
-      setError(error.message);
-      return;
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.passkey.list();
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      setPasskeys(data);
+    } catch (err) {
+      // supabase.auth.passkey.list() can throw (network blip, the
+      // experimental passkey API not enabled server-side, etc.), not just
+      // return {error} — without this catch the list silently stays null
+      // forever with no feedback.
+      console.error("[passkey] list failed:", err);
+      setError("Couldn't load your passkeys — try refreshing the page.");
     }
-    setPasskeys(data);
   }
 
   useEffect(() => {
@@ -28,26 +37,40 @@ export default function PasskeyManager() {
     setBusy(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.registerPasskey();
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.registerPasskey();
 
-    setBusy(false);
-    if (error) {
-      setError(error.message);
-      return;
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      await refresh();
+    } catch (err) {
+      console.error("[passkey] register failed:", err);
+      setError("Couldn't set up a passkey just now — try again in a moment.");
+    } finally {
+      setBusy(false);
     }
-    await refresh();
   }
 
   async function removePasskey(id: string) {
     setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.passkey.delete({ passkeyId: id });
-    if (error) {
-      setError(error.message);
-      return;
+    setBusy(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.passkey.delete({ passkeyId: id });
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      await refresh();
+    } catch (err) {
+      console.error("[passkey] delete failed:", err);
+      setError("Couldn't remove that passkey — try again in a moment.");
+    } finally {
+      setBusy(false);
     }
-    await refresh();
   }
 
   return (
@@ -73,7 +96,8 @@ export default function PasskeyManager() {
             </span>
             <button
               onClick={() => removePasskey(pk.id)}
-              className="shrink-0 text-muted hover:text-danger"
+              disabled={busy}
+              className="shrink-0 text-muted hover:text-danger disabled:opacity-50"
             >
               Remove
             </button>

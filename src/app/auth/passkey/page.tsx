@@ -123,36 +123,48 @@ export default function PasskeyPromptPage() {
     const supabase = createClient();
 
     (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        router.replace("/login");
-        return;
-      }
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          router.replace("/login");
+          return;
+        }
 
-      // /auth/passkey sits under the public "/auth" prefix, so the proxy
-      // (src/lib/supabase/proxy.ts) never gates it the way it gates every
-      // other protected route — it only ever *links* here after TOTP is
-      // done. A logged-in-but-not-yet-AAL2 session (mid MFA enrollment,
-      // or someone typing this URL directly) could otherwise land on this
-      // page and get asked about passkeys before finishing the mandatory
-      // TOTP step. Re-check AAL2 here too, same ladder the proxy enforces.
-      if (cancelled) return;
-      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aal?.currentLevel !== "aal2") {
-        router.replace(aal?.nextLevel === "aal2" ? "/auth/mfa" : "/auth/mfa/enroll");
-        return;
-      }
+        // /auth/passkey sits under the public "/auth" prefix, so the proxy
+        // (src/lib/supabase/proxy.ts) never gates it the way it gates every
+        // other protected route — it only ever *links* here after TOTP is
+        // done. A logged-in-but-not-yet-AAL2 session (mid MFA enrollment,
+        // or someone typing this URL directly) could otherwise land on this
+        // page and get asked about passkeys before finishing the mandatory
+        // TOTP step. Re-check AAL2 here too, same ladder the proxy enforces.
+        if (cancelled) return;
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal?.currentLevel !== "aal2") {
+          router.replace(aal?.nextLevel === "aal2" ? "/auth/mfa" : "/auth/mfa/enroll");
+          return;
+        }
 
-      // Already has one — e.g. added earlier from the dashboard — so
-      // there's nothing to ask; record it seen and move straight on.
-      const { data: passkeys } = await supabase.auth.passkey.list();
-      if (cancelled) return;
-      if (passkeys && passkeys.length > 0) {
-        await markPasskeyPromptSeen();
-        router.replace("/onboarding");
-        return;
+        // Already has one — e.g. added earlier from the dashboard — so
+        // there's nothing to ask; record it seen and move straight on.
+        const { data: passkeys } = await supabase.auth.passkey.list();
+        if (cancelled) return;
+        if (passkeys && passkeys.length > 0) {
+          await markPasskeyPromptSeen();
+          router.replace("/onboarding");
+          return;
+        }
+        setChecking(false);
+      } catch (err) {
+        // Any of the awaits above can throw (network blip, the
+        // experimental passkey API misbehaving, etc.), not just resolve
+        // with data/error. Without this catch, setChecking(false) never
+        // runs and the page is stuck rendering nothing (see the `if
+        // (checking) return null` below) — indistinguishable from the
+        // whole feature being broken. Fail open: show the normal prompt
+        // (with a working Skip) instead of a blank page.
+        console.error("[passkey] initial check failed:", err);
+        if (!cancelled) setChecking(false);
       }
-      setChecking(false);
     })();
 
     return () => {
