@@ -173,31 +173,49 @@ export default function PasskeyPromptPage() {
 
   async function skip() {
     setBusy(true);
-    const ok = await markPasskeyPromptSeen();
-    if (!ok) {
+    setError(null);
+    try {
+      const ok = await markPasskeyPromptSeen();
+      if (!ok) {
+        setError("Couldn't skip just now — try again in a moment.");
+        setBusy(false);
+        return;
+      }
+      proceed();
+    } catch (err) {
+      // markPasskeyPromptSeen() is a server action — it can throw (network
+      // blip, stale action reference after a redeploy, etc.), not just
+      // return ok:false. Without this catch, busy stays true forever with
+      // no feedback: the button never re-labels itself while busy, so a
+      // thrown error here looks exactly like "Skip does nothing".
+      console.error("[passkey] skip failed:", err);
       setError("Couldn't skip just now — try again in a moment.");
       setBusy(false);
-      return;
     }
-    proceed();
   }
 
   async function setUp() {
     setBusy(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.registerPasskey();
-    if (error) {
-      // Most commonly the user cancelled the browser prompt — let them
-      // try again or skip, don't force a page reload.
-      setError(error.message);
-      setBusy(false);
-      return;
-    }
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.registerPasskey();
+      if (error) {
+        // Most commonly the user cancelled the browser prompt — let them
+        // try again or skip, don't force a page reload.
+        setError(error.message);
+        setBusy(false);
+        return;
+      }
 
-    await markPasskeyPromptSeen();
-    proceed();
+      await markPasskeyPromptSeen();
+      proceed();
+    } catch (err) {
+      console.error("[passkey] setup failed:", err);
+      setError("Something went wrong setting up your passkey — try again or skip for now.");
+      setBusy(false);
+    }
   }
 
   // Avoids a flash of the prompt for the (uncommon) case where the user

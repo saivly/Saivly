@@ -142,13 +142,7 @@ export type AdyenOrganizationInput = {
 
 type OrganizationLegalEntityResponse = { id: string };
 
-/**
- * The organisation's own legal entity — separate from the individual one
- * createAdyenIndividual makes for the shopper themself. Used for KYB
- * (business) verification + as the anchor for the account holder/balance
- * account below.
- * https://docs.adyen.com/api-explorer/legalentity/latest/post/legalEntities
- */
+
 export async function createAdyenOrganization(
   input: AdyenOrganizationInput
 ): Promise<string | null> {
@@ -171,14 +165,6 @@ export async function createAdyenOrganization(
           postalCode: input.registeredAddress.postalCode,
           country: input.registeredAddress.country,
         },
-        // "type" is only needed to disambiguate countries with more than
-        // one tax id (Singapore, Sweden, UK, US) — the Netherlands has
-        // just the one (RSIN), so it's omitted here.
-        //
-        // Home associations (VvE) and other associations have no tax
-        // information to report even when KVK does supply an RSIN for
-        // them, so associationIncorporated always reports the absence
-        // reason instead of a tax number, taking priority over input.rsin.
         ...(organizationType === "associationIncorporated"
           ? {
               taxInformation: [
