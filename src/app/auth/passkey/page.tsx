@@ -136,7 +136,6 @@ export default function PasskeyPromptPage() {
       if (passkeys && passkeys.length > 0) {
         await markPasskeyPromptSeen();
         router.replace("/onboarding");
-        router.refresh();
         return;
       }
       setChecking(false);
@@ -148,14 +147,24 @@ export default function PasskeyPromptPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // No router.refresh() here — /onboarding does its own fresh server-side
+  // redirect on every load (see /onboarding/page.tsx), so there's nothing
+  // stale for refresh() to invalidate. Calling it right after replace()
+  // only risks refreshing whatever route is *still* committed at that
+  // instant (i.e. this page) before the navigation lands — which looks
+  // exactly like "Skip does nothing."
   function proceed() {
     router.replace("/onboarding");
-    router.refresh();
   }
 
   async function skip() {
     setBusy(true);
-    await markPasskeyPromptSeen();
+    const ok = await markPasskeyPromptSeen();
+    if (!ok) {
+      setError("Couldn't skip just now — try again in a moment.");
+      setBusy(false);
+      return;
+    }
     proceed();
   }
 

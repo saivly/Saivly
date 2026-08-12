@@ -136,6 +136,11 @@ export type AdyenOrganizationInput = {
   /** entityAssociations[].jobTitle — collected alongside relationshipType
    * on the same step ("Job title"). */
   jobTitle: string;
+  /** KVK's RSIN (Dutch tax/legal-entity id, distinct from the KVK
+   * registration number) — null outside NL, where there's no RSIN. */
+  rsin: string | null;
+  /** ISO YYYY-MM-DD, from KVK — null outside NL. */
+  dateOfIncorporation: string | null;
 };
 
 type OrganizationLegalEntityResponse = { id: string };
@@ -158,6 +163,7 @@ export async function createAdyenOrganization(
         legalName: input.legalName,
         countryOfGoverningLaw: input.countryOfGoverningLaw,
         registrationNumber: input.registrationNumber || undefined,
+        dateOfIncorporation: input.dateOfIncorporation || undefined,
         type: mapRechtsvormToOrganizationType(input.rechtsvorm),
         registeredAddress: {
           street: input.registeredAddress.street,
@@ -165,6 +171,16 @@ export async function createAdyenOrganization(
           postalCode: input.registeredAddress.postalCode,
           country: input.registeredAddress.country,
         },
+        // "type" is only needed to disambiguate countries with more than
+        // one tax id (Singapore, Sweden, UK, US) — the Netherlands has
+        // just the one (RSIN), so it's omitted here.
+        ...(input.rsin
+          ? {
+              taxInformation: [
+                { country: input.countryOfGoverningLaw, number: input.rsin },
+              ],
+            }
+          : {}),
       },
       entityAssociations: [
         {
@@ -200,13 +216,7 @@ export async function createAdyenOnboardingLink(
       body: JSON.stringify({
         redirectUrl,
         settings: {
-          // This app creates both individual (personal step) and
-          // organization (company step, see createAdyenOrganization below)
-          // legal entities — skip Adyen's own "here's what you're about to
-          // do" intro either way, since /onboarding/adyen already covers
-          // that before the shopper ever leaves our site.
-          // hideOnboardingIntroductionIndividual: true,
-          // hideOnboardingIntroductionOrganization: true,
+          transferInstrumentLimit: 0,
         },
       }),
     }

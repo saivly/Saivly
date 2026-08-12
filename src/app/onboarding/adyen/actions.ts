@@ -54,7 +54,7 @@ export async function startAdyenVerification() {
     );
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://saivly.com";
   const url = await createAdyenOnboardingLink(
     legalEntityId,
     `${siteUrl}/onboarding/adyen/return`

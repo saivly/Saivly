@@ -77,6 +77,8 @@ async function ensureAdyenOrganisationReady(
     city: string;
     relationshipType: AdyenEntityRelationshipType;
     jobTitle: string;
+    rsin: string | null;
+    dateOfIncorporation: string | null;
   }
 ): Promise<AdyenChainResult> {
   const { data: org, error: readError } = await supabase
@@ -108,6 +110,8 @@ async function ensureAdyenOrganisationReady(
       associatedIndividualLegalEntityId: individualLegalEntityId,
       relationshipType: company.relationshipType,
       jobTitle: company.jobTitle,
+      rsin: company.rsin,
+      dateOfIncorporation: company.dateOfIncorporation,
     });
     if (!organizationLegalEntityId) {
       return {
@@ -287,20 +291,26 @@ export async function saveCompanyInfo(formData: FormData) {
       );
     }
 
-    // KVK's "statutaire naam" (formal registered name) and rechtsvorm
-    // (legal form) feed Adyen's organization.legalName/type — re-fetched
-    // here from the kvkNumber rather than trusted from the submitted
-    // form, since these go straight into a compliance-facing API call.
-    // Outside NL there's no KVK register to check, so the manually
-    // entered company name stands in for legalName and rechtsvorm stays
-    // null (mapRechtsvormToOrganizationType's fallback: privateCompany).
+    // KVK's "statutaire naam" (formal registered name), rechtsvorm (legal
+    // form), RSIN (Dutch tax/legal-entity id), and date of incorporation
+    // feed Adyen's organization.legalName/type/taxInformation/
+    // dateOfIncorporation — re-fetched here from the kvkNumber rather
+    // than trusted from the submitted form, since these go straight into
+    // a compliance-facing API call. Outside NL there's no KVK register to
+    // check, so the manually entered company name stands in for
+    // legalName and the rest stay null (mapRechtsvormToOrganizationType's
+    // fallback: privateCompany; no RSIN/incorporation date outside NL).
     let legalName = companyName;
     let rechtsvorm: string | null = null;
+    let rsin: string | null = null;
+    let dateOfIncorporation: string | null = null;
     if (kvkNumber) {
       const kvkDetails = await getKvkCompanyDetails(kvkNumber);
       if (kvkDetails) {
         legalName = kvkDetails.statutoryName ?? companyName;
         rechtsvorm = kvkDetails.legalForm;
+        rsin = kvkDetails.rsin;
+        dateOfIncorporation = kvkDetails.dateOfIncorporation;
       }
     }
 
@@ -318,6 +328,8 @@ export async function saveCompanyInfo(formData: FormData) {
         city: companyCity,
         relationshipType,
         jobTitle,
+        rsin,
+        dateOfIncorporation,
       }
     );
 

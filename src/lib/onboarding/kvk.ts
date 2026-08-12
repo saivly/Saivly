@@ -27,6 +27,12 @@ export type KvkCompanyDetails = {
   city: string | null;
   legalForm: string | null;
   mainActivity: string | null;
+  /** RSIN — the Dutch tax/legal-entity id, distinct from the KVK number.
+   * Feeds Adyen's organization.taxInformation (see saveCompanyInfo). */
+  rsin: string | null;
+  /** ISO YYYY-MM-DD, converted from KVK's YYYYMMDD. Feeds Adyen's
+   * organization.dateOfIncorporation (see saveCompanyInfo). */
+  dateOfIncorporation: string | null;
 };
 
 type KvkZoekenResponse = {
@@ -51,9 +57,17 @@ type KvkBasisprofielResponse = {
   kvkNummer: string;
   naam: string;
   statutaireNaam?: string;
+  // Both YYYYMMDD, no separators. materieleRegistratie.datumAanvang is
+  // when the business actually started (closer to "date of
+  // incorporation"); formeleRegistratiedatum is when the KVK paperwork
+  // itself was formally completed, which can lag behind — used only as
+  // a fallback when the former is missing.
+  formeleRegistratiedatum?: string;
+  materieleRegistratie?: { datumAanvang?: string };
   sbiActiviteiten?: KvkSbiActiviteit[];
   _embedded?: {
     eigenaar?: {
+      rsin?: string;
       rechtsvorm?: string;
     };
     hoofdvestiging?: {
@@ -69,6 +83,12 @@ type KvkBasisprofielResponse = {
     };
   };
 };
+
+/** KVK dates are YYYYMMDD with no separators; Adyen expects YYYY-MM-DD. */
+function toIsoDate(kvkDate: string | undefined): string | null {
+  if (!kvkDate || !/^\d{8}$/.test(kvkDate)) return null;
+  return `${kvkDate.slice(0, 4)}-${kvkDate.slice(4, 6)}-${kvkDate.slice(6, 8)}`;
+}
 
 /** Search Dutch companies by KVK number or trade name. */
 export async function searchKvkCompanies(query: string): Promise<KvkSearchResult[]> {
@@ -155,5 +175,9 @@ export async function getKvkCompanyDetails(
     city: address?.plaats ?? null,
     legalForm: data._embedded?.eigenaar?.rechtsvorm ?? null,
     mainActivity: mainActivity?.sbiOmschrijving ?? null,
+    rsin: data._embedded?.eigenaar?.rsin ?? null,
+    dateOfIncorporation:
+      toIsoDate(data.materieleRegistratie?.datumAanvang) ??
+      toIsoDate(data.formeleRegistratiedatum),
   };
 }
