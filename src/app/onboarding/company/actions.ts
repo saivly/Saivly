@@ -11,7 +11,11 @@ import {
   type KvkSearchResult,
   type KvkCompanyDetails,
 } from "@/lib/onboarding/kvk";
-import { createAdyenOrganization, type AdyenEntityRelationshipType } from "@/lib/adyen/legalEntity";
+import {
+  createAdyenOrganization,
+  createAdyenBusinessLine,
+  type AdyenEntityRelationshipType,
+} from "@/lib/adyen/legalEntity";
 import { createAdyenAccountHolder, createAdyenBalanceAccount } from "@/lib/adyen/balancePlatform";
 
 /**
@@ -72,13 +76,23 @@ function expandRelationshipTypes(value: string): AdyenEntityRelationshipType[] {
 }
 
 /**
- * Organisation legal entity -> account holder -> balance account, in
- * that order, with each id persisted the moment it's created — not
- * batched at the end. That makes a retry after a partial failure resume
- * from wherever it actually stopped instead of creating a duplicate
- * organization legal entity in Adyen every time the shopper hits
- * Continue again. company_completed_at is only stamped once all three
- * ids are in place (freshly created or found already there on resume).
+ * Organisation legal entity -> account holder -> balance account ->
+ * business lines (paymentProcessing, banking, issuing), in that order,
+ * with each id persisted the moment it's created — not batched at the
+ * end. That makes a retry after a partial failure resume from wherever
+ * it actually stopped instead of creating a duplicate organization legal
+ * entity in Adyen every time the shopper hits Continue again.
+ * company_completed_at is only stamped once all six ids are in place
+ * (freshly created or found already there on resume).
+ *
+ * Business lines are created here — the same request that's already
+ * showing the shopper a "Saving…" state for the first three calls,
+ * before they've been sent anywhere near Adyen's hosted onboarding page
+ * — rather than later. legalEntityId (their hard prerequisite) already
+ * exists by this point, and Adyen's hosted page (generated next, in the
+ * adyen step) uses the business lines to decide what compliance checks
+ * to show — creating them here means that page never has to render
+ * against an incomplete picture.
  */
 async function ensureAdyenOrganisationReady(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -99,7 +113,9 @@ async function ensureAdyenOrganisationReady(
 ): Promise<AdyenChainResult> {
   const { data: org, error: readError } = await supabase
     .from("organisations")
-    .select("adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id")
+    .select(
+      "adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id, adyen_business_line_payment_processing_id, adyen_business_line_banking_id, adyen_business_line_issuing_id"
+    )
     .eq("id", organisationId)
     .maybeSingle();
 
@@ -110,6 +126,10 @@ async function ensureAdyenOrganisationReady(
   let organizationLegalEntityId = org?.adyen_organization_legal_entity_id ?? null;
   let accountHolderId = org?.adyen_account_holder_id ?? null;
   let balanceAccountId = org?.adyen_balance_account_id ?? null;
+  let paymentProcessingBusinessLineId =
+    org?.adyen_business_line_payment_processing_id ?? null;
+  let bankingBusinessLineId = org?.adyen_business_line_banking_id ?? null;
+  let issuingBusinessLineId = org?.adyen_business_line_issuing_id ?? null;
 
   if (!organizationLegalEntityId) {
     organizationLegalEntityId = await createAdyenOrganization({
@@ -174,8 +194,59 @@ async function ensureAdyenOrganisationReady(
     if (error) return { ok: false, error: error.message };
   }
 
-  // All three in place (whichever were just created vs. already there
-  // from an earlier partial attempt) — the company step is now done.
+  if (!paymentProcessingBusinessLineId) {
+    paymentProcessingBusinessLineId = await createAdyenBusinessLine(
+      organizationLegalEntityId,
+      "paymentProcessing"
+    );
+    if (!paymentProcessingBusinessLineId) {
+      return {
+        ok: false,
+        error:
+          "Your organisation's payout account was set up, but we couldn't finish registering it for payments. Please try again.",
+      };
+    }
+    const { error } = await supabase
+      .from("organisations")
+      .update({ adyen_business_line_payment_processing_id: paymentProcessingBusinessLineId })
+      .eq("id", organisationId);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (!bankingBusinessLineId) {
+    bankingBusinessLineId = await createAdyenBusinessLine(organizationLegalEntityId, "banking");
+    if (!bankingBusinessLineId) {
+      return {
+        ok: false,
+        error:
+          "Your organisation's payout account was set up, but we couldn't finish registering it for banking. Please try again.",
+      };
+    }
+    const { error } = await supabase
+      .from("organisations")
+      .update({ adyen_business_line_banking_id: bankingBusinessLineId })
+      .eq("id", organisationId);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (!issuingBusinessLineId) {
+    issuingBusinessLineId = await createAdyenBusinessLine(organizationLegalEntityId, "issuing");
+    if (!issuingBusinessLineId) {
+      return {
+        ok: false,
+        error:
+          "Your organisation's payout account was set up, but we couldn't finish registering it for card issuing. Please try again.",
+      };
+    }
+    const { error } = await supabase
+      .from("organisations")
+      .update({ adyen_business_line_issuing_id: issuingBusinessLineId })
+      .eq("id", organisationId);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  // All six in place (whichever were just created vs. already there from
+  // an earlier partial attempt) — the company step is now done.
   const { error: completedError } = await supabase
     .from("organisations")
     .update({ company_completed_at: new Date().toISOString() })
@@ -235,8 +306,13 @@ export async function saveCompanyInfo(formData: FormData) {
   const existingOrgId = await getOwnOrganisationId(supabase, user.id);
   let organisationId: string;
   // Already fully set up in Adyen — an edit to an already-completed
-  // company step shouldn't re-run entity/account-holder/balance-account
-  // creation (that would mint duplicates in Adyen for every re-save).
+  // company step shouldn't re-run entity/account-holder/balance-account/
+  // business-line creation (that would mint duplicates in Adyen for every
+  // re-save). Checks all six ids, not just the first three: an org that
+  // has the legal entity/account holder/balance account but not yet its
+  // business lines (e.g. it onboarded before business lines existed)
+  // must still fall through to ensureAdyenOrganisationReady below so it
+  // can pick up wherever it actually left off.
   let alreadyAdyenReady = false;
 
   if (existingOrgId) {
@@ -244,7 +320,9 @@ export async function saveCompanyInfo(formData: FormData) {
       .from("organisations")
       .update(orgFields)
       .eq("id", existingOrgId)
-      .select("adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id")
+      .select(
+        "adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id, adyen_business_line_payment_processing_id, adyen_business_line_banking_id, adyen_business_line_issuing_id"
+      )
       .single();
     if (error) {
       redirect(
@@ -255,7 +333,10 @@ export async function saveCompanyInfo(formData: FormData) {
     alreadyAdyenReady = Boolean(
       updated?.adyen_organization_legal_entity_id &&
         updated?.adyen_account_holder_id &&
-        updated?.adyen_balance_account_id
+        updated?.adyen_balance_account_id &&
+        updated?.adyen_business_line_payment_processing_id &&
+        updated?.adyen_business_line_banking_id &&
+        updated?.adyen_business_line_issuing_id
     );
   } else {
     // First time through — create the org, then join it as owner.
