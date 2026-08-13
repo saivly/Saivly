@@ -121,6 +121,17 @@ export const companyInfoSchema = zod
             .min(1, { message: 'Postal code is required.' })
             .max(12, { message: 'Postal code is too long.' }),
         companyCity: zod.string().trim().min(1, { message: 'City is required.' }),
+        // Feeds Adyen's businessLine.sourceOfFunds (type "business") for the
+        // banking/issuing lines — see createAdyenBusinessLine in
+        // src/lib/adyen/legalEntity.ts. The description there is fixed
+        // (every org here is a homeowners' association funded by members'
+        // reserve-fund contributions); only the amount varies per org.
+        // Whole units of the company's country currency — converted to
+        // minor units server-side.
+        annualReserveFundContributions: zod.coerce
+            .number({ message: 'Enter the estimated annual reserve fund contributions.' })
+            .int({ message: 'Enter a whole number.' })
+            .min(0, { message: 'This can’t be negative.' }),
     })
     // KVK only registers Dutch businesses — require the number there, and
     // there alone, rather than validating it as a fixed 8-digit field above.

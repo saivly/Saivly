@@ -159,9 +159,35 @@ const BUSINESS_LINE_INDUSTRY_CODE = "81399";
 
 type BusinessLineResponse = { id: string };
 
+/**
+ * Every organisation on this platform is a homeowners' association (KVK
+ * rechtsvorm "vereniging van eigenaars" -> associationIncorporated, see
+ * RECHTSVORM_TO_ORGANIZATION_TYPE below) — the money landing in its
+ * balance account is always the same story: households' mandatory
+ * monthly reserve-fund contributions, saved up for future maintenance
+ * and restoration of the shared building. That's true for every org, so
+ * it's fixed here rather than collected as free text from each user.
+ */
+const RESERVE_FUND_SOURCE_OF_FUNDS_DESCRIPTION =
+  "Monthly reserve fund contributions paid by the association's homeowners, collected for future maintenance and restoration of the shared building.";
+
+/**
+ * Required on banking/issuing business lines whenever the funds landing
+ * in the balance account don't come from this platform's own
+ * paymentProcessing line — Adyen's sourceOfFunds.type "business" needs
+ * both (30_104 "type was not provided" otherwise).
+ */
+export type AdyenSourceOfFundsBusiness = {
+  /** Estimated annual reserve fund contributions, in whole units (not minor units) of `currency`. */
+  annualAmount: number;
+  /** ISO 4217 currency code, e.g. "EUR". */
+  currency: string;
+};
+
 export async function createAdyenBusinessLine(
   legalEntityId: string,
-  service: AdyenBusinessLineService
+  service: AdyenBusinessLineService,
+  sourceOfFundsBusiness?: AdyenSourceOfFundsBusiness
 ): Promise<string | null> {
   const result = await adyenRequest<BusinessLineResponse>("legalEntity", "/businessLines", {
     method: "POST",
@@ -174,7 +200,18 @@ export async function createAdyenBusinessLine(
             salesChannels: ["pos", "eCommerce"],
             webDataExemption: { reason: "noOnlinePresence" },
           }
-        : { sourceOfFunds: { adyenProcessedFunds: false } }),
+        : {
+            sourceOfFunds: {
+              adyenProcessedFunds: false,
+              type: "business",
+              description: RESERVE_FUND_SOURCE_OF_FUNDS_DESCRIPTION,
+              amount: {
+                currency: sourceOfFundsBusiness?.currency,
+                // Adyen amounts are minor units (cents for EUR/GBP/USD).
+                value: Math.round((sourceOfFundsBusiness?.annualAmount ?? 0) * 100),
+              },
+            },
+          }),
     }),
   });
 

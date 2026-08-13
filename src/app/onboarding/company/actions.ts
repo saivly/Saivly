@@ -17,6 +17,7 @@ import {
   type AdyenEntityRelationshipType,
 } from "@/lib/adyen/legalEntity";
 import { createAdyenAccountHolder, createAdyenBalanceAccount } from "@/lib/adyen/balancePlatform";
+import { companyCountryCurrency } from "@/lib/onboarding/countries";
 
 /**
  * Thin RPC wrappers so the client form (company-form.tsx) can call the KVK
@@ -109,6 +110,7 @@ async function ensureAdyenOrganisationReady(
     relationshipTypes: AdyenEntityRelationshipType[];
     rsin: string | null;
     dateOfIncorporation: string | null;
+    annualReserveFundContributions: number;
   }
 ): Promise<AdyenChainResult> {
   const { data: org, error: readError } = await supabase
@@ -213,8 +215,17 @@ async function ensureAdyenOrganisationReady(
     if (error) return { ok: false, error: error.message };
   }
 
+  const sourceOfFundsBusiness = {
+    annualAmount: company.annualReserveFundContributions,
+    currency: companyCountryCurrency(company.country),
+  };
+
   if (!bankingBusinessLineId) {
-    bankingBusinessLineId = await createAdyenBusinessLine(organizationLegalEntityId, "banking");
+    bankingBusinessLineId = await createAdyenBusinessLine(
+      organizationLegalEntityId,
+      "banking",
+      sourceOfFundsBusiness
+    );
     if (!bankingBusinessLineId) {
       return {
         ok: false,
@@ -230,7 +241,11 @@ async function ensureAdyenOrganisationReady(
   }
 
   if (!issuingBusinessLineId) {
-    issuingBusinessLineId = await createAdyenBusinessLine(organizationLegalEntityId, "issuing");
+    issuingBusinessLineId = await createAdyenBusinessLine(
+      organizationLegalEntityId,
+      "issuing",
+      sourceOfFundsBusiness
+    );
     if (!issuingBusinessLineId) {
       return {
         ok: false,
@@ -277,6 +292,8 @@ export async function saveCompanyInfo(formData: FormData) {
       (formData.get("companyPostalCode") as string) ?? ""
     ).trim(),
     companyCity: ((formData.get("companyCity") as string) ?? "").trim(),
+    annualReserveFundContributions:
+      (formData.get("annualReserveFundContributions") as string) ?? "",
   });
 
   if (!parsed.success) {
@@ -292,6 +309,7 @@ export async function saveCompanyInfo(formData: FormData) {
     companyStreet,
     companyPostalCode,
     companyCity,
+    annualReserveFundContributions,
   } = parsed.data;
 
   const orgFields = {
@@ -427,6 +445,7 @@ export async function saveCompanyInfo(formData: FormData) {
         relationshipTypes: expandRelationshipTypes(relationshipType),
         rsin,
         dateOfIncorporation,
+        annualReserveFundContributions,
       }
     );
 

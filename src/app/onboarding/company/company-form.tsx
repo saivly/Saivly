@@ -7,7 +7,11 @@ import Link from "next/link";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
 import type { KvkSearchResult } from "@/lib/onboarding/kvk";
 import { inputClasses, CountrySelect, SelectChevron } from "../form-controls";
-import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/onboarding/countries";
+import {
+  COMPANY_COUNTRIES,
+  COMPANY_COUNTRY_CODES,
+  companyCountryCurrency,
+} from "@/lib/onboarding/countries";
 import { companyInfoSchema } from "@/lib/zod";
 
 type Existing = {
@@ -117,6 +121,12 @@ export default function CompanyForm({
   // setup (see saveCompanyInfo), which is skipped entirely on a later
   // revisit/edit, so there's no prior answer to prefill here.
   const [relationshipType, setRelationshipType] = useState("");
+  // Not persisted either — same reasoning as relationshipType above: only
+  // ever feeds the banking/issuing business lines' sourceOfFunds amount
+  // on the org's *first* Adyen setup, which a later revisit/edit skips
+  // entirely. (The sourceOfFunds description itself is fixed, not
+  // user-entered — see createAdyenBusinessLine.)
+  const [annualReserveFundContributions, setAnnualReserveFundContributions] = useState("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -159,6 +169,7 @@ export default function CompanyForm({
     companyStreet: fields.companyStreet,
     companyPostalCode: fields.companyPostalCode,
     companyCity: fields.companyCity,
+    annualReserveFundContributions,
   });
   const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
   function fieldError(field: keyof typeof fieldErrors) {
@@ -492,6 +503,37 @@ export default function CompanyForm({
           </div>
         </>
       )}
+
+      {/* Feeds Adyen's businessLine.sourceOfFunds (type "business") for the
+          banking/issuing lines created alongside this org — see
+          createAdyenBusinessLine in src/lib/adyen/legalEntity.ts. The
+          description there is fixed (every org here is a homeowners'
+          association funded by members' reserve-fund contributions) —
+          only the amount is asked for, and varies per association. */}
+      <label className="flex flex-col gap-1.5 text-sm">
+        Estimated annual reserve fund contributions ({companyCountryCurrency(country)})
+        <input
+          type="number"
+          name="annualReserveFundContributions"
+          min="0"
+          step="1"
+          required
+          value={annualReserveFundContributions}
+          onChange={(e) => setAnnualReserveFundContributions(e.target.value)}
+          onBlur={() => touch("annualReserveFundContributions")}
+          aria-invalid={!!fieldError("annualReserveFundContributions")}
+          className={inputClasses}
+        />
+        <span className="text-xs text-muted">
+          Total the association&apos;s households pay in each year toward the
+          reserve fund for future maintenance and restoration.
+        </span>
+        {fieldError("annualReserveFundContributions") && (
+          <span className="text-xs text-danger">
+            {fieldError("annualReserveFundContributions")}
+          </span>
+        )}
+      </label>
 
       {/* NL has no manual-entry fallback (see the null branch above), so
           there's nothing to submit until a KVK search result is actually

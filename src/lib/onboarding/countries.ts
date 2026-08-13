@@ -90,6 +90,20 @@ export function countryName(code: string): string {
   return COUNTRIES.find((c) => c.code === code)?.name ?? code;
 }
 
+// One currency per supported company country — enough for the annual
+// turnover figure that feeds Adyen's businessLine.sourceOfFunds (see
+// createAdyenBusinessLine in src/lib/adyen/legalEntity.ts). Falls back to
+// EUR for any country outside COMPANY_COUNTRY_CODES.
+const COMPANY_COUNTRY_CURRENCIES: Record<string, string> = {
+  NL: "EUR",
+  GB: "GBP",
+  US: "USD",
+};
+
+export function companyCountryCurrency(code: string): string {
+  return COMPANY_COUNTRY_CURRENCIES[code] ?? "EUR";
+}
+
 // Renders a 2-letter ISO code as its flag emoji via Unicode regional
 // indicator symbols (each letter maps to U+1F1E6.."A" + offset). No image
 // assets needed; unsupported code strings just render as-is.
