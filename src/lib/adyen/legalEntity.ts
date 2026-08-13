@@ -198,7 +198,7 @@ export async function createAdyenBusinessLine(
       ...(service === "paymentProcessing"
         ? {
             salesChannels: ["pos", "eCommerce"],
-            webDataExemption: { reason: "noOnlinePresence" },
+            webData: [{ webAddress: "https://www.saivly.com" }],
           }
         : {
             sourceOfFunds: {
