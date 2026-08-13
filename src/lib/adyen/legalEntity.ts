@@ -195,10 +195,10 @@ export async function createAdyenBusinessLine(
       legalEntityId,
       service,
       industryCode: BUSINESS_LINE_INDUSTRY_CODE,
+      webData: [{ webAddress: "https://www.saivly.com" }],
       ...(service === "paymentProcessing"
         ? {
             salesChannels: ["pos", "eCommerce"],
-            webData: [{ webAddress: "https://www.saivly.com" }],
           }
         : {
             sourceOfFunds: {
@@ -207,7 +207,6 @@ export async function createAdyenBusinessLine(
               description: RESERVE_FUND_SOURCE_OF_FUNDS_DESCRIPTION,
               amount: {
                 currency: sourceOfFundsBusiness?.currency,
-                // Adyen amounts are minor units (cents for EUR/GBP/USD).
                 value: Math.round((sourceOfFundsBusiness?.annualAmount ?? 0) * 100),
               },
             },
