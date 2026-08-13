@@ -149,6 +149,7 @@ async function ensureAdyenOrganisationReady(
       relationshipTypes: company.relationshipTypes,
       rsin: company.rsin,
       dateOfIncorporation: company.dateOfIncorporation,
+      annualReserveFundContributions: company.annualReserveFundContributions,
     });
     if (!organizationLegalEntityId) {
       return {

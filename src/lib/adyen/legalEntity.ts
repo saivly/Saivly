@@ -1,5 +1,6 @@
 
 import { adyenRequest } from "./client";
+import { companyCountryCurrency } from "@/lib/onboarding/countries";
 
 export type AdyenIndividualInput = {
   firstName: string;
@@ -106,6 +107,7 @@ export type AdyenOrganizationInput = {
   relationshipTypes: AdyenEntityRelationshipType[];
   rsin: string | null;
   dateOfIncorporation: string | null;
+  annualReserveFundContributions: number;
 };
 
 type OrganizationLegalEntityResponse = { id: string };
@@ -133,11 +135,28 @@ export async function createAdyenOrganization(
           postalCode: input.registeredAddress.postalCode,
           country: input.registeredAddress.country,
         },
+        financialReports: [
+          {
+            annualTurnover: input.annualReserveFundContributions,
+            currencyOfFinancialData: companyCountryCurrency(input.countryOfGoverningLaw),
+            dateOfFinancialData: new Date().toISOString().slice(0, 10),
+          },
+        ],
         ...(input.rsin
           ? {
               taxInformation: [
                 { country: input.countryOfGoverningLaw, number: input.rsin },
               ],
+            }
+          : {}),
+        ...(organizationType === "associationIncorporated"
+          ? {
+              taxReportingClassification: {
+                businessType: "other",
+                mainSourceOfIncome: "businessOperation",
+                type: "nonFinancialPassive",
+              },
+              vatAbsenceReason: "industryExemption",
             }
           : {}),
       },
@@ -195,7 +214,12 @@ export async function createAdyenBusinessLine(
       legalEntityId,
       service,
       industryCode: BUSINESS_LINE_INDUSTRY_CODE,
-      webData: [{ webAddress: "https://www.saivly.com" }],
+      // No storefront/app to point Adyen at for any business line — every
+      // org here is a homeowners' association (see
+      // RESERVE_FUND_SOURCE_OF_FUNDS_DESCRIPTION above), not an online
+      // seller, so webAddress is exempted rather than pointing Adyen at
+      // saivly.com itself, which isn't the shopper's business.
+      webDataExemption: { reason: "noOnlinePresence" },
       ...(service === "paymentProcessing"
         ? {
             salesChannels: ["pos", "eCommerce"],
