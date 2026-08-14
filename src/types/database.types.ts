@@ -12,7 +12,11 @@
  * 0010_organisation_adyen.sql: organisations.adyen_organization_legal_entity_id
  * / adyen_account_holder_id / adyen_balance_account_id.
  * 0011_organisation_business_lines.sql: organisations.
- * adyen_business_line_payment_processing_id / _banking_id / _issuing_id.)
+ * adyen_business_line_payment_processing_id / _banking_id / _issuing_id.
+ * 0012_organisation_business_activity.sql: organisations.relationship_type
+ * / industry_code / vat_number / support_email / support_phone /
+ * annual_reserve_fund_contributions / annual_reserve_fund_currency /
+ * website.)
  * Once you have a live project, regenerate from the real schema with:
  *   npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
  */
@@ -127,6 +131,14 @@ export type Database = {
           adyen_business_line_payment_processing_id: string | null;
           adyen_business_line_banking_id: string | null;
           adyen_business_line_issuing_id: string | null;
+          relationship_type: string | null;
+          industry_code: string | null;
+          vat_number: string | null;
+          support_email: string | null;
+          support_phone: string | null;
+          annual_reserve_fund_contributions: number | null;
+          annual_reserve_fund_currency: string | null;
+          website: string | null;
           plan: "free" | "pro" | "enterprise" | null;
           subscription_completed_at: string | null;
           created_at: string;
@@ -147,6 +159,14 @@ export type Database = {
           adyen_business_line_payment_processing_id?: string | null;
           adyen_business_line_banking_id?: string | null;
           adyen_business_line_issuing_id?: string | null;
+          relationship_type?: string | null;
+          industry_code?: string | null;
+          vat_number?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          annual_reserve_fund_contributions?: number | null;
+          annual_reserve_fund_currency?: string | null;
+          website?: string | null;
           plan?: "free" | "pro" | "enterprise" | null;
           subscription_completed_at?: string | null;
         };
@@ -164,6 +184,14 @@ export type Database = {
           adyen_business_line_payment_processing_id?: string | null;
           adyen_business_line_banking_id?: string | null;
           adyen_business_line_issuing_id?: string | null;
+          relationship_type?: string | null;
+          industry_code?: string | null;
+          vat_number?: string | null;
+          support_email?: string | null;
+          support_phone?: string | null;
+          annual_reserve_fund_contributions?: number | null;
+          annual_reserve_fund_currency?: string | null;
+          website?: string | null;
           plan?: "free" | "pro" | "enterprise" | null;
           subscription_completed_at?: string | null;
         };

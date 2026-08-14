@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
-import { companyInfoSchema } from "@/lib/zod";
+import { companyInfoSchema, businessActivitySchema } from "@/lib/zod";
 import {
   searchKvkCompanies,
   getKvkCompanyDetails,
@@ -14,10 +14,12 @@ import {
 import {
   createAdyenOrganization,
   createAdyenBusinessLine,
+  isHomeownersAssociation,
+  HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE,
+  sourceOfFundsDescription,
   type AdyenEntityRelationshipType,
 } from "@/lib/adyen/legalEntity";
 import { createAdyenAccountHolder, createAdyenBalanceAccount } from "@/lib/adyen/balancePlatform";
-import { companyCountryCurrency } from "@/lib/onboarding/countries";
 
 /**
  * Thin RPC wrappers so the client form (company-form.tsx) can call the KVK
@@ -86,14 +88,10 @@ function expandRelationshipTypes(value: string): AdyenEntityRelationshipType[] {
  * company_completed_at is only stamped once all six ids are in place
  * (freshly created or found already there on resume).
  *
- * Business lines are created here — the same request that's already
- * showing the shopper a "Saving…" state for the first three calls,
- * before they've been sent anywhere near Adyen's hosted onboarding page
- * — rather than later. legalEntityId (their hard prerequisite) already
- * exists by this point, and Adyen's hosted page (generated next, in the
- * adyen step) uses the business lines to decide what compliance checks
- * to show — creating them here means that page never has to render
- * against an incomplete picture.
+ * Called from saveBusinessActivity below (the second of the "Organisation
+ * info" step's two pages) — legalEntityId's compliance-facing fields
+ * (industry/reserve-fund/etc.) aren't known until that page, so this
+ * can't run any earlier than that.
  */
 async function ensureAdyenOrganisationReady(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -111,6 +109,9 @@ async function ensureAdyenOrganisationReady(
     rsin: string | null;
     dateOfIncorporation: string | null;
     annualReserveFundContributions: number;
+    reserveFundCurrency: string;
+    industryCode: string;
+    website: string | null;
   }
 ): Promise<AdyenChainResult> {
   const { data: org, error: readError } = await supabase
@@ -150,6 +151,7 @@ async function ensureAdyenOrganisationReady(
       rsin: company.rsin,
       dateOfIncorporation: company.dateOfIncorporation,
       annualReserveFundContributions: company.annualReserveFundContributions,
+      reserveFundCurrency: company.reserveFundCurrency,
     });
     if (!organizationLegalEntityId) {
       return {
@@ -200,7 +202,9 @@ async function ensureAdyenOrganisationReady(
   if (!paymentProcessingBusinessLineId) {
     paymentProcessingBusinessLineId = await createAdyenBusinessLine(
       organizationLegalEntityId,
-      "paymentProcessing"
+      "paymentProcessing",
+      company.industryCode,
+      company.website
     );
     if (!paymentProcessingBusinessLineId) {
       return {
@@ -216,15 +220,21 @@ async function ensureAdyenOrganisationReady(
     if (error) return { ok: false, error: error.message };
   }
 
+  // Only VvEs (the common case here) get the reserve-fund-specific
+  // description — every other org falls back to a generic one (see
+  // sourceOfFundsDescription in src/lib/adyen/legalEntity.ts).
   const sourceOfFundsBusiness = {
     annualAmount: company.annualReserveFundContributions,
-    currency: companyCountryCurrency(company.country),
+    currency: company.reserveFundCurrency,
+    description: sourceOfFundsDescription(company.rechtsvorm),
   };
 
   if (!bankingBusinessLineId) {
     bankingBusinessLineId = await createAdyenBusinessLine(
       organizationLegalEntityId,
       "banking",
+      company.industryCode,
+      company.website,
       sourceOfFundsBusiness
     );
     if (!bankingBusinessLineId) {
@@ -245,6 +255,8 @@ async function ensureAdyenOrganisationReady(
     issuingBusinessLineId = await createAdyenBusinessLine(
       organizationLegalEntityId,
       "issuing",
+      company.industryCode,
+      company.website,
       sourceOfFundsBusiness
     );
     if (!issuingBusinessLineId) {
@@ -272,6 +284,15 @@ async function ensureAdyenOrganisationReady(
   return { ok: true };
 }
 
+/**
+ * First half of the "Organisation info" step's company page: KVK lookup
+ * (or manual entry outside NL) + relationship-to-the-company, persisted
+ * as soon as they're submitted. Deliberately does nothing Adyen-facing —
+ * that all happens once industry/reserve-fund/support-contact/VAT are
+ * gathered too, on the business-activity screen this redirects to (see
+ * saveBusinessActivity below), so a shopper who never gets that far
+ * hasn't left a half-registered legal entity behind in Adyen.
+ */
 export async function saveCompanyInfo(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -293,8 +314,6 @@ export async function saveCompanyInfo(formData: FormData) {
       (formData.get("companyPostalCode") as string) ?? ""
     ).trim(),
     companyCity: ((formData.get("companyCity") as string) ?? "").trim(),
-    annualReserveFundContributions:
-      (formData.get("annualReserveFundContributions") as string) ?? "",
   });
 
   if (!parsed.success) {
@@ -310,12 +329,12 @@ export async function saveCompanyInfo(formData: FormData) {
     companyStreet,
     companyPostalCode,
     companyCity,
-    annualReserveFundContributions,
   } = parsed.data;
 
   const orgFields = {
     name: companyName,
     country: companyCountry,
+    relationship_type: relationshipType,
     kvk_number: kvkNumber || null,
     street: companyStreet,
     postal_code: companyPostalCode,
@@ -323,40 +342,17 @@ export async function saveCompanyInfo(formData: FormData) {
   };
 
   const existingOrgId = await getOwnOrganisationId(supabase, user.id);
-  let organisationId: string;
-  // Already fully set up in Adyen — an edit to an already-completed
-  // company step shouldn't re-run entity/account-holder/balance-account/
-  // business-line creation (that would mint duplicates in Adyen for every
-  // re-save). Checks all six ids, not just the first three: an org that
-  // has the legal entity/account holder/balance account but not yet its
-  // business lines (e.g. it onboarded before business lines existed)
-  // must still fall through to ensureAdyenOrganisationReady below so it
-  // can pick up wherever it actually left off.
-  let alreadyAdyenReady = false;
 
   if (existingOrgId) {
-    const { data: updated, error } = await supabase
+    const { error } = await supabase
       .from("organisations")
       .update(orgFields)
-      .eq("id", existingOrgId)
-      .select(
-        "adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id, adyen_business_line_payment_processing_id, adyen_business_line_banking_id, adyen_business_line_issuing_id"
-      )
-      .single();
+      .eq("id", existingOrgId);
     if (error) {
       redirect(
         `/onboarding/company?error=${encodeURIComponent(error.message)}`
       );
     }
-    organisationId = existingOrgId;
-    alreadyAdyenReady = Boolean(
-      updated?.adyen_organization_legal_entity_id &&
-        updated?.adyen_account_holder_id &&
-        updated?.adyen_balance_account_id &&
-        updated?.adyen_business_line_payment_processing_id &&
-        updated?.adyen_business_line_banking_id &&
-        updated?.adyen_business_line_issuing_id
-    );
   } else {
     // First time through — create the org, then join it as owner.
     // The id is generated here (rather than left to the DB default +
@@ -365,7 +361,7 @@ export async function saveCompanyInfo(formData: FormData) {
     // the insert itself regardless, but there's no reason to rely on
     // RETURNING being exempt from the table's SELECT policy when we can
     // just... not need it.
-    organisationId = crypto.randomUUID();
+    const organisationId = crypto.randomUUID();
 
     const { error: orgError } = await supabase
       .from("organisations")
@@ -386,6 +382,158 @@ export async function saveCompanyInfo(formData: FormData) {
     }
   }
 
+  // See personal/actions.ts for why this is needed on every step's
+  // completion redirect, not just this one.
+  revalidatePath("/onboarding", "layout");
+  redirect("/onboarding/company/business-activity");
+}
+
+/**
+ * Second half of the "Organisation info" step: industry, the reserve-fund
+ * estimate (amount + currency), support contact details, VAT number, and
+ * website — then the whole organisation-legal-entity/account-holder/
+ * balance-account/business-line chain in Adyen (ensureAdyenOrganisationReady
+ * above), using these answers together with whatever saveCompanyInfo
+ * already persisted.
+ */
+export async function saveBusinessActivity(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const status = await getOnboardingStatus(supabase, user.id);
+  if (!status.personalDone) redirect("/onboarding/personal");
+
+  const organisationId = await getOwnOrganisationId(supabase, user.id);
+  if (!organisationId) redirect("/onboarding/company");
+
+  const { data: org, error: orgReadError } = await supabase
+    .from("organisations")
+    .select(
+      "name, country, relationship_type, kvk_number, street, postal_code, city, adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id, adyen_business_line_payment_processing_id, adyen_business_line_banking_id, adyen_business_line_issuing_id"
+    )
+    .eq("id", organisationId)
+    .maybeSingle();
+
+  if (orgReadError || !org) {
+    redirect(
+      `/onboarding/company?error=${encodeURIComponent(
+        orgReadError?.message ?? "We couldn't find your organisation. Please start again."
+      )}`
+    );
+  }
+
+  // Shouldn't happen — saveCompanyInfo always sets this before this page
+  // is ever reachable — but the Adyen chain below needs a real value.
+  if (!org.relationship_type) {
+    redirect("/onboarding/company");
+  }
+
+  // KVK's "statutaire naam" (formal registered name), rechtsvorm (legal
+  // form), RSIN (Dutch tax/legal-entity id), and date of incorporation
+  // feed Adyen's organization.legalName/type/taxInformation/
+  // dateOfIncorporation — re-fetched here from the kvkNumber rather than
+  // trusted from the submitted form, since these go straight into a
+  // compliance-facing API call. Outside NL there's no KVK register to
+  // check, so the saved company name stands in for legalName and the
+  // rest stay null (mapRechtsvormToOrganizationType's fallback:
+  // privateCompany; no RSIN/incorporation date outside NL). Done up
+  // front (not just inside the Adyen-chain branch below) because
+  // rechtsvorm also decides whether this is a VvE — which locks several
+  // of the fields being saved to organisations just below.
+  let legalName = org.name;
+  let rechtsvorm: string | null = null;
+  let rsin: string | null = null;
+  let dateOfIncorporation: string | null = null;
+  if (org.kvk_number) {
+    const kvkDetails = await getKvkCompanyDetails(org.kvk_number);
+    if (kvkDetails) {
+      legalName = kvkDetails.statutoryName ?? org.name;
+      rechtsvorm = kvkDetails.legalForm;
+      rsin = kvkDetails.rsin;
+      dateOfIncorporation = kvkDetails.dateOfIncorporation;
+    }
+  }
+  const isVve = isHomeownersAssociation(rechtsvorm);
+
+  const parsed = businessActivitySchema.safeParse({
+    industryCode: (formData.get("industryCode") as string) ?? "",
+    reserveFundCurrency: (formData.get("reserveFundCurrency") as string) ?? "",
+    annualReserveFundContributions:
+      (formData.get("annualReserveFundContributions") as string) ?? "",
+    supportEmail: ((formData.get("supportEmail") as string) ?? "").trim(),
+    supportPhone: ((formData.get("supportPhone") as string) ?? "").trim(),
+    vatNumber: ((formData.get("vatNumber") as string) ?? "").trim(),
+    website: ((formData.get("website") as string) ?? "").trim(),
+  });
+
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? "Invalid input.";
+    redirect(
+      `/onboarding/company/business-activity?error=${encodeURIComponent(message)}`
+    );
+  }
+
+  const {
+    industryCode: submittedIndustryCode,
+    reserveFundCurrency,
+    annualReserveFundContributions: enteredReserveFundAmount,
+    supportEmail,
+    supportPhone,
+    vatNumber,
+    website: submittedWebsite,
+  } = parsed.data;
+
+  // VvEs get a few fields locked server-side, not just disabled in the
+  // form — a shopper can't override them by tampering with the request.
+  const industryCode = isVve ? HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE : submittedIndustryCode;
+  const website = isVve ? null : submittedWebsite || null;
+  // VvEs are asked for their *monthly* contribution (see the "Expected
+  // Monthly contribution for this account" label in business-activity-
+  // form.tsx) — Adyen's annualTurnover/sourceOfFunds.amount both want a
+  // true annual figure, so it's annualised here before going anywhere
+  // near either. Everyone else's figure is already annual.
+  const annualReserveFundContributions = isVve
+    ? enteredReserveFundAmount * 12
+    : enteredReserveFundAmount;
+
+  const { error: updateError } = await supabase
+    .from("organisations")
+    .update({
+      industry_code: industryCode,
+      annual_reserve_fund_currency: reserveFundCurrency,
+      annual_reserve_fund_contributions: annualReserveFundContributions,
+      support_email: supportEmail,
+      support_phone: supportPhone,
+      vat_number: vatNumber || null,
+      website,
+    })
+    .eq("id", organisationId);
+  if (updateError) {
+    redirect(
+      `/onboarding/company/business-activity?error=${encodeURIComponent(updateError.message)}`
+    );
+  }
+
+  // Already fully set up in Adyen — an edit to an already-completed
+  // company step shouldn't re-run entity/account-holder/balance-account/
+  // business-line creation (that would mint duplicates in Adyen for every
+  // re-save). Checks all six ids, not just the first three: an org that
+  // has the legal entity/account holder/balance account but not yet its
+  // business lines (e.g. it onboarded before business lines existed)
+  // must still fall through to ensureAdyenOrganisationReady below so it
+  // can pick up wherever it actually left off.
+  const alreadyAdyenReady = Boolean(
+    org.adyen_organization_legal_entity_id &&
+      org.adyen_account_holder_id &&
+      org.adyen_balance_account_id &&
+      org.adyen_business_line_payment_processing_id &&
+      org.adyen_business_line_banking_id &&
+      org.adyen_business_line_issuing_id
+  );
+
   if (!alreadyAdyenReady) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -398,33 +546,10 @@ export async function saveCompanyInfo(formData: FormData) {
       // Shouldn't happen — personalDone requires this — but the org
       // legal entity's entityAssociations needs an id to point at.
       redirect(
-        `/onboarding/company?error=${encodeURIComponent(
+        `/onboarding/company/business-activity?error=${encodeURIComponent(
           "We couldn't find your identity verification record. Go back to Personal info and save it again, then retry."
         )}`
       );
-    }
-
-    // KVK's "statutaire naam" (formal registered name), rechtsvorm (legal
-    // form), RSIN (Dutch tax/legal-entity id), and date of incorporation
-    // feed Adyen's organization.legalName/type/taxInformation/
-    // dateOfIncorporation — re-fetched here from the kvkNumber rather
-    // than trusted from the submitted form, since these go straight into
-    // a compliance-facing API call. Outside NL there's no KVK register to
-    // check, so the manually entered company name stands in for
-    // legalName and the rest stay null (mapRechtsvormToOrganizationType's
-    // fallback: privateCompany; no RSIN/incorporation date outside NL).
-    let legalName = companyName;
-    let rechtsvorm: string | null = null;
-    let rsin: string | null = null;
-    let dateOfIncorporation: string | null = null;
-    if (kvkNumber) {
-      const kvkDetails = await getKvkCompanyDetails(kvkNumber);
-      if (kvkDetails) {
-        legalName = kvkDetails.statutoryName ?? companyName;
-        rechtsvorm = kvkDetails.legalForm;
-        rsin = kvkDetails.rsin;
-        dateOfIncorporation = kvkDetails.dateOfIncorporation;
-      }
     }
 
     const result = await ensureAdyenOrganisationReady(
@@ -434,24 +559,29 @@ export async function saveCompanyInfo(formData: FormData) {
       {
         legalName,
         rechtsvorm,
-        registrationNumber: kvkNumber ?? "",
-        country: companyCountry,
-        street: companyStreet,
-        postalCode: companyPostalCode,
-        city: companyCity,
+        registrationNumber: org.kvk_number ?? "",
+        country: org.country,
+        street: org.street ?? "",
+        postalCode: org.postal_code ?? "",
+        city: org.city ?? "",
         // "all" expands to all three real Adyen values — one
         // entityAssociation gets created per entry (see
         // createAdyenOrganization), each with its own type standing in
         // for its own jobTitle too.
-        relationshipTypes: expandRelationshipTypes(relationshipType),
+        relationshipTypes: expandRelationshipTypes(org.relationship_type),
         rsin,
         dateOfIncorporation,
         annualReserveFundContributions,
+        reserveFundCurrency,
+        industryCode,
+        website,
       }
     );
 
     if (!result.ok) {
-      redirect(`/onboarding/company?error=${encodeURIComponent(result.error)}`);
+      redirect(
+        `/onboarding/company/business-activity?error=${encodeURIComponent(result.error)}`
+      );
     }
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { COUNTRIES, countryFlag } from "@/lib/onboarding/countries";
+import { COUNTRIES, countryFlag, CURRENCIES } from "@/lib/onboarding/countries";
 
 // Shared between every /onboarding form (personal, company, …) so their
 // inputs/selects look identical.
@@ -69,6 +69,36 @@ export function CountrySelect({
         {options.map((c) => (
           <option key={c.code} value={c.code}>
             {c.name}
+          </option>
+        ))}
+      </select>
+      <SelectChevron />
+    </div>
+  );
+}
+
+/** Same shell as CountrySelect, minus the flag glyph — currencies don't have one. */
+export function CurrencySelect({
+  name,
+  value,
+  onChange,
+}: {
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <select
+        name={name}
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${inputClasses} w-full appearance-none pr-8`}
+      >
+        {CURRENCIES.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.code} — {c.name}
           </option>
         ))}
       </select>

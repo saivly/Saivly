@@ -7,15 +7,12 @@ import Link from "next/link";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
 import type { KvkSearchResult } from "@/lib/onboarding/kvk";
 import { inputClasses, CountrySelect, SelectChevron } from "../form-controls";
-import {
-  COMPANY_COUNTRIES,
-  COMPANY_COUNTRY_CODES,
-  companyCountryCurrency,
-} from "@/lib/onboarding/countries";
+import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/onboarding/countries";
 import { companyInfoSchema } from "@/lib/zod";
 
 type Existing = {
   companyCountry: string;
+  relationshipType: string;
   kvkNumber: string;
   companyName: string;
   companyStreet: string;
@@ -83,9 +80,9 @@ const RELATIONSHIP_OPTIONS = [
 // when called from a component distinct from the one rendering the
 // <form> itself (see the same pattern in login/auth-panels.tsx) — hence
 // pulling this out instead of inlining the button below. This click
-// kicks off the whole organisation-legal-entity/account-holder/balance-
-// account chain in Adyen (saveCompanyInfo), so a second click landing
-// before the first finishes could very well mint duplicates there.
+// creates the organisation + membership row (saveCompanyInfo) before
+// moving on to the business-activity screen, so a second click landing
+// before the first finishes could still double up that insert.
 function ContinueButton({ disabledUntilReady }: { disabledUntilReady: boolean }) {
   const { pending } = useFormStatus();
   return (
@@ -116,17 +113,7 @@ export default function CompanyForm({
       ? existing.companyCountry
       : "NL"
   );
-  // Neither persisted anywhere (organisations has no columns for them) —
-  // they only ever feed entityAssociations on the org's *first* Adyen
-  // setup (see saveCompanyInfo), which is skipped entirely on a later
-  // revisit/edit, so there's no prior answer to prefill here.
-  const [relationshipType, setRelationshipType] = useState("");
-  // Not persisted either — same reasoning as relationshipType above: only
-  // ever feeds the banking/issuing business lines' sourceOfFunds amount
-  // on the org's *first* Adyen setup, which a later revisit/edit skips
-  // entirely. (The sourceOfFunds description itself is fixed, not
-  // user-entered — see createAdyenBusinessLine.)
-  const [annualReserveFundContributions, setAnnualReserveFundContributions] = useState("");
+  const [relationshipType, setRelationshipType] = useState(existing.relationshipType);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -169,7 +156,6 @@ export default function CompanyForm({
     companyStreet: fields.companyStreet,
     companyPostalCode: fields.companyPostalCode,
     companyCity: fields.companyCity,
-    annualReserveFundContributions,
   });
   const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
   function fieldError(field: keyof typeof fieldErrors) {
@@ -504,42 +490,13 @@ export default function CompanyForm({
         </>
       )}
 
-      {/* Feeds Adyen's businessLine.sourceOfFunds (type "business") for the
-          banking/issuing lines created alongside this org — see
-          createAdyenBusinessLine in src/lib/adyen/legalEntity.ts. The
-          description there is fixed (every org here is a homeowners'
-          association funded by members' reserve-fund contributions) —
-          only the amount is asked for, and varies per association. */}
-      <label className="flex flex-col gap-1.5 text-sm">
-        Estimated annual reserve fund contributions ({companyCountryCurrency(country)})
-        <input
-          type="number"
-          name="annualReserveFundContributions"
-          min="0"
-          step="1"
-          required
-          value={annualReserveFundContributions}
-          onChange={(e) => setAnnualReserveFundContributions(e.target.value)}
-          onBlur={() => touch("annualReserveFundContributions")}
-          aria-invalid={!!fieldError("annualReserveFundContributions")}
-          className={inputClasses}
-        />
-        <span className="text-xs text-muted">
-          Total the association&apos;s households pay in each year toward the
-          reserve fund for future maintenance and restoration.
-        </span>
-        {fieldError("annualReserveFundContributions") && (
-          <span className="text-xs text-danger">
-            {fieldError("annualReserveFundContributions")}
-          </span>
-        )}
-      </label>
-
       {/* NL has no manual-entry fallback (see the null branch above), so
           there's nothing to submit until a KVK search result is actually
           picked — fade the button out rather than leaving it looking
           clickable ahead of that (and again while the submission itself
-          is in flight, see ContinueButton). */}
+          is in flight, see ContinueButton). Industry, reserve fund,
+          support contact, and VAT number are asked next, on the
+          business-activity screen. */}
       <ContinueButton disabledUntilReady={isNL && !hasSelectedCompany} />
 
       {/* Only meaningful before the org actually exists: once created (or

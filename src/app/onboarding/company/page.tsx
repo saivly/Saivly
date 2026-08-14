@@ -33,7 +33,9 @@ export default async function CompanyInfoStep({
   const { data: existing } = membership
     ? await supabase
         .from("organisations")
-        .select("id, country, kvk_number, name, street, postal_code, city")
+        .select(
+          "id, country, relationship_type, kvk_number, name, street, postal_code, city"
+        )
         .eq("id", membership.organisation_id)
         .maybeSingle()
     : { data: null };
@@ -62,6 +64,7 @@ export default async function CompanyInfoStep({
       <CompanyForm
         existing={{
           companyCountry: existing?.country ?? "NL",
+          relationshipType: existing?.relationship_type ?? "",
           kvkNumber: existing?.kvk_number ?? "",
           companyName: existing?.name ?? "",
           companyStreet: existing?.street ?? "",

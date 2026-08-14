@@ -11,6 +11,7 @@ export type OnboardingStepPath =
   | "personal"
   | "organisation"
   | "company"
+  | "company/business-activity"
   | "adyen"
   | "subscription";
 
@@ -31,7 +32,12 @@ export const ONBOARDING_STEPS = [
   {
     key: "organisation",
     label: "Organisation info",
-    paths: ["organisation", "organisation/join", "company"],
+    paths: [
+      "organisation",
+      "organisation/join",
+      "company",
+      "company/business-activity",
+    ],
     revisitPath: "company",
   },
   {

@@ -104,6 +104,68 @@ export function companyCountryCurrency(code: string): string {
   return COMPANY_COUNTRY_CURRENCIES[code] ?? "EUR";
 }
 
+// Offered on the business-activity step's reserve-fund currency selector
+// (see /onboarding/company/business-activity) — defaults to
+// companyCountryCurrency(country) but isn't locked to it, since an
+// association's reserve fund isn't always denominated in its home
+// country's currency. Not exhaustive (ISO 4217 has ~180 codes); covers
+// the currencies of every country in COUNTRIES plus a few other major
+// ones, sorted alphabetically by code.
+const CURRENCIES_UNSORTED: { code: string; name: string }[] = [
+  { code: "AED", name: "UAE Dirham" },
+  { code: "ARS", name: "Argentine Peso" },
+  { code: "AUD", name: "Australian Dollar" },
+  { code: "BGN", name: "Bulgarian Lev" },
+  { code: "BRL", name: "Brazilian Real" },
+  { code: "CAD", name: "Canadian Dollar" },
+  { code: "CHF", name: "Swiss Franc" },
+  { code: "CLP", name: "Chilean Peso" },
+  { code: "CNY", name: "Chinese Yuan" },
+  { code: "COP", name: "Colombian Peso" },
+  { code: "CZK", name: "Czech Koruna" },
+  { code: "DKK", name: "Danish Krone" },
+  { code: "EGP", name: "Egyptian Pound" },
+  { code: "EUR", name: "Euro" },
+  { code: "GBP", name: "British Pound" },
+  { code: "HKD", name: "Hong Kong Dollar" },
+  { code: "HUF", name: "Hungarian Forint" },
+  { code: "IDR", name: "Indonesian Rupiah" },
+  { code: "ILS", name: "Israeli New Shekel" },
+  { code: "INR", name: "Indian Rupee" },
+  { code: "ISK", name: "Icelandic Krona" },
+  { code: "JPY", name: "Japanese Yen" },
+  { code: "KES", name: "Kenyan Shilling" },
+  { code: "KRW", name: "South Korean Won" },
+  { code: "MAD", name: "Moroccan Dirham" },
+  { code: "MXN", name: "Mexican Peso" },
+  { code: "MYR", name: "Malaysian Ringgit" },
+  { code: "NGN", name: "Nigerian Naira" },
+  { code: "NOK", name: "Norwegian Krone" },
+  { code: "NZD", name: "New Zealand Dollar" },
+  { code: "PHP", name: "Philippine Peso" },
+  { code: "PLN", name: "Polish Zloty" },
+  { code: "RON", name: "Romanian Leu" },
+  { code: "RUB", name: "Russian Ruble" },
+  { code: "SAR", name: "Saudi Riyal" },
+  { code: "SEK", name: "Swedish Krona" },
+  { code: "SGD", name: "Singapore Dollar" },
+  { code: "THB", name: "Thai Baht" },
+  { code: "TRY", name: "Turkish Lira" },
+  { code: "UAH", name: "Ukrainian Hryvnia" },
+  { code: "USD", name: "US Dollar" },
+  { code: "VND", name: "Vietnamese Dong" },
+  { code: "ZAR", name: "South African Rand" },
+];
+
+export const CURRENCIES = [...CURRENCIES_UNSORTED].sort((a, b) =>
+  a.code.localeCompare(b.code)
+);
+
+export const CURRENCY_CODES = CURRENCIES.map((c) => c.code) as [
+  string,
+  ...string[],
+];
+
 // Renders a 2-letter ISO code as its flag emoji via Unicode regional
 // indicator symbols (each letter maps to U+1F1E6.."A" + offset). No image
 // assets needed; unsupported code strings just render as-is.
