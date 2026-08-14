@@ -135,6 +135,10 @@ export type AdyenOrganizationInput = {
    * in — picked by the shopper on the business-activity screen, not
    * assumed from countryOfGoverningLaw. */
   reserveFundCurrency: string;
+  /** Support contact shown to Adyen (and, downstream, to cardholders) —
+   * collected on the business-activity screen alongside industryCode. */
+  supportEmail: string;
+  supportPhone: string;
 };
 
 type OrganizationLegalEntityResponse = { id: string };
@@ -149,6 +153,17 @@ export async function createAdyenOrganization(
     method: "POST",
     body: JSON.stringify({
       type: "organization",
+      // Top-level, not nested under `organization` — required once a
+      // platform is involved. phone.type is fixed to "mobile" rather
+      // than asked on the form, same as the individual's phone above.
+      support: {
+        email: input.supportEmail,
+        phone: {
+          number: input.supportPhone,
+          phoneCountryCode: input.registeredAddress.country,
+          type: "mobile",
+        },
+      },
       organization: {
         legalName: input.legalName,
         doingBusinessAsAbsent: true,

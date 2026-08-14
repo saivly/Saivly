@@ -112,6 +112,8 @@ async function ensureAdyenOrganisationReady(
     reserveFundCurrency: string;
     industryCode: string;
     website: string | null;
+    supportEmail: string;
+    supportPhone: string;
   }
 ): Promise<AdyenChainResult> {
   const { data: org, error: readError } = await supabase
@@ -152,6 +154,8 @@ async function ensureAdyenOrganisationReady(
       dateOfIncorporation: company.dateOfIncorporation,
       annualReserveFundContributions: company.annualReserveFundContributions,
       reserveFundCurrency: company.reserveFundCurrency,
+      supportEmail: company.supportEmail,
+      supportPhone: company.supportPhone,
     });
     if (!organizationLegalEntityId) {
       return {
@@ -575,6 +579,8 @@ export async function saveBusinessActivity(formData: FormData) {
         reserveFundCurrency,
         industryCode,
         website,
+        supportEmail,
+        supportPhone,
       }
     );
 
