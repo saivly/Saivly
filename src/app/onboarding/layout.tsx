@@ -38,10 +38,23 @@ export default async function TeamOnboardingLayout({
     adyen: status.adyenDone,
     subscription: status.subscriptionDone,
   };
+  // Keyed by ONBOARDING_STEPS' organisation.subSteps[].key — finer-grained
+  // than stepDone.organisation above, driving the nested checkmarks the
+  // sidebar shows for that one step's four pages.
+  const subStepDone: Record<string, boolean> = {
+    "new-organisation": status.organisationDone,
+    "company-information": status.companyInfoDone,
+    "business-activity": status.businessActivityDone,
+    "contact-details": status.companyDone,
+  };
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-4xl flex-col gap-8 px-6 py-16 md:flex-row md:gap-16">
-      <OnboardingSidebar steps={ONBOARDING_STEPS} stepDone={stepDone} />
+      <OnboardingSidebar
+        steps={ONBOARDING_STEPS}
+        stepDone={stepDone}
+        subStepDone={subStepDone}
+      />
       <div className="min-w-0 flex-1">{children}</div>
     </main>
   );

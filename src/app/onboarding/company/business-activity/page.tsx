@@ -32,7 +32,7 @@ export default async function BusinessActivityStep({
     .limit(1)
     .maybeSingle();
 
-  // Nothing to ask about yet — this screen is the second half of the
+  // Nothing to ask about yet — this screen is the third page of the
   // company step, reachable only after saveCompanyInfo has created the
   // organisation row (see company/actions.ts).
   if (!membership) redirect("/onboarding/company");
@@ -40,7 +40,7 @@ export default async function BusinessActivityStep({
   const { data: org } = await supabase
     .from("organisations")
     .select(
-      "name, country, kvk_number, industry_code, vat_number, support_email, support_phone, annual_reserve_fund_contributions, annual_reserve_fund_currency, website"
+      "name, country, kvk_number, industry_code, vat_number, business_description, annual_reserve_fund_contributions, annual_reserve_fund_currency"
     )
     .eq("id", membership.organisation_id)
     .maybeSingle();
@@ -49,8 +49,8 @@ export default async function BusinessActivityStep({
 
   // Same re-fetch-from-KVK-rather-than-trust-a-stored-guess pattern as
   // saveBusinessActivity (see company/actions.ts) — rechtsvorm isn't
-  // persisted, and VvE-ness decides whether industry/website/the reserve-
-  // fund label below are locked.
+  // persisted, and VvE-ness decides whether industry (and the reserve-
+  // fund label below) is locked.
   const kvkDetails = org.kvk_number ? await getKvkCompanyDetails(org.kvk_number) : null;
   const isVve = isHomeownersAssociation(kvkDetails?.legalForm);
 
@@ -81,15 +81,12 @@ export default async function BusinessActivityStep({
       <BusinessActivityForm
         isVve={isVve}
         existing={{
-          companyCountry: org.country,
           industryCode: isVve ? HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE : org.industry_code ?? "",
           reserveFundCurrency:
             org.annual_reserve_fund_currency ?? companyCountryCurrency(org.country),
           annualReserveFundContributions: prefillAmount,
-          supportEmail: org.support_email ?? "",
-          supportPhone: org.support_phone ?? "",
           vatNumber: org.vat_number ?? "",
-          website: isVve ? "" : org.website ?? "",
+          businessDescription: org.business_description ?? "",
         }}
       />
     </div>

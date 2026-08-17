@@ -140,7 +140,10 @@ export const companyInfoSchema = zod
 // outside NL, its details are entered manually) on /onboarding/company.
 // Kept as its own schema/page rather than folded into companyInfoSchema
 // above because it's a separate page (see ONBOARDING_STEPS in
-// src/lib/onboarding/onboarding.ts): the company step now spans two URLs.
+// src/lib/onboarding/onboarding.ts): the company step now spans several
+// URLs. This is the third of them — industry/reserve-fund/VAT/description
+// — with contact details (below) split off onto a fourth so each screen
+// asks about one thing at a time.
 export const businessActivitySchema = zod.object({
     // One of Adyen's own industry codes (see src/lib/onboarding/industry-codes.ts) —
     // feeds every business line's industryCode directly (see
@@ -157,18 +160,29 @@ export const businessActivitySchema = zod.object({
         .number({ message: 'Enter the estimated annual reserve fund contributions.' })
         .int({ message: 'Enter a whole number.' })
         .min(0, { message: 'This can’t be negative.' }),
+    // Optional — most organisations here are VAT-exempt homeowners'
+    // associations (see vatAbsenceReason in src/lib/adyen/legalEntity.ts).
+    vatNumber: zod.string().trim().max(32, { message: 'VAT number is too long.' }).optional().or(zod.literal('')),
+    // Optional, free text — not sent to Adyen anywhere, just shown back to
+    // the org later (see migration 0013).
+    businessDescription: zod.string().trim().max(500, { message: 'Keep the description under 500 characters.' }).optional().or(zod.literal('')),
+});
+
+// Fourth (final) page of the "Organisation info" step — see
+// businessActivitySchema above. Collected last because submitting it is
+// what fires the Adyen organisation-legal-entity chain
+// (ensureAdyenOrganisationReady in company/actions.ts), which needs every
+// answer from all three earlier pages plus these.
+export const contactDetailsSchema = zod.object({
+    // Optional — most associations here don't have one. Feeds every
+    // business line's webAddress when set (see createAdyenBusinessLine);
+    // webDataExemption otherwise.
+    website: zod.url({ message: 'Enter a valid website URL, e.g. https://example.com.' }).optional().or(zod.literal('')),
     supportEmail: zod.email({ message: 'Enter a valid support email address.' }),
     supportPhone: zod
         .string()
         .min(1, { message: 'Support phone number is required.' })
         .regex(PHONE_PATTERN, { message: 'Enter a valid phone number.' }),
-    // Optional — most organisations here are VAT-exempt homeowners'
-    // associations (see vatAbsenceReason in src/lib/adyen/legalEntity.ts).
-    vatNumber: zod.string().trim().max(32, { message: 'VAT number is too long.' }).optional().or(zod.literal('')),
-    // Optional — most associations here don't have one. Feeds every
-    // business line's webAddress when set (see createAdyenBusinessLine);
-    // webDataExemption otherwise.
-    website: zod.url({ message: 'Enter a valid website URL, e.g. https://example.com.' }).optional().or(zod.literal('')),
 });
 
 export const PLAN_OPTIONS = ['free', 'pro', 'enterprise'] as const;

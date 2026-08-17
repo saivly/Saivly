@@ -6,7 +6,6 @@ import { flattenError } from "zod";
 import Link from "next/link";
 import { saveBusinessActivity } from "../actions";
 import { inputClasses, CurrencySelect, SelectChevron } from "../../form-controls";
-import { phonePlaceholder } from "@/lib/onboarding/countries";
 import { INDUSTRY_CODE_GROUPS } from "@/lib/onboarding/industry-codes";
 import { businessActivitySchema } from "@/lib/zod";
 
@@ -16,22 +15,16 @@ import { businessActivitySchema } from "@/lib/zod";
 const HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE = "5313";
 
 type Existing = {
-  companyCountry: string;
   industryCode: string;
   reserveFundCurrency: string;
   annualReserveFundContributions: string;
-  supportEmail: string;
-  supportPhone: string;
   vatNumber: string;
-  website: string;
+  businessDescription: string;
 };
 
 // Same useFormStatus caveat as company-form.tsx's ContinueButton — pulled
 // out so it reports the enclosing <form>'s pending state rather than
-// always false. This click kicks off the whole organisation-legal-entity/
-// account-holder/balance-account/business-line chain in Adyen
-// (saveBusinessActivity), so a second click landing before the first
-// finishes could very well mint duplicates there.
+// always false.
 function ContinueButton() {
   const { pending } = useFormStatus();
   return (
@@ -50,8 +43,8 @@ export default function BusinessActivityForm({
 }: {
   existing: Existing;
   /** Whether this org's KVK rechtsvorm is "vereniging van eigenaars" — see
-   * isHomeownersAssociation in src/lib/adyen/legalEntity.ts. Locks industry
-   * and website to fixed values and changes what the reserve-fund amount
+   * isHomeownersAssociation in src/lib/adyen/legalEntity.ts. Locks
+   * industry to a fixed value and changes what the reserve-fund amount
    * asks for; enforced server-side too (saveBusinessActivity), this is
    * just what makes that legible in the form itself. */
   isVve: boolean;
@@ -61,10 +54,8 @@ export default function BusinessActivityForm({
   const [annualReserveFundContributions, setAnnualReserveFundContributions] = useState(
     existing.annualReserveFundContributions
   );
-  const [supportEmail, setSupportEmail] = useState(existing.supportEmail);
-  const [supportPhone, setSupportPhone] = useState(existing.supportPhone);
   const [vatNumber, setVatNumber] = useState(existing.vatNumber);
-  const [website, setWebsite] = useState(existing.website);
+  const [businessDescription, setBusinessDescription] = useState(existing.businessDescription);
 
   // Live client-side mirror of businessActivitySchema (lib/zod.ts — same
   // schema saveBusinessActivity re-validates with server-side), same
@@ -78,10 +69,8 @@ export default function BusinessActivityForm({
     industryCode,
     reserveFundCurrency,
     annualReserveFundContributions,
-    supportEmail,
-    supportPhone,
     vatNumber,
-    website,
+    businessDescription,
   });
   const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
   function fieldError(field: keyof typeof fieldErrors) {
@@ -178,67 +167,6 @@ export default function BusinessActivityForm({
       </div>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        Website (if applicable)
-        <input
-          type="url"
-          name={isVve ? undefined : "website"}
-          disabled={isVve}
-          placeholder={isVve ? "" : "https://example.com"}
-          value={isVve ? "" : website}
-          onChange={(e) => setWebsite(e.target.value)}
-          onBlur={() => touch("website")}
-          aria-invalid={!!fieldError("website")}
-          className={`${inputClasses} disabled:opacity-70`}
-        />
-        {isVve && (
-          <span className="text-xs text-muted">
-            Not applicable for homeowners&apos; associations.
-          </span>
-        )}
-        {fieldError("website") && (
-          <span className="text-xs text-danger">{fieldError("website")}</span>
-        )}
-      </label>
-
-      <label className="flex flex-col gap-1.5 text-sm">
-        Support email address
-        <input
-          type="email"
-          name="supportEmail"
-          required
-          value={supportEmail}
-          onChange={(e) => setSupportEmail(e.target.value)}
-          onBlur={() => touch("supportEmail")}
-          aria-invalid={!!fieldError("supportEmail")}
-          className={inputClasses}
-        />
-        <span className="text-xs text-muted">
-          Where homeowners can reach the association with questions.
-        </span>
-        {fieldError("supportEmail") && (
-          <span className="text-xs text-danger">{fieldError("supportEmail")}</span>
-        )}
-      </label>
-
-      <label className="flex flex-col gap-1.5 text-sm">
-        Support phone number
-        <input
-          type="tel"
-          name="supportPhone"
-          required
-          placeholder={phonePlaceholder(existing.companyCountry)}
-          value={supportPhone}
-          onChange={(e) => setSupportPhone(e.target.value)}
-          onBlur={() => touch("supportPhone")}
-          aria-invalid={!!fieldError("supportPhone")}
-          className={inputClasses}
-        />
-        {fieldError("supportPhone") && (
-          <span className="text-xs text-danger">{fieldError("supportPhone")}</span>
-        )}
-      </label>
-
-      <label className="flex flex-col gap-1.5 text-sm">
         VAT number
         <input
           type="text"
@@ -254,6 +182,25 @@ export default function BusinessActivityForm({
         </span>
         {fieldError("vatNumber") && (
           <span className="text-xs text-danger">{fieldError("vatNumber")}</span>
+        )}
+      </label>
+
+      <label className="flex flex-col gap-1.5 text-sm">
+        Business description
+        <textarea
+          name="businessDescription"
+          rows={3}
+          value={businessDescription}
+          onChange={(e) => setBusinessDescription(e.target.value)}
+          onBlur={() => touch("businessDescription")}
+          aria-invalid={!!fieldError("businessDescription")}
+          className={`${inputClasses} resize-none`}
+        />
+        <span className="text-xs text-muted">
+          A short description of what the association does.
+        </span>
+        {fieldError("businessDescription") && (
+          <span className="text-xs text-danger">{fieldError("businessDescription")}</span>
         )}
       </label>
 

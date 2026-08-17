@@ -12,14 +12,17 @@ export type OnboardingStepPath =
   | "organisation"
   | "company"
   | "company/business-activity"
+  | "company/contact-details"
   | "adyen"
   | "subscription";
 
 // Sidebar-facing grouping — driving the step numbering/labels in
 // /onboarding/layout.tsx + onboarding-sidebar.tsx. "Organisation info"
-// covers three URLs (the create-vs-join fork, its join sub-page, and the
-// company form) as a single step: picking a side of that fork and, for
-// the create path, filling in company details are one conceptual task.
+// covers five URLs (the create-vs-join fork, its join sub-page, and the
+// three company-detail pages) as a single step: picking a side of that
+// fork and, for the create path, filling in company details are one
+// conceptual task. Its own sub-steps (below) are what actually surface
+// that internal structure in the sidebar — see OnboardingSidebar.
 export const ONBOARDING_STEPS = [
   {
     key: "personal",
@@ -37,8 +40,39 @@ export const ONBOARDING_STEPS = [
       "organisation/join",
       "company",
       "company/business-activity",
+      "company/contact-details",
     ],
     revisitPath: "company",
+    // Rendered nested under this step in the sidebar (see
+    // OnboardingSidebar) — done-ness for each comes from
+    // OnboardingStatus's finer-grained flags below, not from this step's
+    // own (all-four-pages) stepDone.
+    subSteps: [
+      {
+        key: "new-organisation",
+        label: "New organisation",
+        paths: ["organisation", "organisation/join"],
+        revisitPath: "organisation",
+      },
+      {
+        key: "company-information",
+        label: "Company information",
+        paths: ["company"],
+        revisitPath: "company",
+      },
+      {
+        key: "business-activity",
+        label: "Business activity",
+        paths: ["company/business-activity"],
+        revisitPath: "company/business-activity",
+      },
+      {
+        key: "contact-details",
+        label: "Contact details",
+        paths: ["company/contact-details"],
+        revisitPath: "company/contact-details",
+      },
+    ],
   },
   {
     key: "adyen",
@@ -60,6 +94,18 @@ export type OnboardingStatus = {
   // /onboarding/organisation — true the moment an organisation_members
   // row exists, regardless of which path put it there.
   organisationDone: boolean;
+  // Sub-step flags for the "Organisation info" step, in the order its
+  // four pages are actually filled in — company/business-activity/
+  // contact-details, each gating the next (see their page.tsx guards).
+  // companyInfoDone flips once saveCompanyInfo has run at least once
+  // (relationship_type is the tell — it's set unconditionally there);
+  // businessActivityDone once saveBusinessActivity has (industry_code).
+  // companyDone is the step as a whole — the Adyen organisation-legal-
+  // entity chain only finishes on the last page (saveContactDetails), so
+  // it stays the authoritative "can the user move on to Adyen
+  // verification?" gate everywhere else in the wizard already relied on.
+  companyInfoDone: boolean;
+  businessActivityDone: boolean;
   companyDone: boolean;
   // Went through the Adyen-hosted onboarding redirect and came back — see
   // migration 0009. Not the same as Adyen having approved their KYC;
@@ -72,6 +118,8 @@ export type OnboardingStatus = {
 const ALL_DONE: OnboardingStatus = {
   personalDone: true,
   organisationDone: true,
+  companyInfoDone: true,
+  businessActivityDone: true,
   companyDone: true,
   adyenDone: true,
   subscriptionDone: true,
@@ -139,6 +187,8 @@ export async function getOnboardingStatus(
     return {
       personalDone,
       organisationDone: false,
+      companyInfoDone: false,
+      businessActivityDone: false,
       companyDone: false,
       adyenDone,
       subscriptionDone: false,
@@ -148,7 +198,9 @@ export async function getOnboardingStatus(
 
   const { data: org, error: orgError } = await supabase
     .from("organisations")
-    .select("company_completed_at, subscription_completed_at")
+    .select(
+      "relationship_type, industry_code, company_completed_at, subscription_completed_at"
+    )
     .eq("id", membership.organisation_id)
     .maybeSingle();
 
@@ -156,12 +208,20 @@ export async function getOnboardingStatus(
     console.error("[onboarding] organisation check failed:", orgError.message);
   }
 
+  // relationship_type/industry_code are each set unconditionally by the
+  // save action of the page that asks for them (saveCompanyInfo,
+  // saveBusinessActivity) — their presence is what "that page has been
+  // submitted at least once" actually looks like from here.
+  const companyInfoDone = Boolean(org?.relationship_type);
+  const businessActivityDone = Boolean(org?.industry_code);
   const companyDone = Boolean(org?.company_completed_at);
   const subscriptionDone = Boolean(org?.subscription_completed_at);
 
   return {
     personalDone,
     organisationDone: true,
+    companyInfoDone,
+    businessActivityDone,
     companyDone,
     adyenDone,
     subscriptionDone,
@@ -175,7 +235,9 @@ export function firstIncompleteStep(
 ): OnboardingStepPath | null {
   if (!status.personalDone) return "personal";
   if (!status.organisationDone) return "organisation";
-  if (!status.companyDone) return "company";
+  if (!status.companyInfoDone) return "company";
+  if (!status.businessActivityDone) return "company/business-activity";
+  if (!status.companyDone) return "company/contact-details";
   if (!status.adyenDone) return "adyen";
   if (!status.subscriptionDone) return "subscription";
   return null;

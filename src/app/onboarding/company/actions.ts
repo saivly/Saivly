@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
-import { companyInfoSchema, businessActivitySchema } from "@/lib/zod";
+import { companyInfoSchema, businessActivitySchema, contactDetailsSchema } from "@/lib/zod";
 import {
   searchKvkCompanies,
   getKvkCompanyDetails,
@@ -88,10 +88,11 @@ function expandRelationshipTypes(value: string): AdyenEntityRelationshipType[] {
  * company_completed_at is only stamped once all six ids are in place
  * (freshly created or found already there on resume).
  *
- * Called from saveBusinessActivity below (the second of the "Organisation
- * info" step's two pages) — legalEntityId's compliance-facing fields
- * (industry/reserve-fund/etc.) aren't known until that page, so this
- * can't run any earlier than that.
+ * Called from saveContactDetails below (the fourth and last of the
+ * "Organisation info" step's pages) — legalEntityId's compliance-facing
+ * fields (industry/reserve-fund/etc., gathered on the business-activity
+ * page before this one) plus support contact details (this page) both
+ * have to be known before this can run.
  */
 async function ensureAdyenOrganisationReady(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -289,13 +290,14 @@ async function ensureAdyenOrganisationReady(
 }
 
 /**
- * First half of the "Organisation info" step's company page: KVK lookup
- * (or manual entry outside NL) + relationship-to-the-company, persisted
- * as soon as they're submitted. Deliberately does nothing Adyen-facing —
- * that all happens once industry/reserve-fund/support-contact/VAT are
- * gathered too, on the business-activity screen this redirects to (see
- * saveBusinessActivity below), so a shopper who never gets that far
- * hasn't left a half-registered legal entity behind in Adyen.
+ * First of the "Organisation info" step's four pages: KVK lookup (or
+ * manual entry outside NL) + relationship-to-the-company, persisted as
+ * soon as they're submitted. Deliberately does nothing Adyen-facing —
+ * that all happens once industry/reserve-fund/VAT (business-activity)
+ * and support-contact/website (contact-details) are gathered too, on the
+ * two screens this eventually leads to (see saveBusinessActivity and
+ * saveContactDetails below), so a shopper who never gets that far hasn't
+ * left a half-registered legal entity behind in Adyen.
  */
 export async function saveCompanyInfo(formData: FormData) {
   const supabase = await createClient();
@@ -393,12 +395,12 @@ export async function saveCompanyInfo(formData: FormData) {
 }
 
 /**
- * Second half of the "Organisation info" step: industry, the reserve-fund
- * estimate (amount + currency), support contact details, VAT number, and
- * website — then the whole organisation-legal-entity/account-holder/
- * balance-account/business-line chain in Adyen (ensureAdyenOrganisationReady
- * above), using these answers together with whatever saveCompanyInfo
- * already persisted.
+ * Third of the "Organisation info" step's four pages: industry, the
+ * reserve-fund estimate (amount + currency), VAT number, and a short
+ * business description — persisted as soon as they're submitted.
+ * Deliberately does nothing Adyen-facing, same reasoning as saveCompanyInfo
+ * above: that only happens once contact details are gathered too, on the
+ * page this redirects to (see saveContactDetails below).
  */
 export async function saveBusinessActivity(formData: FormData) {
   const supabase = await createClient();
@@ -415,8 +417,108 @@ export async function saveBusinessActivity(formData: FormData) {
 
   const { data: org, error: orgReadError } = await supabase
     .from("organisations")
+    .select("kvk_number")
+    .eq("id", organisationId)
+    .maybeSingle();
+
+  if (orgReadError || !org) {
+    redirect(
+      `/onboarding/company?error=${encodeURIComponent(
+        orgReadError?.message ?? "We couldn't find your organisation. Please start again."
+      )}`
+    );
+  }
+
+  // rechtsvorm isn't persisted — re-fetched here from the kvkNumber the
+  // same way saveContactDetails does below, since VvE-ness locks
+  // industryCode and changes what the reserve-fund amount means (monthly
+  // vs. annual). Outside NL there's no KVK register to check, so this
+  // just stays null (never a VvE).
+  const kvkDetails = org.kvk_number ? await getKvkCompanyDetails(org.kvk_number) : null;
+  const isVve = isHomeownersAssociation(kvkDetails?.legalForm);
+
+  const parsed = businessActivitySchema.safeParse({
+    industryCode: (formData.get("industryCode") as string) ?? "",
+    reserveFundCurrency: (formData.get("reserveFundCurrency") as string) ?? "",
+    annualReserveFundContributions:
+      (formData.get("annualReserveFundContributions") as string) ?? "",
+    vatNumber: ((formData.get("vatNumber") as string) ?? "").trim(),
+    businessDescription: ((formData.get("businessDescription") as string) ?? "").trim(),
+  });
+
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? "Invalid input.";
+    redirect(
+      `/onboarding/company/business-activity?error=${encodeURIComponent(message)}`
+    );
+  }
+
+  const {
+    industryCode: submittedIndustryCode,
+    reserveFundCurrency,
+    annualReserveFundContributions: enteredReserveFundAmount,
+    vatNumber,
+    businessDescription,
+  } = parsed.data;
+
+  // VvEs get industry locked server-side, not just disabled in the form —
+  // a shopper can't override it by tampering with the request.
+  const industryCode = isVve ? HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE : submittedIndustryCode;
+  // VvEs are asked for their *monthly* contribution (see the "Expected
+  // Monthly contribution for this account" label in business-activity-
+  // form.tsx) — Adyen's annualTurnover/sourceOfFunds.amount both want a
+  // true annual figure, so it's annualised here before going anywhere
+  // near either. Everyone else's figure is already annual.
+  const annualReserveFundContributions = isVve
+    ? enteredReserveFundAmount * 12
+    : enteredReserveFundAmount;
+
+  const { error: updateError } = await supabase
+    .from("organisations")
+    .update({
+      industry_code: industryCode,
+      annual_reserve_fund_currency: reserveFundCurrency,
+      annual_reserve_fund_contributions: annualReserveFundContributions,
+      vat_number: vatNumber || null,
+      business_description: businessDescription || null,
+    })
+    .eq("id", organisationId);
+  if (updateError) {
+    redirect(
+      `/onboarding/company/business-activity?error=${encodeURIComponent(updateError.message)}`
+    );
+  }
+
+  // See personal/actions.ts for why this is needed on every step's
+  // completion redirect, not just this one.
+  revalidatePath("/onboarding", "layout");
+  redirect("/onboarding/company/contact-details");
+}
+
+/**
+ * Fourth and last of the "Organisation info" step's pages: support
+ * contact details and website — then the whole organisation-legal-entity/
+ * account-holder/balance-account/business-line chain in Adyen
+ * (ensureAdyenOrganisationReady above), using these answers together with
+ * whatever saveCompanyInfo and saveBusinessActivity already persisted.
+ */
+export async function saveContactDetails(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const status = await getOnboardingStatus(supabase, user.id);
+  if (!status.personalDone) redirect("/onboarding/personal");
+
+  const organisationId = await getOwnOrganisationId(supabase, user.id);
+  if (!organisationId) redirect("/onboarding/company");
+
+  const { data: org, error: orgReadError } = await supabase
+    .from("organisations")
     .select(
-      "name, country, relationship_type, kvk_number, street, postal_code, city, adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id, adyen_business_line_payment_processing_id, adyen_business_line_banking_id, adyen_business_line_issuing_id"
+      "name, country, relationship_type, kvk_number, street, postal_code, city, industry_code, annual_reserve_fund_currency, annual_reserve_fund_contributions, adyen_organization_legal_entity_id, adyen_account_holder_id, adyen_balance_account_id, adyen_business_line_payment_processing_id, adyen_business_line_banking_id, adyen_business_line_issuing_id"
     )
     .eq("id", organisationId)
     .maybeSingle();
@@ -434,6 +536,16 @@ export async function saveBusinessActivity(formData: FormData) {
   if (!org.relationship_type) {
     redirect("/onboarding/company");
   }
+  // Shouldn't happen either — saveBusinessActivity always sets these
+  // before this page is ever reachable (see its own page.tsx guard) —
+  // but the Adyen chain below needs real values for all three.
+  if (
+    !org.industry_code ||
+    org.annual_reserve_fund_currency == null ||
+    org.annual_reserve_fund_contributions == null
+  ) {
+    redirect("/onboarding/company/business-activity");
+  }
 
   // KVK's "statutaire naam" (formal registered name), rechtsvorm (legal
   // form), RSIN (Dutch tax/legal-entity id), and date of incorporation
@@ -445,8 +557,8 @@ export async function saveBusinessActivity(formData: FormData) {
   // rest stay null (mapRechtsvormToOrganizationType's fallback:
   // privateCompany; no RSIN/incorporation date outside NL). Done up
   // front (not just inside the Adyen-chain branch below) because
-  // rechtsvorm also decides whether this is a VvE — which locks several
-  // of the fields being saved to organisations just below.
+  // rechtsvorm also decides whether this is a VvE — which locks website
+  // just below.
   let legalName = org.name;
   let rechtsvorm: string | null = null;
   let rsin: string | null = null;
@@ -462,62 +574,36 @@ export async function saveBusinessActivity(formData: FormData) {
   }
   const isVve = isHomeownersAssociation(rechtsvorm);
 
-  const parsed = businessActivitySchema.safeParse({
-    industryCode: (formData.get("industryCode") as string) ?? "",
-    reserveFundCurrency: (formData.get("reserveFundCurrency") as string) ?? "",
-    annualReserveFundContributions:
-      (formData.get("annualReserveFundContributions") as string) ?? "",
+  const parsed = contactDetailsSchema.safeParse({
+    website: ((formData.get("website") as string) ?? "").trim(),
     supportEmail: ((formData.get("supportEmail") as string) ?? "").trim(),
     supportPhone: ((formData.get("supportPhone") as string) ?? "").trim(),
-    vatNumber: ((formData.get("vatNumber") as string) ?? "").trim(),
-    website: ((formData.get("website") as string) ?? "").trim(),
   });
 
   if (!parsed.success) {
     const message = parsed.error.issues[0]?.message ?? "Invalid input.";
     redirect(
-      `/onboarding/company/business-activity?error=${encodeURIComponent(message)}`
+      `/onboarding/company/contact-details?error=${encodeURIComponent(message)}`
     );
   }
 
-  const {
-    industryCode: submittedIndustryCode,
-    reserveFundCurrency,
-    annualReserveFundContributions: enteredReserveFundAmount,
-    supportEmail,
-    supportPhone,
-    vatNumber,
-    website: submittedWebsite,
-  } = parsed.data;
+  const { website: submittedWebsite, supportEmail, supportPhone } = parsed.data;
 
-  // VvEs get a few fields locked server-side, not just disabled in the
-  // form — a shopper can't override them by tampering with the request.
-  const industryCode = isVve ? HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE : submittedIndustryCode;
+  // VvEs get website locked server-side, not just disabled in the form —
+  // a shopper can't override it by tampering with the request.
   const website = isVve ? null : submittedWebsite || null;
-  // VvEs are asked for their *monthly* contribution (see the "Expected
-  // Monthly contribution for this account" label in business-activity-
-  // form.tsx) — Adyen's annualTurnover/sourceOfFunds.amount both want a
-  // true annual figure, so it's annualised here before going anywhere
-  // near either. Everyone else's figure is already annual.
-  const annualReserveFundContributions = isVve
-    ? enteredReserveFundAmount * 12
-    : enteredReserveFundAmount;
 
   const { error: updateError } = await supabase
     .from("organisations")
     .update({
-      industry_code: industryCode,
-      annual_reserve_fund_currency: reserveFundCurrency,
-      annual_reserve_fund_contributions: annualReserveFundContributions,
+      website,
       support_email: supportEmail,
       support_phone: supportPhone,
-      vat_number: vatNumber || null,
-      website,
     })
     .eq("id", organisationId);
   if (updateError) {
     redirect(
-      `/onboarding/company/business-activity?error=${encodeURIComponent(updateError.message)}`
+      `/onboarding/company/contact-details?error=${encodeURIComponent(updateError.message)}`
     );
   }
 
@@ -550,7 +636,7 @@ export async function saveBusinessActivity(formData: FormData) {
       // Shouldn't happen — personalDone requires this — but the org
       // legal entity's entityAssociations needs an id to point at.
       redirect(
-        `/onboarding/company/business-activity?error=${encodeURIComponent(
+        `/onboarding/company/contact-details?error=${encodeURIComponent(
           "We couldn't find your identity verification record. Go back to Personal info and save it again, then retry."
         )}`
       );
@@ -575,9 +661,9 @@ export async function saveBusinessActivity(formData: FormData) {
         relationshipTypes: expandRelationshipTypes(org.relationship_type),
         rsin,
         dateOfIncorporation,
-        annualReserveFundContributions,
-        reserveFundCurrency,
-        industryCode,
+        annualReserveFundContributions: org.annual_reserve_fund_contributions,
+        reserveFundCurrency: org.annual_reserve_fund_currency,
+        industryCode: org.industry_code,
         website,
         supportEmail,
         supportPhone,
@@ -586,7 +672,7 @@ export async function saveBusinessActivity(formData: FormData) {
 
     if (!result.ok) {
       redirect(
-        `/onboarding/company/business-activity?error=${encodeURIComponent(result.error)}`
+        `/onboarding/company/contact-details?error=${encodeURIComponent(result.error)}`
       );
     }
   }

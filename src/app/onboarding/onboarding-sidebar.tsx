@@ -5,13 +5,17 @@ import { usePathname } from "next/navigation";
 import type { ONBOARDING_STEPS } from "@/lib/onboarding/onboarding";
 
 type Step = (typeof ONBOARDING_STEPS)[number];
+type SubStep = Extract<Step, { subSteps: readonly unknown[] }>["subSteps"][number];
 
 export default function OnboardingSidebar({
   steps,
   stepDone,
+  subStepDone,
 }: {
   steps: readonly Step[];
   stepDone: Record<string, boolean>;
+  /** Keyed by sub-step key (see ONBOARDING_STEPS' organisation.subSteps). */
+  subStepDone: Record<string, boolean>;
 }) {
   const pathname = usePathname();
 
@@ -52,6 +56,14 @@ export default function OnboardingSidebar({
             </div>
           );
 
+          // Sub-steps only mean something once you're inside this step —
+          // hidden otherwise (it isn't reachable yet either, so there's
+          // nothing useful to link to). Desktop only: the mobile row
+          // layout above is a compact horizontal strip of step icons,
+          // no room for a nested list without it wrapping badly.
+          const subSteps = "subSteps" in step ? step.subSteps : undefined;
+          const showSubSteps = subSteps && (active || done);
+
           return (
             <li key={step.key} className="shrink-0 md:shrink md:w-full">
               {reachable ? (
@@ -61,11 +73,96 @@ export default function OnboardingSidebar({
               ) : (
                 content
               )}
+              {showSubSteps && (
+                <ol className="mt-1 mb-1 ml-4.5 hidden flex-col gap-0.5 border-l border-line pl-3.5 md:flex">
+                  {subSteps.map((sub) => (
+                    <SubStepItem
+                      key={sub.key}
+                      sub={sub}
+                      pathname={pathname}
+                      done={subStepDone[sub.key]}
+                    />
+                  ))}
+                </ol>
+              )}
             </li>
           );
         })}
       </ol>
     </nav>
+  );
+}
+
+function SubStepItem({
+  sub,
+  pathname,
+  done,
+}: {
+  sub: SubStep;
+  pathname: string;
+  done: boolean;
+}) {
+  const active = (sub.paths as readonly string[]).some(
+    (p) => pathname === `/onboarding/${p}`
+  );
+  const reachable = done || active;
+  const href = active ? pathname : `/onboarding/${sub.revisitPath}`;
+
+  const content = (
+    <div
+      className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs whitespace-nowrap ${
+        active
+          ? "font-medium text-ink"
+          : done
+            ? "text-ink hover:bg-panel"
+            : "text-muted"
+      }`}
+    >
+      <SubStepIcon done={done} active={active} />
+      <span className="truncate">{sub.label}</span>
+    </div>
+  );
+
+  return (
+    <li>
+      {reachable ? (
+        <Link href={href} aria-current={active ? "step" : undefined}>
+          {content}
+        </Link>
+      ) : (
+        content
+      )}
+    </li>
+  );
+}
+
+function SubStepIcon({ done, active }: { done: boolean; active: boolean }) {
+  if (done) {
+    return (
+      <svg
+        viewBox="0 0 20 20"
+        className="size-3.5 shrink-0 text-success"
+        aria-hidden="true"
+      >
+        <circle cx="10" cy="10" r="10" fill="currentColor" />
+        <path
+          d="M6 10.5l2.5 2.5L14 7.5"
+          fill="none"
+          stroke="white"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  return (
+    <span
+      className={`size-1.5 shrink-0 rounded-full ${
+        active ? "bg-ink" : "bg-line"
+      }`}
+      aria-hidden="true"
+    />
   );
 }
 

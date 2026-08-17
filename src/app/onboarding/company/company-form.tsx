@@ -243,7 +243,7 @@ export default function CompanyForm({
   return (
     <form action={saveCompanyInfo} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
-        Country of business
+        Country of registration
         <CountrySelect
           name="companyCountry"
           value={country}
@@ -494,9 +494,9 @@ export default function CompanyForm({
           there's nothing to submit until a KVK search result is actually
           picked — fade the button out rather than leaving it looking
           clickable ahead of that (and again while the submission itself
-          is in flight, see ContinueButton). Industry, reserve fund,
-          support contact, and VAT number are asked next, on the
-          business-activity screen. */}
+          is in flight, see ContinueButton). Industry, reserve fund, and
+          VAT number are asked next on the business-activity screen;
+          support contact and website after that, on contact-details. */}
       <ContinueButton disabledUntilReady={isNL && !hasSelectedCompany} />
 
       {/* Only meaningful before the org actually exists: once created (or

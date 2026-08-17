@@ -134,6 +134,7 @@ export type Database = {
           relationship_type: string | null;
           industry_code: string | null;
           vat_number: string | null;
+          business_description: string | null;
           support_email: string | null;
           support_phone: string | null;
           annual_reserve_fund_contributions: number | null;
@@ -162,6 +163,7 @@ export type Database = {
           relationship_type?: string | null;
           industry_code?: string | null;
           vat_number?: string | null;
+          business_description?: string | null;
           support_email?: string | null;
           support_phone?: string | null;
           annual_reserve_fund_contributions?: number | null;
@@ -187,6 +189,7 @@ export type Database = {
           relationship_type?: string | null;
           industry_code?: string | null;
           vat_number?: string | null;
+          business_description?: string | null;
           support_email?: string | null;
           support_phone?: string | null;
           annual_reserve_fund_contributions?: number | null;

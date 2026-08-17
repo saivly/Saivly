@@ -136,7 +136,7 @@ export type AdyenOrganizationInput = {
    * assumed from countryOfGoverningLaw. */
   reserveFundCurrency: string;
   /** Support contact shown to Adyen (and, downstream, to cardholders) —
-   * collected on the business-activity screen alongside industryCode. */
+   * collected on the contact-details screen, after industryCode. */
   supportEmail: string;
   supportPhone: string;
 };
@@ -262,7 +262,7 @@ export async function createAdyenBusinessLine(
    * Picked by the shopper on the business-activity screen, same code across
    * all three business lines for a given org. */
   industryCode: string,
-  /** Company website, also from the business-activity screen — null/empty
+  /** Company website, from the contact-details screen — null/empty
    * exempts webAddress instead (most orgs here don't have one). */
   website: string | null,
   sourceOfFundsBusiness?: AdyenSourceOfFundsBusiness
