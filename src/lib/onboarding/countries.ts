@@ -166,6 +166,24 @@ export const CURRENCY_CODES = CURRENCIES.map((c) => c.code) as [
   ...string[],
 ];
 
+// Symbol shown on CurrencySelect's closed control (e.g. "USD - $") — the
+// dropdown itself still lists the full "USD — US Dollar" name. Derived via
+// Intl rather than a hand-maintained map so all 39 CURRENCIES resolve
+// correctly, including non-"$" ones (kr, zł, ₹, …). Falls back to the code
+// itself if the runtime doesn't recognise it.
+export function currencySymbol(code: string): string {
+  try {
+    const parts = new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: code,
+      currencyDisplay: "narrowSymbol",
+    }).formatToParts(0);
+    return parts.find((p) => p.type === "currency")?.value ?? code;
+  } catch {
+    return code;
+  }
+}
+
 // Renders a 2-letter ISO code as its flag emoji via Unicode regional
 // indicator symbols (each letter maps to U+1F1E6.."A" + offset). No image
 // assets needed; unsupported code strings just render as-is.

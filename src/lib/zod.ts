@@ -156,10 +156,19 @@ export const businessActivitySchema = zod.object({
     // createAdyenOrganization in src/lib/adyen/legalEntity.ts. Whole units
     // of reserveFundCurrency — converted to minor units server-side.
     reserveFundCurrency: zod.enum(CURRENCY_CODES, { message: 'Select a currency.' }),
-    annualReserveFundContributions: zod.coerce
-        .number({ message: 'Enter the estimated annual reserve fund contributions.' })
-        .int({ message: 'Enter a whole number.' })
-        .min(0, { message: 'This can’t be negative.' }),
+    // zod.coerce.number() alone would turn an empty string into 0 — a
+    // "valid" number — via `Number("")`, letting the client-side re-parse
+    // in business-activity-form.tsx call the (still-empty) required field
+    // valid, enable Continue, and hand off to the browser's own "Please
+    // fill out this field" bubble on submit. Route empty/blank input to
+    // undefined first so it fails coercion instead.
+    annualReserveFundContributions: zod.preprocess(
+        (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+        zod.coerce
+            .number({ message: 'Enter the estimated annual reserve fund contributions.' })
+            .int({ message: 'Enter a whole number.' })
+            .min(0, { message: 'This can’t be negative.' })
+    ),
     // Optional — most organisations here are VAT-exempt homeowners'
     // associations (see vatAbsenceReason in src/lib/adyen/legalEntity.ts).
     vatNumber: zod.string().trim().max(32, { message: 'VAT number is too long.' }).optional().or(zod.literal('')),

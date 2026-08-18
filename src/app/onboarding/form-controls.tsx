@@ -1,6 +1,6 @@
 "use client";
 
-import { COUNTRIES, countryFlag, CURRENCIES } from "@/lib/onboarding/countries";
+import { COUNTRIES, countryFlag, CURRENCIES, currencySymbol } from "@/lib/onboarding/countries";
 
 // Shared between every /onboarding form (personal, company, …) so their
 // inputs/selects look identical.
@@ -77,7 +77,12 @@ export function CountrySelect({
   );
 }
 
-/** Same shell as CountrySelect, minus the flag glyph — currencies don't have one. */
+/** Same shell as CountrySelect, but instead of a flag glyph laid over
+ * plain text, the select's own text is made transparent and a "USD - $"
+ * overlay stands in for it when closed — full "USD — US Dollar" names
+ * stay legible in the open dropdown since each <option> gets its color
+ * set back explicitly, which (being specified rather than inherited)
+ * wins over the transparent color coming down from the <select>. */
 export function CurrencySelect({
   name,
   value,
@@ -89,15 +94,23 @@ export function CurrencySelect({
 }) {
   return (
     <div className="relative">
+      {value && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-ink sm:text-sm"
+        >
+          {value} - {currencySymbol(value)}
+        </span>
+      )}
       <select
         name={name}
         required
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${inputClasses} w-full appearance-none pr-8`}
+        className={`${inputClasses} w-full appearance-none pr-8 text-transparent`}
       >
         {CURRENCIES.map((c) => (
-          <option key={c.code} value={c.code}>
+          <option key={c.code} value={c.code} className="text-ink">
             {c.code} — {c.name}
           </option>
         ))}
