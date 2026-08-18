@@ -13,11 +13,13 @@ export default function EnrollMfaPage() {
   const router = useRouter();
   const [qr, setQr] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
+  const [uri, setUri] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -58,6 +60,7 @@ export default function EnrollMfaPage() {
       if (!cancelled && data.type === "totp") {
         setQr(data.totp.qr_code);
         setSecret(data.totp.secret);
+        setUri(data.totp.uri);
         setFactorId(data.id);
       }
     }
@@ -146,8 +149,9 @@ export default function EnrollMfaPage() {
         <h1 className="text-2xl font-semibold">Set up two-factor auth</h1>
         <p className="mt-1 text-sm text-muted">
           Required for every account. Scan the QR code with an authenticator
-          app (1Password, Google Authenticator, Aegis…), then enter the
-          6-digit code.
+          app (1Password, Google Authenticator, Aegis…) — or, if you&apos;re
+          setting this up on the same phone, tap the button below instead —
+          then enter the 6-digit code.
         </p>
       </div>
 
@@ -164,13 +168,42 @@ export default function EnrollMfaPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qr} alt="TOTP QR code" className="h-44 w-44" />
           </div>
+
+          {uri && (
+            // The camera and the QR code are the same device when signing
+            // up on mobile, so scanning is a non-starter there — this
+            // deep-links straight into whatever TOTP app is installed
+            // (otpauth:// is a registered URL scheme on iOS/Android for
+            // Google Authenticator, Authy, 1Password, Aegis, Raivo, …)
+            // instead of requiring a second device.
+            <a
+              href={uri}
+              className="self-center rounded-lg border border-line px-4 py-2 text-center text-sm font-medium transition-opacity hover:opacity-90"
+            >
+              Setting up on this phone? Open in authenticator app
+            </a>
+          )}
+
           {secret && (
-            <p className="text-center text-xs text-muted">
-              Can&apos;t scan? Enter this key manually:{" "}
-              <code className="rounded bg-panel px-1.5 py-0.5 break-all">
-                {secret}
-              </code>
-            </p>
+            <div className="flex items-center justify-center gap-2 text-center text-xs text-muted">
+              <span>
+                Can&apos;t scan? Enter this key manually:{" "}
+                <code className="rounded bg-panel px-1.5 py-0.5 break-all">
+                  {secret}
+                </code>
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(secret);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+                className="shrink-0 text-accent hover:underline"
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
           )}
           <form onSubmit={verify} className="flex flex-col gap-4">
             <input

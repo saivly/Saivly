@@ -155,8 +155,6 @@ async function ensureAdyenOrganisationReady(
       dateOfIncorporation: company.dateOfIncorporation,
       annualReserveFundContributions: company.annualReserveFundContributions,
       reserveFundCurrency: company.reserveFundCurrency,
-      supportEmail: company.supportEmail,
-      supportPhone: company.supportPhone,
     });
     if (!organizationLegalEntityId) {
       return {
@@ -204,12 +202,21 @@ async function ensureAdyenOrganisationReady(
     if (error) return { ok: false, error: error.message };
   }
 
+  // Sent on every business line below, not on the legal entity itself —
+  // see AdyenBusinessLineSupport in src/lib/adyen/legalEntity.ts.
+  const support = {
+    email: company.supportEmail,
+    phone: company.supportPhone,
+    phoneCountryCode: company.country,
+  };
+
   if (!paymentProcessingBusinessLineId) {
     paymentProcessingBusinessLineId = await createAdyenBusinessLine(
       organizationLegalEntityId,
       "paymentProcessing",
       company.industryCode,
-      company.website
+      company.website,
+      support
     );
     if (!paymentProcessingBusinessLineId) {
       return {
@@ -240,6 +247,7 @@ async function ensureAdyenOrganisationReady(
       "banking",
       company.industryCode,
       company.website,
+      support,
       sourceOfFundsBusiness
     );
     if (!bankingBusinessLineId) {
@@ -262,6 +270,7 @@ async function ensureAdyenOrganisationReady(
       "issuing",
       company.industryCode,
       company.website,
+      support,
       sourceOfFundsBusiness
     );
     if (!issuingBusinessLineId) {
