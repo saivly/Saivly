@@ -84,11 +84,11 @@ export default function ContactDetailsForm({
           aria-invalid={!!fieldError("website")}
           className={`${inputClasses} disabled:opacity-70`}
         />
-        {isVve && (
+        {/* {isVve && (
           <span className="text-xs text-muted">
             Not applicable for homeowners&apos; associations.
           </span>
-        )}
+        )} */}
         {fieldError("website") && (
           <span className="text-xs text-danger">{fieldError("website")}</span>
         )}
@@ -106,9 +106,9 @@ export default function ContactDetailsForm({
           aria-invalid={!!fieldError("supportEmail")}
           className={inputClasses}
         />
-        <span className="text-xs text-muted">
+        {/* <span className="text-xs text-muted">
           Where homeowners can reach the association with questions.
-        </span>
+        </span> */}
         {fieldError("supportEmail") && (
           <span className="text-xs text-danger">{fieldError("supportEmail")}</span>
         )}

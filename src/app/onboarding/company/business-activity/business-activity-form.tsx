@@ -12,7 +12,11 @@ import { businessActivitySchema } from "@/lib/zod";
 // Mirrors HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE in src/lib/adyen/legalEntity.ts.
 // Not imported directly — that file pulls in the Adyen client, which has
 // no business being bundled into client code.
-const HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE = "5313";
+const HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE = "81399";
+
+// Prefilled for VvEs so the user can just hit Continue — still editable.
+const HOMEOWNERS_ASSOCIATION_DESCRIPTION =
+  "A Homeowners’ Association (HOA) manages and maintains the common areas of an apartment building. The HOA collects contributions from the owners, arranges maintenance and repairs, and ensures that shared expenses and agreements are properly managed.";
 
 type Existing = {
   industryCode: string;
@@ -24,12 +28,16 @@ type Existing = {
 
 // Same useFormStatus caveat as company-form.tsx's ContinueButton — pulled
 // out so it reports the enclosing <form>'s pending state rather than
-// always false.
-function ContinueButton() {
+// always false. Gated on formValid (same pattern as personal-form.tsx)
+// so an incomplete form can't be submitted at all — that keeps the
+// browser's own "Please fill out this field" bubble from ever firing,
+// leaving the red fieldError text below each input as the only, and
+// properly styled, validation feedback.
+function ContinueButton({ formValid }: { formValid: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
-      disabled={pending}
+      disabled={pending || !formValid}
       className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
     >
       {pending ? "Saving…" : "Continue"}
@@ -55,7 +63,9 @@ export default function BusinessActivityForm({
     existing.annualReserveFundContributions
   );
   const [vatNumber, setVatNumber] = useState(existing.vatNumber);
-  const [businessDescription, setBusinessDescription] = useState(existing.businessDescription);
+  const [businessDescription, setBusinessDescription] = useState(
+    existing.businessDescription || (isVve ? HOMEOWNERS_ASSOCIATION_DESCRIPTION : "")
+  );
 
   // Live client-side mirror of businessActivitySchema (lib/zod.ts — same
   // schema saveBusinessActivity re-validates with server-side), same
@@ -101,7 +111,6 @@ export default function BusinessActivityForm({
                 {group.codes.map((i) => (
                   <option key={i.code} value={i.code}>
                     {i.description}
-                    {i.approvalNeeded ? " (requires approval)" : ""}
                   </option>
                 ))}
               </optgroup>
@@ -118,7 +127,7 @@ export default function BusinessActivityForm({
         <span className="text-xs text-muted">
           {isVve
             ? "Fixed for homeowners' associations."
-            : "Adyen's own classification, closest to what the association actually does day to day."}
+            : "Adyen's own classification, closest to what the organisation actually does day to day."}
         </span>
         {fieldError("industryCode") && (
           <span className="text-xs text-danger">{fieldError("industryCode")}</span>
@@ -129,7 +138,7 @@ export default function BusinessActivityForm({
         {isVve
           ? "Expected Monthly contribution for this account"
           : "Estimated annual reserve fund contributions"}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[1fr_3fr] gap-3">
           <label className="flex flex-col gap-1.5">
             <span className="sr-only">Currency</span>
             <CurrencySelect
@@ -154,11 +163,11 @@ export default function BusinessActivityForm({
             />
           </label>
         </div>
-        <span className="text-xs text-muted">
+        {/* <span className="text-xs text-muted">
           {isVve
             ? "What the association collects from its homeowners each month."
             : "Total the association's households pay in each year toward the reserve fund for future maintenance and restoration."}
-        </span>
+        </span> */}
         {(fieldError("reserveFundCurrency") || fieldError("annualReserveFundContributions")) && (
           <span className="text-xs text-danger">
             {fieldError("reserveFundCurrency") ?? fieldError("annualReserveFundContributions")}
@@ -178,7 +187,7 @@ export default function BusinessActivityForm({
           className={inputClasses}
         />
         <span className="text-xs text-muted">
-          Leave blank if the association doesn&apos;t have one — most don&apos;t.
+          Leave blank if the organisation doesn&apos;t have one — most don&apos;t.
         </span>
         {fieldError("vatNumber") && (
           <span className="text-xs text-danger">{fieldError("vatNumber")}</span>
@@ -197,14 +206,14 @@ export default function BusinessActivityForm({
           className={`${inputClasses} resize-none`}
         />
         <span className="text-xs text-muted">
-          A short description of what the association does.
+          A short description of what the organisation does.
         </span>
         {fieldError("businessDescription") && (
           <span className="text-xs text-danger">{fieldError("businessDescription")}</span>
         )}
       </label>
 
-      <ContinueButton />
+      <ContinueButton formValid={parsed.success} />
 
       <Link
         href="/onboarding/company"
