@@ -95,7 +95,7 @@ export default function ContactDetailsForm({
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        Support email address
+        Company email address
         <input
           type="email"
           name="supportEmail"
@@ -115,7 +115,7 @@ export default function ContactDetailsForm({
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        Support phone number
+        Company phone number
         <input
           type="tel"
           name="supportPhone"
