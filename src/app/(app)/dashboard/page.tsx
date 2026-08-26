@@ -1,23 +1,20 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { addTodo, toggleTodo, deleteTodo } from "./actions";
 import PasskeyManager from "./passkey-manager";
 
 /**
- * Protected page. The proxy already redirects unauthenticated users,
- * but we defense-in-depth check again here — never rely on the proxy alone.
- * Every query below runs through RLS: users can only ever see their own rows.
+ * Auth is already gated by the (app) layout above this page — every query
+ * below runs through RLS regardless, so users can only ever see their own
+ * rows even if that guard were somehow bypassed.
  */
 export default async function Dashboard() {
   const supabase = await createClient();
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const [{ data: profile }, { data: todos }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).single(),
+    supabase.from("profiles").select("*").eq("id", user?.id ?? "").single(),
     supabase
       .from("todos")
       .select("*")
@@ -25,19 +22,11 @@ export default async function Dashboard() {
   ]);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold">
-            {profile?.full_name || "Dashboard"}
-          </h1>
-          <p className="truncate text-sm text-muted">{user.email}</p>
-        </div>
-        <form action="/auth/signout" method="post" className="shrink-0">
-          <button className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-panel">
-            Sign out
-          </button>
-        </form>
+    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-16">
+      <header>
+        <h1 className="truncate text-2xl font-semibold">
+          {profile?.full_name || "Dashboard"}
+        </h1>
       </header>
 
       <section className="rounded-xl border border-line bg-panel p-5">
@@ -95,6 +84,6 @@ export default async function Dashboard() {
       </section>
 
       <PasskeyManager />
-    </main>
+    </div>
   );
 }

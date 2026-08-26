@@ -135,6 +135,15 @@ export type AdyenOrganizationInput = {
    * in — picked by the shopper on the business-activity screen, not
    * assumed from countryOfGoverningLaw. */
   reserveFundCurrency: string;
+  /** Support contact shown to Adyen (and, downstream, to cardholders) —
+   * collected on the contact-details screen, after industryCode. Lives at
+   * organization.support per Adyen's schema — NOT top-level on
+   * LegalEntityInfo (rejected: "Structure of LegalEntityInfo contains the
+   * following unknown fields: [support]") and NOT on BusinessLineInfo
+   * either (same rejection there). Confirmed against Adyen's own OpenAPI
+   * spec (LegalEntityService-v4.json → Organization.support → Support). */
+  supportEmail: string;
+  supportPhone: string;
 };
 
 type OrganizationLegalEntityResponse = { id: string };
@@ -152,6 +161,17 @@ export async function createAdyenOrganization(
       organization: {
         legalName: input.legalName,
         doingBusinessAsAbsent: true,
+        // phone.type fixed to "mobile" rather than asked on the form,
+        // same as the individual's phone below. No phoneCountryCode —
+        // PhoneNumber.phoneCountryCode is readOnly, Adyen derives it from
+        // the number's own country-code digits.
+        support: {
+          email: input.supportEmail,
+          phone: {
+            number: input.supportPhone,
+            type: "mobile",
+          },
+        },
         countryOfGoverningLaw: input.countryOfGoverningLaw,
         registrationNumber: input.registrationNumber || undefined,
         dateOfIncorporation: input.dateOfIncorporation || undefined,
@@ -240,20 +260,6 @@ export type AdyenSourceOfFundsBusiness = {
   description: string;
 };
 
-/** Support contact shown to Adyen (and, downstream, to cardholders) —
- * collected on the contact-details screen, after industryCode. Belongs to
- * BusinessLineInfo, not LegalEntityInfo — Adyen rejects `support` on
- * /legalEntities as an unknown field ("Structure of LegalEntityInfo
- * contains the following unknown fields: [support]"), so it's sent with
- * every business line instead. phone.type is fixed to "mobile" rather
- * than asked on the form, same as the individual's phone above. */
-export type AdyenBusinessLineSupport = {
-  email: string;
-  phone: string;
-  /** ISO 3166-1 alpha-2 — the org's registered-address country. */
-  phoneCountryCode: string;
-};
-
 export async function createAdyenBusinessLine(
   legalEntityId: string,
   service: AdyenBusinessLineService,
@@ -264,7 +270,6 @@ export async function createAdyenBusinessLine(
   /** Company website, from the contact-details screen — null/empty
    * exempts webAddress instead (most orgs here don't have one). */
   website: string | null,
-  support: AdyenBusinessLineSupport,
   sourceOfFundsBusiness?: AdyenSourceOfFundsBusiness
 ): Promise<string | null> {
   const result = await adyenRequest<BusinessLineResponse>("legalEntity", "/businessLines", {
@@ -273,14 +278,6 @@ export async function createAdyenBusinessLine(
       legalEntityId,
       service,
       industryCode,
-      support: {
-        email: support.email,
-        phone: {
-          number: support.phone,
-          phoneCountryCode: support.phoneCountryCode,
-          type: "mobile",
-        },
-      },
       ...(website
         ? { webAddress: website }
         : // No storefront/app to point Adyen at — exempted rather than
