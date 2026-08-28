@@ -16,10 +16,20 @@
  * 0012_organisation_business_activity.sql: organisations.relationship_type
  * / industry_code / vat_number / support_email / support_phone /
  * annual_reserve_fund_contributions / annual_reserve_fund_currency /
- * website.)
+ * website.
+ * 0014_adyen_webhooks.sql: adyen_webhook_events (one shared table) +
+ * organisations gains indexes on adyen_account_holder_id /
+ * adyen_balance_account_id.
+ * 0015_adyen_webhooks_split.sql: drops adyen_webhook_events, replaced
+ * by adyen_payment_webhook_events / adyen_configuration_webhook_events /
+ * adyen_transfer_webhook_events (one table per Adyen webhook product) +
+ * organisations gains an index on adyen_organization_legal_entity_id.
+ * 0016_invoices.sql: invoices table + private "invoices" storage bucket.)
  * Once you have a live project, regenerate from the real schema with:
  *   npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
  */
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 export type Database = {
   public: {
     Tables: {
@@ -217,6 +227,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      invoices: {
+        Row: {
+          id: string;
+          organisation_id: string;
+          uploaded_by: string;
+          file_path: string;
+          file_name: string;
+          mime_type: string;
+          size_bytes: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organisation_id: string;
+          uploaded_by?: string;
+          file_path: string;
+          file_name: string;
+          mime_type: string;
+          size_bytes: number;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       rate_limits: {
         Row: {
           key: string;
@@ -232,6 +266,135 @@ export type Database = {
           key?: string;
           count?: number;
           window_start?: string;
+        };
+        Relationships: [];
+      };
+      adyen_payment_webhook_events: {
+        Row: {
+          id: string;
+          organisation_id: string | null;
+          event_code: string;
+          live: boolean;
+          psp_reference: string;
+          original_reference: string | null;
+          merchant_account_code: string;
+          merchant_reference: string | null;
+          amount_value: number | null;
+          amount_currency: string | null;
+          success: boolean | null;
+          reason: string | null;
+          payload: Json;
+          processing_status: "received" | "processed" | "failed" | "ignored";
+          error: string | null;
+          received_at: string;
+          processed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          organisation_id?: string | null;
+          event_code: string;
+          live?: boolean;
+          psp_reference: string;
+          original_reference?: string | null;
+          merchant_account_code: string;
+          merchant_reference?: string | null;
+          amount_value?: number | null;
+          amount_currency?: string | null;
+          success?: boolean | null;
+          reason?: string | null;
+          payload: Json;
+          processing_status?: "received" | "processed" | "failed" | "ignored";
+          error?: string | null;
+          received_at?: string;
+          processed_at?: string | null;
+        };
+        Update: {
+          organisation_id?: string | null;
+          processing_status?: "received" | "processed" | "failed" | "ignored";
+          error?: string | null;
+          processed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      adyen_configuration_webhook_events: {
+        Row: {
+          id: string;
+          organisation_id: string | null;
+          event_type: string;
+          live: boolean;
+          balance_account_id: string | null;
+          account_holder_id: string | null;
+          legal_entity_id: string | null;
+          raw_body_hash: string;
+          payload: Json;
+          processing_status: "received" | "processed" | "failed" | "ignored";
+          error: string | null;
+          received_at: string;
+          processed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          organisation_id?: string | null;
+          event_type: string;
+          live?: boolean;
+          balance_account_id?: string | null;
+          account_holder_id?: string | null;
+          legal_entity_id?: string | null;
+          raw_body_hash: string;
+          payload: Json;
+          processing_status?: "received" | "processed" | "failed" | "ignored";
+          error?: string | null;
+          received_at?: string;
+          processed_at?: string | null;
+        };
+        Update: {
+          organisation_id?: string | null;
+          processing_status?: "received" | "processed" | "failed" | "ignored";
+          error?: string | null;
+          processed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      adyen_transfer_webhook_events: {
+        Row: {
+          id: string;
+          organisation_id: string | null;
+          event_type: string;
+          live: boolean;
+          balance_account_id: string | null;
+          transfer_reference: string | null;
+          transfer_status: string | null;
+          amount_value: number | null;
+          amount_currency: string | null;
+          raw_body_hash: string;
+          payload: Json;
+          processing_status: "received" | "processed" | "failed" | "ignored";
+          error: string | null;
+          received_at: string;
+          processed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          organisation_id?: string | null;
+          event_type: string;
+          live?: boolean;
+          balance_account_id?: string | null;
+          transfer_reference?: string | null;
+          transfer_status?: string | null;
+          amount_value?: number | null;
+          amount_currency?: string | null;
+          raw_body_hash: string;
+          payload: Json;
+          processing_status?: "received" | "processed" | "failed" | "ignored";
+          error?: string | null;
+          received_at?: string;
+          processed_at?: string | null;
+        };
+        Update: {
+          organisation_id?: string | null;
+          processing_status?: "received" | "processed" | "failed" | "ignored";
+          error?: string | null;
+          processed_at?: string | null;
         };
         Relationships: [];
       };

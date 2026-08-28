@@ -4,16 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
-const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
+const NAV_ITEMS: { segment: string; label: string; icon: ReactNode }[] = [
   {
-    href: "/dashboard",
+    segment: "dashboard",
     label: "Dashboard",
     icon: (
       <path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 011-1h0a1 1 0 011 1v4a1 1 0 001 1h4a1 1 0 001-1V10" />
     ),
   },
   {
-    href: "/payments",
+    segment: "payments",
     label: "Payments",
     icon: (
       <>
@@ -23,7 +23,17 @@ const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
     ),
   },
   {
-    href: "/accounts",
+    segment: "invoices",
+    label: "Invoices",
+    icon: (
+      <>
+        <path d="M6 3h12a1 1 0 011 1v16l-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1V4a1 1 0 011-1z" />
+        <path d="M8 8h8M8 12h8M8 16h5" />
+      </>
+    ),
+  },
+  {
+    segment: "accounts",
     label: "Accounts",
     icon: (
       <>
@@ -34,7 +44,7 @@ const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
     ),
   },
   {
-    href: "/analytics",
+    segment: "analytics",
     label: "Analytics",
     icon: (
       <>
@@ -43,7 +53,7 @@ const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
     ),
   },
   {
-    href: "/users",
+    segment: "users",
     label: "Users",
     icon: (
       <>
@@ -55,7 +65,7 @@ const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
     ),
   },
   {
-    href: "/reports",
+    segment: "reports",
     label: "Reports",
     icon: (
       <>
@@ -66,7 +76,7 @@ const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
     ),
   },
   {
-    href: "/settings",
+    segment: "settings",
     label: "Settings",
     icon: (
       <>
@@ -94,16 +104,24 @@ function NavIcon({ children }: { children: ReactNode }) {
   );
 }
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavLinks({
+  orgBase,
+  pathname,
+  onNavigate,
+}: {
+  orgBase: string;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3">
       {NAV_ITEMS.map((item) => {
-        const active =
-          pathname === item.href || pathname.startsWith(item.href + "/");
+        const href = `${orgBase}/${item.segment}`;
+        const active = pathname === href || pathname.startsWith(href + "/");
         return (
           <Link
-            key={item.href}
-            href={item.href}
+            key={item.segment}
+            href={href}
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -121,25 +139,53 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
+/** Building/landmark glyph next to the organisation name. */
+function OrgIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4 shrink-0"
+      aria-hidden="true"
+    >
+      <path d="M4 21V8l8-5 8 5v13" />
+      <path d="M4 21h16" />
+      <path d="M9 21v-6h6v6" />
+    </svg>
+  );
+}
+
 export default function Sidebar({
+  orgId,
+  orgName,
   userName,
   userEmail,
 }: {
+  orgId: string;
+  orgName: string;
   userName?: string | null;
   userEmail: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const orgBase = `/org/${orgId}`;
 
   return (
     <>
       {/* Mobile top bar */}
-      <div className="flex items-center justify-between border-b border-line bg-panel px-4 py-3 md:hidden">
-        <span className="text-lg font-semibold tracking-tight">Saivly</span>
+      <div className="flex items-center justify-between gap-3 border-b border-line bg-panel px-4 py-3 md:hidden">
+        <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
+          <OrgIcon />
+          <span className="truncate">{orgName}</span>
+        </span>
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"
-          className="rounded-lg border border-line p-2 text-ink hover:bg-accent-soft"
+          className="shrink-0 rounded-lg border border-line p-2 text-ink hover:bg-accent-soft"
         >
           <svg
             viewBox="0 0 24 24"
@@ -168,8 +214,10 @@ export default function Sidebar({
           open ? "translate-x-0" : ""
         }`}
       >
-        <div className="flex items-center justify-between px-5 py-6">
-          <span className="text-lg font-semibold tracking-tight">Saivly</span>
+        <div className="flex items-center justify-between px-5 pt-6 pb-4">
+          <span className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+            Saivly
+          </span>
           <button
             onClick={() => setOpen(false)}
             aria-label="Close menu"
@@ -188,7 +236,14 @@ export default function Sidebar({
           </button>
         </div>
 
-        <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
+        <div className="mx-3 mb-4 flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5">
+          <OrgIcon />
+          <span className="truncate text-sm font-medium text-white">
+            {orgName}
+          </span>
+        </div>
+
+        <NavLinks orgBase={orgBase} pathname={pathname} onNavigate={() => setOpen(false)} />
 
         <div className="mt-auto border-t border-white/10 p-3">
           <div className="mb-2 truncate px-2 text-xs text-zinc-400">
