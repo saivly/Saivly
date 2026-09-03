@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { verifyEnrollment } from "../actions";
 
 /**
- * Mandatory TOTP enrollment. On success the server action returns
- * single-use backup codes, displayed exactly once.
+ * Optional TOTP enrollment, entered from the /auth/security picker (or
+ * directly after redeeming a backup code — see recoverWithBackupCode).
+ * On success the server action returns single-use backup codes, displayed
+ * exactly once, then hands back to /auth/security.
  */
 export default function EnrollMfaPage() {
   const router = useRouter();
@@ -35,7 +38,14 @@ export default function EnrollMfaPage() {
       const { data: factors } = await supabase.auth.mfa.listFactors();
 
       if (factors?.totp.some((f) => f.status === "verified")) {
-        router.replace("/auth/mfa");
+        // Already enrolled — nothing to set up. If this session hasn't
+        // cleared the per-session challenge yet, send them to do that;
+        // otherwise there's nothing left to prove, back to the picker.
+        const { data: aal } =
+          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        router.replace(
+          aal?.currentLevel === "aal2" ? "/auth/security" : "/auth/mfa"
+        );
         return;
       }
 
@@ -90,7 +100,7 @@ export default function EnrollMfaPage() {
   }
 
   function finish() {
-    router.replace("/dashboard");
+    router.replace("/auth/security");
     router.refresh();
   }
 
@@ -146,12 +156,12 @@ export default function EnrollMfaPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
       <div>
-        <h1 className="text-2xl font-semibold">Set up two-factor auth</h1>
+        <h1 className="text-2xl font-semibold">Set up an authenticator app</h1>
         <p className="mt-1 text-sm text-muted">
-          Required for every account. Scan the QR code with an authenticator
-          app (1Password, Google Authenticator, Aegis…) — or, if you&apos;re
-          setting this up on the same phone, tap the button below instead —
-          then enter the 6-digit code.
+          Scan the QR code with an authenticator app (1Password, Google
+          Authenticator, Aegis…) — or, if you&apos;re setting this up on the
+          same phone, tap the button below instead — then enter the 6-digit
+          code.
         </p>
       </div>
 
@@ -229,11 +239,14 @@ export default function EnrollMfaPage() {
         !error && <p className="text-sm text-muted">Generating your key…</p>
       )}
 
-      <form action="/auth/signout" method="post" className="self-center">
-        <button className="text-sm text-muted hover:underline">
-          Sign out
-        </button>
-      </form>
+      <div className="flex flex-col items-center gap-2 text-sm">
+        <Link href="/auth/security" className="text-accent hover:underline">
+          Back to security options
+        </Link>
+        <form action="/auth/signout" method="post">
+          <button className="text-muted hover:underline">Sign out</button>
+        </form>
+      </div>
     </main>
   );
 }

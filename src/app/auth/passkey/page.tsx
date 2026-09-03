@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { markPasskeyPromptSeen } from "./actions";
 
 function LaptopIcon({ className }: { className?: string }) {
   return (
@@ -55,23 +54,6 @@ function VaultIcon({ className }: { className?: string }) {
   );
 }
 
-function InfoIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      className={className}
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11v5.5" strokeLinecap="round" />
-      <circle cx="12" cy="8" r="0.9" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
 function KeyIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -107,10 +89,11 @@ const FEATURES = [
 ];
 
 /**
- * One-time, skippable interstitial shown before the onboarding wizard —
- * see the enforcement ladder in @/lib/supabase/proxy for when this is
- * reached. Not reachable via the sidebar/wizard: it's outside
- * ONBOARDING_STEPS on purpose, it isn't a step you can come back to.
+ * Passkey setup flow, entered from the /auth/security picker. Not gated
+ * on AAL — a passkey can be set up before, after, or instead of an
+ * authenticator app, since neither is mandatory. Always hands back to
+ * /auth/security when done (or when backing out), so the picker can show
+ * a checkmark for it.
  */
 export default function PasskeyPromptPage() {
   const router = useRouter();
@@ -130,38 +113,24 @@ export default function PasskeyPromptPage() {
           return;
         }
 
-        // /auth/passkey sits under the public "/auth" prefix, so the proxy
-        // (src/lib/supabase/proxy.ts) never gates it the way it gates every
-        // other protected route — it only ever *links* here after TOTP is
-        // done. A logged-in-but-not-yet-AAL2 session (mid MFA enrollment,
-        // or someone typing this URL directly) could otherwise land on this
-        // page and get asked about passkeys before finishing the mandatory
-        // TOTP step. Re-check AAL2 here too, same ladder the proxy enforces.
-        if (cancelled) return;
-        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (aal?.currentLevel !== "aal2") {
-          router.replace(aal?.nextLevel === "aal2" ? "/auth/mfa" : "/auth/mfa/enroll");
-          return;
-        }
-
         // Already has one — e.g. added earlier from the dashboard — so
-        // there's nothing to ask; record it seen and move straight on.
+        // there's nothing to ask; go straight back to the picker.
+        if (cancelled) return;
         const { data: passkeys } = await supabase.auth.passkey.list();
         if (cancelled) return;
         if (passkeys && passkeys.length > 0) {
-          await markPasskeyPromptSeen();
-          router.replace("/onboarding");
+          router.replace("/auth/security");
           return;
         }
         setChecking(false);
       } catch (err) {
-        // Any of the awaits above can throw (network blip, the
-        // experimental passkey API misbehaving, etc.), not just resolve
-        // with data/error. Without this catch, setChecking(false) never
-        // runs and the page is stuck rendering nothing (see the `if
+        // Either await above can throw (network blip, the experimental
+        // passkey API misbehaving, etc.), not just resolve with
+        // data/error. Without this catch, setChecking(false) never runs
+        // and the page is stuck rendering nothing (see the `if
         // (checking) return null` below) — indistinguishable from the
         // whole feature being broken. Fail open: show the normal prompt
-        // (with a working Skip) instead of a blank page.
+        // (with a working way back) instead of a blank page.
         console.error("[passkey] initial check failed:", err);
         if (!cancelled) setChecking(false);
       }
@@ -173,37 +142,14 @@ export default function PasskeyPromptPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // No router.refresh() here — /onboarding does its own fresh server-side
-  // redirect on every load (see /onboarding/page.tsx), so there's nothing
-  // stale for refresh() to invalidate. Calling it right after replace()
-  // only risks refreshing whatever route is *still* committed at that
-  // instant (i.e. this page) before the navigation lands — which looks
-  // exactly like "Skip does nothing."
-  function proceed() {
-    router.replace("/onboarding");
-  }
-
-  async function skip() {
-    setBusy(true);
-    setError(null);
-    try {
-      const ok = await markPasskeyPromptSeen();
-      if (!ok) {
-        setError("Couldn't skip just now — try again in a moment.");
-        setBusy(false);
-        return;
-      }
-      proceed();
-    } catch (err) {
-      // markPasskeyPromptSeen() is a server action — it can throw (network
-      // blip, stale action reference after a redeploy, etc.), not just
-      // return ok:false. Without this catch, busy stays true forever with
-      // no feedback: the button never re-labels itself while busy, so a
-      // thrown error here looks exactly like "Skip does nothing".
-      console.error("[passkey] skip failed:", err);
-      setError("Couldn't skip just now — try again in a moment.");
-      setBusy(false);
-    }
+  // No router.refresh() here — /auth/security re-fetches its own status
+  // fresh on every mount, so there's nothing stale for refresh() to
+  // invalidate. Calling it right after replace() only risks refreshing
+  // whatever route is *still* committed at that instant (i.e. this page)
+  // before the navigation lands — which looks exactly like "back does
+  // nothing."
+  function back() {
+    router.replace("/auth/security");
   }
 
   async function setUp() {
@@ -215,17 +161,16 @@ export default function PasskeyPromptPage() {
       const { error } = await supabase.auth.registerPasskey();
       if (error) {
         // Most commonly the user cancelled the browser prompt — let them
-        // try again or skip, don't force a page reload.
+        // try again or go back, don't force a page reload.
         setError(error.message);
         setBusy(false);
         return;
       }
 
-      await markPasskeyPromptSeen();
-      proceed();
+      back();
     } catch (err) {
       console.error("[passkey] setup failed:", err);
-      setError("Something went wrong setting up your passkey — try again or skip for now.");
+      setError("Something went wrong setting up your passkey — try again or go back for now.");
       setBusy(false);
     }
   }
@@ -265,14 +210,6 @@ export default function PasskeyPromptPage() {
         ))}
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-line px-4 py-3 text-sm text-muted">
-        <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          You already have two-factor authentication enabled — a passkey
-          is an additional, faster way to sign in on devices you trust.
-        </p>
-      </div>
-
       {error && (
         <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
           {error}
@@ -281,11 +218,11 @@ export default function PasskeyPromptPage() {
 
       <div className="flex items-center justify-between gap-3">
         <button
-          onClick={skip}
+          onClick={back}
           disabled={busy}
           className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent-soft disabled:opacity-50"
         >
-          Skip
+          Back
         </button>
         <button
           onClick={setUp}

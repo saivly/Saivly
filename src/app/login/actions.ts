@@ -57,17 +57,16 @@ export async function login(formData: FormData) {
 
   revalidatePath("/", "layout");
 
-  // Password auth only gets you to aal1. Route straight to the right
-  // MFA step instead of bouncing off the proxy.
+  // Password auth only gets you to aal1. If they've already enrolled a
+  // factor, that factor's per-session challenge is still mandatory —
+  // route straight to it instead of bouncing off the proxy. A user with
+  // no factor at all skips this: MFA is opt-in, not required to proceed.
   const { data: aal } =
     await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   const next = safeNext(formData.get("next") as string);
 
-  if (aal?.currentLevel !== "aal2") {
-    if (aal?.nextLevel === "aal2") {
-      redirect(`/auth/mfa?next=${encodeURIComponent(next)}`);
-    }
-    redirect("/auth/mfa/enroll");
+  if (aal?.currentLevel !== "aal2" && aal?.nextLevel === "aal2") {
+    redirect(`/auth/mfa?next=${encodeURIComponent(next)}`);
   }
 
   redirect(next);

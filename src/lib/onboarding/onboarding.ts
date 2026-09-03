@@ -243,34 +243,3 @@ export function firstIncompleteStep(
   return null;
 }
 
-/**
- * Whether the user has already been shown the optional passkey prompt
- * (/auth/passkey) — set on skip and on successful enrollment alike, so
- * this is "seen", not "completed". Gates a one-time interstitial that
- * runs before the onboarding wizard, not a wizard step itself: it has
- * no ONBOARDING_STEPS entry and isn't tracked in the sidebar.
- */
-export async function hasSeenPasskeyPrompt(
-  supabase: SupabaseClient<Database>,
-  userId: string
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("passkey_prompt_seen_at")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error) {
-    // Same fail-closed reasoning as the profile check above — profiles
-    // always exists, so an error here is unexpected. Treat as "seen" so
-    // a query hiccup doesn't loop-redirect the user; worst case they
-    // just don't get prompted this one time.
-    console.error(
-      "[onboarding] passkey prompt check failed:",
-      error.message
-    );
-    return true;
-  }
-
-  return Boolean(data?.passkey_prompt_seen_at);
-}
