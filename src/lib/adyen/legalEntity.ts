@@ -5,19 +5,18 @@ export type AdyenIndividualInput = {
   firstName: string;
   lastName: string;
   email: string;
-  phoneNumber: string;
-  dateOfBirth: string; // YYYY-MM-DD
   residentialAddress: {
-    street: string;
-    city: string;
-    postalCode: string;
     country: string; // ISO 3166-1 alpha-2
-    stateOrProvince?: string; // 2-letter code, see src/lib/provinces.ts
   };
 };
 
 type LegalEntityResponse = { id: string };
 
+// Deliberately minimal: only individual.name, individual.email and
+// individual.residentialAddress.country are sent to Adyen for this call.
+// Phone, date of birth, and the rest of the residential address are
+// collected on the onboarding form and stored in our own DB (see
+// src/app/onboarding/personal/actions.ts), but aren't forwarded here.
 export async function createAdyenIndividual(
   input: AdyenIndividualInput
 ): Promise<string | null> {
@@ -30,21 +29,8 @@ export async function createAdyenIndividual(
           firstName: input.firstName,
           lastName: input.lastName,
         },
-        birthData: {
-          dateOfBirth: input.dateOfBirth,
-        },
         residentialAddress: {
-          street: input.residentialAddress.street,
-          city: input.residentialAddress.city,
-          postalCode: input.residentialAddress.postalCode,
           country: input.residentialAddress.country,
-          ...(input.residentialAddress.stateOrProvince
-            ? { stateOrProvince: input.residentialAddress.stateOrProvince }
-            : {}),
-        },
-        phone: {
-          number: input.phoneNumber,
-          type: "mobile",
         },
         email: input.email,
       },

@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { personalInfoSchema } from "@/lib/zod";
 import { createAdyenIndividual } from "@/lib/adyen/legalEntity";
 import { lookupDutchAddress, type DutchAddress } from "@/lib/onboarding/pdok";
-import { isProvinceCode } from "@/lib/onboarding/provinces";
 
 /**
  * Thin RPC wrapper so the client form (personal-form.tsx) can call PDOK
@@ -110,21 +109,11 @@ export async function savePersonalInfo(formData: FormData) {
             firstName,
             lastName,
             email: user.email,
-            phoneNumber,
-            dateOfBirth,
+            // Adyen only gets name/email/country — phone, date of birth,
+            // and the rest of the residential address are saved to our own
+            // DB above but not sent on this call (see legalEntity.ts).
             residentialAddress: {
-              street: residentialStreet,
-              city: residentialCity,
-              postalCode: residentialPostalCode,
               country: residentialCountry,
-              // Only the NL/GB/US dropdowns store a 2-letter code (see
-              // provinces.ts); every other country's free-text region name
-              // isn't a format Adyen's stateOrProvince expects, so leave it
-              // out rather than forwarding arbitrary text.
-              stateOrProvince:
-                residentialProvince && isProvinceCode(residentialProvince)
-                  ? residentialProvince
-                  : undefined,
             },
           })
         : null;
