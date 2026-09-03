@@ -61,7 +61,7 @@ export async function requestEmailCode(formData: FormData) {
   redirect(`/auth/mfa/email?${qs}&sent=1`);
 }
 
-/** Verifies the 6-digit code and marks this session's email challenge cleared. */
+/** Verifies the 8-digit code and marks this session's email challenge cleared. */
 export async function verifyEmailCode(formData: FormData) {
   const supabase = await createClient();
   const {

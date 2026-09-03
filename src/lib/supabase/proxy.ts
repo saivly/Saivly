@@ -14,7 +14,11 @@ import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
  *  2. Verified authenticator app, but  -> /auth/mfa (needs this session's
  *     not yet cleared this session        code)
  *  3. No authenticator app AND no      -> /auth/mfa/email (needs this
- *     passkey on file                     session's emailed code)
+ *     passkey on file                     session's emailed code, unless
+ *                                          this session was just minted by
+ *                                          confirming a brand-new account's
+ *                                          signup email — see
+ *                                          SIGNUP_JUST_CONFIRMED_COOKIE)
  *  4. ...and hasn't dismissed the      -> /auth/security (nudge to add
  *     security nudge this session         either method — shown again
  *                                          every session until they do)
@@ -25,7 +29,7 @@ import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
  *
  * Two-factor auth is OPTIONAL to *set up*, but every session still ends
  * up with a second factor of some kind: an authenticator app or a passkey
- * if the account has one, otherwise a 6-digit code emailed on the spot
+ * if the account has one, otherwise an 8-digit code emailed on the spot
  * (step 3) — see /auth/mfa/email. Passkeys are a first-factor sign-in
  * credential in Supabase's model, not an `auth.mfa`-enrolled factor, so
  * they never show up in `getAuthenticatorAssuranceLevel()`; step 3 checks
@@ -61,6 +65,18 @@ export const SESSION_MAX_AGE_SECONDS = 2 * 60 * 60; // 2 hours
 // since neither should carry over into the next login.
 export const EMAIL_MFA_VERIFIED_COOKIE = "email_mfa_verified_at";
 export const SECURITY_PROMPT_DISMISSED_COOKIE = "security_prompt_dismissed_at";
+
+// Set by /auth/confirm right after a brand-new account verifies its
+// "Confirm signup" link (type=signup). That click already proves control
+// of the inbox — the exact thing step 3's emailed 8-digit code exists to
+// prove — so making a just-registered user clear it a second time before
+// they've even had a chance to set up a passkey/authenticator is pure
+// friction. One-time and short-lived (just long enough to cover the
+// confirm -> first protected page hop): consumed the first time step 3
+// below sees it, and never renewed by anything but /auth/confirm itself,
+// so it can't be replayed to skip step 3 on some later, unrelated login.
+export const SIGNUP_JUST_CONFIRMED_COOKIE = "signup_just_confirmed";
+export const SIGNUP_JUST_CONFIRMED_MAX_AGE_SECONDS = 5 * 60; // 5 minutes
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -141,6 +157,7 @@ export async function updateSession(request: NextRequest) {
       res.cookies.delete(SESSION_STARTED_COOKIE);
       res.cookies.delete(EMAIL_MFA_VERIFIED_COOKIE);
       res.cookies.delete(SECURITY_PROMPT_DISMISSED_COOKIE);
+      res.cookies.delete(SIGNUP_JUST_CONFIRMED_COOKIE);
       return res;
     }
 
@@ -195,12 +212,30 @@ export async function updateSession(request: NextRequest) {
 
       if (!hasPasskey) {
         // 3. Nothing stronger on file -> fall back to a code emailed for
-        //    this session.
+        //    this session — unless this *is* that proof already, freshly
+        //    minted by confirming a brand-new account's signup email.
+        const justConfirmedSignup =
+          request.cookies.get(SIGNUP_JUST_CONFIRMED_COOKIE)?.value === "1";
         const emailOk =
-          !freshSession &&
-          request.cookies.get(EMAIL_MFA_VERIFIED_COOKIE)?.value === "1";
+          justConfirmedSignup ||
+          (!freshSession &&
+            request.cookies.get(EMAIL_MFA_VERIFIED_COOKIE)?.value === "1");
         if (!emailOk) {
           return redirectTo(request, EMAIL_MFA_PATH, supabaseResponse, pathname);
+        }
+
+        if (justConfirmedSignup) {
+          // Consume it: covers the rest of this session too (no reason to
+          // ask again a minute later) and stops it from being replayed to
+          // skip step 3 on some unrelated later login.
+          supabaseResponse.cookies.set(EMAIL_MFA_VERIFIED_COOKIE, "1", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/",
+            maxAge: SESSION_MAX_AGE_SECONDS,
+          });
+          supabaseResponse.cookies.delete(SIGNUP_JUST_CONFIRMED_COOKIE);
         }
 
         // 4. Cleared for this session, but still nothing stronger set up

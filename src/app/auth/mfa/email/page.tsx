@@ -4,13 +4,13 @@ import { safeNext } from "@/lib/safe-redirect";
 /**
  * Fallback per-session second factor for accounts with neither an
  * authenticator app nor a passkey on file — see the enforcement ladder in
- * @/lib/supabase/proxy. A 6-digit code emailed through Supabase's own
+ * @/lib/supabase/proxy. An 8-digit code emailed through Supabase's own
  * passwordless OTP flow (signInWithOtp / verifyOtp), since there's no
  * standalone "email" factor type in Supabase's own MFA system.
  *
  * Requires the project's Supabase "Magic Link" email template (Auth ->
  * Email Templates, in the Supabase dashboard) to include {{ .Token }} —
- * otherwise the email carries only a sign-in link, no 6-digit code to
+ * otherwise the email carries only a sign-in link, no 8-digit code to
  * enter below.
  */
 export default async function EmailMfaChallengePage({
@@ -28,8 +28,8 @@ export default async function EmailMfaChallengePage({
         <h1 className="text-2xl font-semibold">Confirm it&apos;s you</h1>
         <p className="mt-1 text-sm text-muted">
           {sent
-            ? "Enter the 6-digit code we emailed you. It expires shortly — send a new one if it's been a while."
-            : "You haven't set up an authenticator app or passkey, so we'll email you a 6-digit code to confirm it's you."}
+            ? "Enter the 8-digit code we emailed you. It expires shortly — send a new one if it's been a while."
+            : "You haven't set up an authenticator app or passkey, so we'll email you an 8-digit code to confirm it's you."}
         </p>
       </div>
 
@@ -47,11 +47,11 @@ export default async function EmailMfaChallengePage({
               name="code"
               inputMode="numeric"
               autoComplete="one-time-code"
-              pattern="\d{6}"
-              maxLength={6}
+              pattern="\d{8}"
+              maxLength={8}
               required
               autoFocus
-              placeholder="123456"
+              placeholder="12345678"
               className="rounded-lg border border-line bg-panel px-3 py-2 text-center text-lg tracking-[0.4em] outline-none focus:border-accent"
             />
             <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90">

@@ -259,7 +259,7 @@ function SecurityPrompt() {
         <div className="flex items-start gap-3 rounded-xl border border-line px-4 py-3 text-sm text-muted">
           <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            Without one of these, we&apos;ll email you a 6-digit code to
+            Without one of these, we&apos;ll email you an 8-digit code to
             confirm it&apos;s you every time you sign in. An authenticator
             app or passkey is faster — and doesn&apos;t depend on your
             inbox.
