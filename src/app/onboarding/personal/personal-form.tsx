@@ -22,6 +22,29 @@ type Existing = {
 
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1));
+
+// Newest-eligible year first (most signups cluster near 18-40) down to
+// 100 years ago — generous enough to cover everyone isAdult() would
+// ever accept without listing centuries nobody needs.
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 83 }, (_, i) => String(CURRENT_YEAR - 18 - i));
+
 function isAdult(iso: string): boolean {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return false;
@@ -30,13 +53,12 @@ function isAdult(iso: string): boolean {
   return date <= eighteenYearsAgo;
 }
 
-/** Day/month/year is split into three plain text fields (no browser spin
- * buttons, no dropdown) rather than a native `type="date"` input, whose
- * picker UI and formatting vary across browsers/locales. The three pieces
- * are recombined into a single ISO `YYYY-MM-DD` string, reported to the
- * parent (for the Continue button's validity gate) via onValidityChange
- * rather than read back out of the hidden input, since the parent needs
- * to know *before* a submit attempt.
+/** Day/month/year is split into three dropdowns rather than a native
+ * `type="date"` input, whose picker UI and formatting vary across
+ * browsers/locales. The three pieces are recombined into a single ISO
+ * `YYYY-MM-DD` string, reported to the parent (for the Continue button's
+ * validity gate) via onValidityChange rather than read back out of the
+ * hidden input, since the parent needs to know *before* a submit attempt.
  */
 function DateOfBirthFields({
   defaultValue,
@@ -49,7 +71,12 @@ function DateOfBirthFields({
     defaultValue || ""
   ).split("-");
 
-  const [day, setDay] = useState(initialDay);
+  // Stored (and DAYS/MONTHS option values) are unpadded — "5", not
+  // "05" — so a saved "05" has to be renormalized or it won't match any
+  // option and the dropdown would silently sit on its placeholder.
+  const [day, setDay] = useState(
+    initialDay ? String(Number(initialDay)) : ""
+  );
   const [month, setMonth] = useState(
     initialMonth ? String(Number(initialMonth)) : ""
   );
@@ -118,39 +145,66 @@ function DateOfBirthFields({
     <div className="flex flex-col gap-1.5 text-sm">
       Date of birth
       <div className="flex gap-3">
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={2}
-          required
-          value={day}
-          onChange={(e) => setDay(e.target.value.replace(/\D/g, ""))}
-          onBlur={() => setTouched(true)}
-          aria-invalid={!!error}
-          className={`${inputClasses} flex-[2] text-center`}
-        />
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={2}
-          required
-          value={month}
-          onChange={(e) => setMonth(e.target.value.replace(/\D/g, ""))}
-          onBlur={() => setTouched(true)}
-          aria-invalid={!!error}
-          className={`${inputClasses} flex-[2] text-center`}
-        />
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={4}
-          required
-          value={year}
-          onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))}
-          onBlur={() => setTouched(true)}
-          aria-invalid={!!error}
-          className={`${inputClasses} flex-[3] text-center`}
-        />
+        <div className="relative flex-[2]">
+          <select
+            required
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={!!error}
+            className={`${inputClasses} w-full appearance-none pr-8`}
+          >
+            <option value="" disabled>
+              Day
+            </option>
+            {DAYS.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
+        <div className="relative flex-[5]">
+          <select
+            required
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={!!error}
+            className={`${inputClasses} w-full appearance-none pr-8`}
+          >
+            <option value="" disabled>
+              Month
+            </option>
+            {MONTHS.map((name, i) => (
+              <option key={name} value={i + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
+        <div className="relative flex-[3]">
+          <select
+            required
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            onBlur={() => setTouched(true)}
+            aria-invalid={!!error}
+            className={`${inputClasses} w-full appearance-none pr-8`}
+          >
+            <option value="" disabled>
+              Year
+            </option>
+            {YEARS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
       </div>
       {error && <span className="text-xs text-danger">{error}</span>}
       <input type="hidden" name="dateOfBirth" value={isoValue} />
