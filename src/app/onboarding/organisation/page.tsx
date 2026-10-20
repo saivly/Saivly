@@ -49,7 +49,7 @@ const CHOICES = [
     href: "/onboarding/organisation/join",
     icon: UsersIcon,
     title: "No, I want to join an existing organisation",
-    body: "Enter your organisation's name and ID to join a team that's already set up.",
+    body: "Join a team that's already set up — this isn't available quite yet.",
   },
 ] as const;
 

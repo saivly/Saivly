@@ -21,12 +21,17 @@ type Existing = {
 // always false. This click fires the whole organisation-legal-entity/
 // account-holder/balance-account/business-line chain in Adyen
 // (saveContactDetails), so a second click landing before the first
-// finishes could very well mint duplicates there.
-function ContinueButton() {
+// finishes could very well mint duplicates there. Gated on formValid
+// (same pattern as personal-form.tsx and business-activity-form.tsx) so
+// an incomplete form can't be submitted at all — that keeps the
+// browser's own "Please fill out this field" bubble from ever firing,
+// leaving the red fieldError text below each input as the only, and
+// properly styled, validation feedback.
+function ContinueButton({ formValid }: { formValid: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
-      disabled={pending}
+      disabled={pending || !formValid}
       className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
     >
       {pending ? "Saving…" : "Continue"}
@@ -132,7 +137,7 @@ export default function ContactDetailsForm({
         )}
       </label>
 
-      <ContinueButton />
+      <ContinueButton formValid={parsed.success} />
 
       <Link
         href="/onboarding/company/business-activity"

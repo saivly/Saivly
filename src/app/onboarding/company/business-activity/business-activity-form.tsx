@@ -9,11 +9,6 @@ import { inputClasses, CurrencySelect, SelectChevron } from "../../form-controls
 import { INDUSTRY_CODE_GROUPS } from "@/lib/onboarding/industry-codes";
 import { businessActivitySchema } from "@/lib/zod";
 
-// Mirrors HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE in src/lib/adyen/legalEntity.ts.
-// Not imported directly — that file pulls in the Adyen client, which has
-// no business being bundled into client code.
-const HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE = "81399";
-
 // Prefilled for VvEs so the user can just hit Continue — still editable.
 const HOMEOWNERS_ASSOCIATION_DESCRIPTION =
   "A Homeowners’ Association (HOA) manages and maintains the common areas of an apartment building. The HOA collects contributions from the owners, arranges maintenance and repairs, and ensures that shared expenses and agreements are properly managed.";
@@ -92,37 +87,49 @@ export default function BusinessActivityForm({
     <form action={saveBusinessActivity} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
         Industry
-        <div className="relative">
-          <select
-            name={isVve ? undefined : "industryCode"}
-            required
-            disabled={isVve}
-            value={industryCode}
-            onChange={(e) => setIndustryCode(e.target.value)}
-            onBlur={() => touch("industryCode")}
-            aria-invalid={!!fieldError("industryCode")}
-            className={`${inputClasses} w-full appearance-none pr-8 disabled:opacity-70`}
-          >
-            <option value="" disabled>
-              Select…
-            </option>
-            {INDUSTRY_CODE_GROUPS.map((group) => (
-              <optgroup key={group.sector} label={group.sector}>
-                {group.codes.map((i) => (
-                  <option key={i.code} value={i.code}>
-                    {i.description}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-          <SelectChevron />
-        </div>
-        {/* A disabled <select> doesn't submit its value — this carries it
-            through instead, same pattern as the read-only company summary
-            in company-form.tsx. */}
-        {isVve && (
-          <input type="hidden" name="industryCode" value={HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE} />
+        {isVve ? (
+          <>
+            {/* The underlying Adyen industry code (passed in via
+                `existing.industryCode`, see business-activity/page.tsx) is
+                a real-estate classification, not something a homeowners'
+                association would recognise itself in — show the plain
+                label instead and carry the real code through via the
+                hidden input below. */}
+            <input
+              type="text"
+              value="Home Association"
+              disabled
+              readOnly
+              className={`${inputClasses} disabled:opacity-70`}
+            />
+            <input type="hidden" name="industryCode" value={industryCode} />
+          </>
+        ) : (
+          <div className="relative">
+            <select
+              name="industryCode"
+              required
+              value={industryCode}
+              onChange={(e) => setIndustryCode(e.target.value)}
+              onBlur={() => touch("industryCode")}
+              aria-invalid={!!fieldError("industryCode")}
+              className={`${inputClasses} w-full appearance-none pr-8`}
+            >
+              <option value="" disabled>
+                Select…
+              </option>
+              {INDUSTRY_CODE_GROUPS.map((group) => (
+                <optgroup key={group.sector} label={group.sector}>
+                  {group.codes.map((i) => (
+                    <option key={i.code} value={i.code}>
+                      {i.description}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <SelectChevron />
+          </div>
         )}
         <span className="text-xs text-muted">
           {isVve
@@ -179,15 +186,18 @@ export default function BusinessActivityForm({
         VAT number
         <input
           type="text"
-          name="vatNumber"
-          value={vatNumber}
+          name={isVve ? undefined : "vatNumber"}
+          disabled={isVve}
+          value={isVve ? "" : vatNumber}
           onChange={(e) => setVatNumber(e.target.value)}
           onBlur={() => touch("vatNumber")}
           aria-invalid={!!fieldError("vatNumber")}
-          className={inputClasses}
+          className={`${inputClasses} disabled:opacity-70`}
         />
         <span className="text-xs text-muted">
-          Leave blank if the organisation doesn&apos;t have one — most don&apos;t.
+          {isVve
+            ? "Homeowners’ associations are VAT-exempt."
+            : "Leave blank if the organisation doesn’t have one — most don’t."}
         </span>
         {fieldError("vatNumber") && (
           <span className="text-xs text-danger">{fieldError("vatNumber")}</span>

@@ -22,21 +22,6 @@ type Existing = {
 
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
 function isAdult(iso: string): boolean {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return false;
@@ -45,13 +30,13 @@ function isAdult(iso: string): boolean {
   return date <= eighteenYearsAgo;
 }
 
-/** Day/month/year is split into three fields — day and year as free text
- * (so no browser spin buttons), month as a dropdown of names — rather than
- * a native `type="date"` input, whose picker UI and formatting vary across
- * browsers/locales. The three pieces are recombined into a single ISO
- * `YYYY-MM-DD` string, reported to the parent (for the Continue button's
- * validity gate) via onValidityChange rather than read back out of the
- * hidden input, since the parent needs to know *before* a submit attempt.
+/** Day/month/year is split into three plain text fields (no browser spin
+ * buttons, no dropdown) rather than a native `type="date"` input, whose
+ * picker UI and formatting vary across browsers/locales. The three pieces
+ * are recombined into a single ISO `YYYY-MM-DD` string, reported to the
+ * parent (for the Continue button's validity gate) via onValidityChange
+ * rather than read back out of the hidden input, since the parent needs
+ * to know *before* a submit attempt.
  */
 function DateOfBirthFields({
   defaultValue,
@@ -144,26 +129,17 @@ function DateOfBirthFields({
           aria-invalid={!!error}
           className={`${inputClasses} flex-[2] text-center`}
         />
-        <div className="relative flex-[5]">
-          <select
-            required
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            onBlur={() => setTouched(true)}
-            aria-invalid={!!error}
-            className={`${inputClasses} w-full appearance-none pr-8`}
-          >
-            <option value="" disabled>
-              Month
-            </option>
-            {MONTHS.map((name, i) => (
-              <option key={name} value={i + 1}>
-                {name}
-              </option>
-            ))}
-          </select>
-          <SelectChevron />
-        </div>
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={2}
+          required
+          value={month}
+          onChange={(e) => setMonth(e.target.value.replace(/\D/g, ""))}
+          onBlur={() => setTouched(true)}
+          aria-invalid={!!error}
+          className={`${inputClasses} flex-[2] text-center`}
+        />
         <input
           type="text"
           inputMode="numeric"

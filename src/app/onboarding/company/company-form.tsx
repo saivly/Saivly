@@ -67,13 +67,15 @@ function BriefcaseIcon({ className }: { className?: string }) {
   );
 }
 
-// Mirrors AdyenEntityRelationshipType (src/lib/adyen/legalEntity.ts) and
-// ENTITY_RELATIONSHIP_TYPES (src/lib/zod.ts) — keep all three in sync.
+// Mirrors AdyenEntityRelationshipType (src/lib/adyen/legalEntity.ts). The
+// "all" sentinel ENTITY_RELATIONSHIP_TYPES (src/lib/zod.ts) still accepts
+// is deliberately not offered here any more — kept there only so an
+// organisation saved with it before stays valid — so don't resurrect it
+// as an option here without also reconsidering that.
 const RELATIONSHIP_OPTIONS = [
-  { value: "signatory", label: "Signatory — authorized to sign on the company's behalf" },
-  { value: "uboThroughOwnership", label: "Ultimate beneficial owner — through ownership (25%+ shares)" },
-  { value: "uboThroughControl", label: "Ultimate beneficial owner — through control (e.g. voting rights)" },
-  { value: "all", label: "All of the above" },
+  { value: "signatory", label: "Authorized company signatory" },
+  { value: "uboThroughOwnership", label: "Owner via shares" },
+  { value: "uboThroughControl", label: "Owner via control" },
 ] as const;
 
 // useFormStatus only reports the enclosing <form>'s real pending state

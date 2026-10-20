@@ -5,18 +5,33 @@ export type AdyenIndividualInput = {
   firstName: string;
   lastName: string;
   email: string;
+  /** Full number including country code, e.g. "+31612345678" — Adyen
+   * derives phoneCountryCode from it itself (that field is readOnly on
+   * PhoneNumber). */
+  phoneNumber: string;
+  /** YYYY-MM-DD. */
+  dateOfBirth: string;
+  /** ISO 3166-1 alpha-2. */
+  nationality: string;
   residentialAddress: {
+    street: string;
+    city: string;
+    /** Two-letter ISO 3166-2 state/province code — only pass this for a
+     * country whose provinces/states are genuinely coded that way (see
+     * the caller in personal/actions.ts for why that's narrower than
+     * every country provincesForCountry() has a dropdown for). */
+    stateOrProvince?: string;
+    postalCode: string;
     country: string; // ISO 3166-1 alpha-2
   };
 };
 
 type LegalEntityResponse = { id: string };
 
-// Deliberately minimal: only individual.name, individual.email and
-// individual.residentialAddress.country are sent to Adyen for this call.
-// Phone, date of birth, and the rest of the residential address are
-// collected on the onboarding form and stored in our own DB (see
-// src/app/onboarding/personal/actions.ts), but aren't forwarded here.
+/** Everything collected on the personal-info step (src/app/onboarding/
+ * personal/actions.ts) that Adyen's Individual schema has a field for —
+ * see components.schemas.Individual in Adyen's LegalEntityService-v4
+ * OpenAPI spec. */
 export async function createAdyenIndividual(
   input: AdyenIndividualInput
 ): Promise<string | null> {
@@ -29,10 +44,26 @@ export async function createAdyenIndividual(
           firstName: input.firstName,
           lastName: input.lastName,
         },
-        residentialAddress: {
-          country: input.residentialAddress.country,
-        },
         email: input.email,
+        nationality: input.nationality,
+        // type fixed to "mobile" rather than asked on the form, same as
+        // the organization's support phone (createAdyenOrganization).
+        phone: {
+          number: input.phoneNumber,
+          type: "mobile",
+        },
+        birthData: {
+          dateOfBirth: input.dateOfBirth,
+        },
+        residentialAddress: {
+          street: input.residentialAddress.street,
+          city: input.residentialAddress.city,
+          postalCode: input.residentialAddress.postalCode,
+          country: input.residentialAddress.country,
+          ...(input.residentialAddress.stateOrProvince
+            ? { stateOrProvince: input.residentialAddress.stateOrProvince }
+            : {}),
+        },
       },
     }),
   });

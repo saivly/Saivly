@@ -109,10 +109,24 @@ export async function savePersonalInfo(formData: FormData) {
             firstName,
             lastName,
             email: user.email,
-            // Adyen only gets name/email/country — phone, date of birth,
-            // and the rest of the residential address are saved to our own
-            // DB above but not sent on this call (see legalEntity.ts).
+            phoneNumber,
+            dateOfBirth,
+            nationality,
             residentialAddress: {
+              street: residentialStreet,
+              city: residentialCity,
+              // Only NL's and US's province tables (src/lib/onboarding/
+              // provinces.ts) are real ISO 3166-2 codes — GB's are a
+              // shortened, made-up 2-letter stand-in for the real
+              // 3-letter ones (ENG/SCT/WLS/NIR), and every other country
+              // collects free text here, so sending either as
+              // stateOrProvince would just get rejected by Adyen (or
+              // silently wrong) rather than actually matching anything.
+              stateOrProvince:
+                residentialCountry === "NL" || residentialCountry === "US"
+                  ? residentialProvince || undefined
+                  : undefined,
+              postalCode: residentialPostalCode,
               country: residentialCountry,
             },
           })

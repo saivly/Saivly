@@ -2,18 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
-import { joinOrganisation } from "./actions";
 
-const inputClasses =
-  "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm";
-
-export default async function JoinOrganisationStep({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
-
+/**
+ * Joining an existing organisation isn't wired up yet (see ./actions.ts
+ * for the dormant join_organisation() RPC flow this used to expose) — this
+ * screen just explains that and sends the user back to the create-vs-join
+ * fork instead of showing the (currently non-functional) join form.
+ */
+export default async function JoinOrganisationStep() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,51 +24,17 @@ export default async function JoinOrganisationStep({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Join an existing organisation
+          Joining an organisation isn&apos;t available yet
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 4 — ask whoever set up your organisation for its exact
-          name and ID. They can find the ID on their own company step.
+          We&apos;re still building this. In the meantime, please contact
+          your organisation&apos;s admin and ask them to add you directly.
         </p>
       </div>
 
-      {error && (
-        <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-          {error}
-        </p>
-      )}
-
-      <form action={joinOrganisation} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1.5 text-sm">
-          Organisation name
-          <input
-            type="text"
-            name="organisationName"
-            required
-            autoFocus
-            placeholder="Acme B.V."
-            className={inputClasses}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          Organisation ID
-          <input
-            type="text"
-            name="organisationId"
-            required
-            placeholder="e.g. 5f2e1c3a-7b9d-4a1e-9c3f-8d2b6e1a0f4c"
-            className={`${inputClasses} font-mono text-sm`}
-          />
-        </label>
-
-        <button className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
-          Join organisation
-        </button>
-      </form>
-
       <Link
         href="/onboarding/organisation"
-        className="self-start text-sm text-muted hover:underline"
+        className="self-start rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition-colors hover:bg-surface"
       >
         ← Back
       </Link>
