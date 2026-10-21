@@ -6,7 +6,7 @@ import { flattenError } from "zod";
 import Link from "next/link";
 import { saveCompanyInfo, searchKvk, getKvkDetails } from "./actions";
 import type { KvkSearchResult } from "@/lib/onboarding/kvk";
-import { inputClasses, CountrySelect, SelectChevron } from "../form-controls";
+import { inputClasses, CountrySelect } from "../form-controls";
 import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/onboarding/countries";
 import { companyInfoSchema } from "@/lib/zod";
 
@@ -67,16 +67,34 @@ function BriefcaseIcon({ className }: { className?: string }) {
   );
 }
 
-// Mirrors AdyenEntityRelationshipType (src/lib/adyen/legalEntity.ts). The
-// "all" sentinel ENTITY_RELATIONSHIP_TYPES (src/lib/zod.ts) still accepts
-// is deliberately not offered here any more — kept there only so an
-// organisation saved with it before stays valid — so don't resurrect it
-// as an option here without also reconsidering that.
+// Mirrors AdyenEntityRelationshipType (src/lib/adyen/legalEntity.ts) — one
+// checkbox per value below, any number of which can apply at once (e.g. a
+// sole owner who's also the signatory).
 const RELATIONSHIP_OPTIONS = [
   { value: "signatory", label: "Authorized company signatory" },
   { value: "uboThroughOwnership", label: "Owner via shares" },
   { value: "uboThroughControl", label: "Owner via control" },
 ] as const;
+
+type RelationshipValue = (typeof RELATIONSHIP_OPTIONS)[number]["value"];
+
+const RELATIONSHIP_VALUES: readonly string[] = RELATIONSHIP_OPTIONS.map((o) => o.value);
+
+// existing.relationshipType (company/page.tsx) is whatever was last saved
+// to organisations.relationship_type — a comma-joined list of the values
+// above as of this change, but possibly still the single pre-checkbox
+// value ("all" was a sentinel meaning "all three", see saveCompanyInfo's
+// companion expandRelationshipTypes in contact-details/finish.ts) from
+// before multi-select existed. Normalize either shape into the string[]
+// these checkboxes actually work with.
+function parseStoredRelationshipTypes(stored: string): RelationshipValue[] {
+  if (!stored) return [];
+  if (stored === "all") return RELATIONSHIP_OPTIONS.map((o) => o.value);
+  return stored
+    .split(",")
+    .map((v) => v.trim())
+    .filter((v): v is RelationshipValue => RELATIONSHIP_VALUES.includes(v));
+}
 
 // useFormStatus only reports the enclosing <form>'s real pending state
 // when called from a component distinct from the one rendering the
@@ -115,7 +133,16 @@ export default function CompanyForm({
       ? existing.companyCountry
       : "NL"
   );
-  const [relationshipType, setRelationshipType] = useState(existing.relationshipType);
+  const [relationshipTypes, setRelationshipTypes] = useState<RelationshipValue[]>(
+    () => parseStoredRelationshipTypes(existing.relationshipType)
+  );
+  function toggleRelationshipType(value: RelationshipValue) {
+    setRelationshipTypes((current) =>
+      current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value]
+    );
+  }
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KvkSearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -152,7 +179,7 @@ export default function CompanyForm({
   }
   const parsed = companyInfoSchema.safeParse({
     companyCountry: country,
-    relationshipType,
+    relationshipType: relationshipTypes,
     kvkNumber: fields.kvkNumber,
     companyName: fields.companyName,
     companyStreet: fields.companyStreet,
@@ -254,33 +281,29 @@ export default function CompanyForm({
         />
       </label>
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        Your relationship to the company
-        <div className="relative">
-          <select
-            name="relationshipType"
-            required
-            value={relationshipType}
-            onChange={(e) => setRelationshipType(e.target.value)}
-            onBlur={() => touch("relationshipType")}
-            aria-invalid={!!fieldError("relationshipType")}
-            className={`${inputClasses} w-full appearance-none pr-8`}
-          >
-            <option value="" disabled>
-              Select…
-            </option>
-            {RELATIONSHIP_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <SelectChevron />
+      <fieldset className="flex flex-col gap-1.5 text-sm">
+        <legend className="mb-0.5">Your relationship to the company</legend>
+        <div className="flex flex-col gap-2">
+          {RELATIONSHIP_OPTIONS.map((o) => (
+            <label key={o.value} className="flex items-center gap-2.5">
+              <input
+                type="checkbox"
+                name="relationshipType"
+                value={o.value}
+                checked={relationshipTypes.includes(o.value)}
+                onChange={() => toggleRelationshipType(o.value)}
+                onBlur={() => touch("relationshipType")}
+                aria-invalid={!!fieldError("relationshipType")}
+                className="h-4 w-4 shrink-0 rounded border-line accent-accent"
+              />
+              {o.label}
+            </label>
+          ))}
         </div>
         {fieldError("relationshipType") && (
           <span className="text-xs text-danger">{fieldError("relationshipType")}</span>
         )}
-      </label>
+      </fieldset>
 
       {isNL && (
         <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3">

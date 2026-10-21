@@ -92,22 +92,24 @@ export const personalInfoSchema = zod
 // The first three mirror AdyenEntityRelationshipType in
 // src/lib/adyen/legalEntity.ts — keep both in sync. Restricted to the
 // subset Adyen allows when the *current* legal entity is type
-// "organization" (ours always is). 'all' isn't a real Adyen value — it's
-// a form-only sentinel meaning "send all three", expanded back out to
-// the real values in company/actions.ts before it ever reaches Adyen.
+// "organization" (ours always is). A shopper can be more than one of
+// these at once (e.g. a sole owner who's also the signatory) — checked
+// via checkboxes in company-form.tsx, submitted as however many
+// "relationshipType" fields were checked, hence the array here rather
+// than a single value. One entityAssociation gets created per entry
+// (see createAdyenOrganization).
 const ENTITY_RELATIONSHIP_TYPES = [
     'signatory',
     'uboThroughOwnership',
     'uboThroughControl',
-    'all',
 ] as const;
 
 export const companyInfoSchema = zod
     .object({
         companyCountry: companyCountryCode,
-        relationshipType: zod.enum(ENTITY_RELATIONSHIP_TYPES, {
-            message: 'Select your relationship to the company.',
-        }),
+        relationshipType: zod
+            .array(zod.enum(ENTITY_RELATIONSHIP_TYPES))
+            .min(1, { message: 'Select at least one relationship to the company.' }),
         kvkNumber: zod
             .string()
             .trim()

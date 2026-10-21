@@ -1,6 +1,6 @@
 "use client";
 
-import { COUNTRIES, countryFlag, CURRENCIES, currencySymbol } from "@/lib/onboarding/countries";
+import { COUNTRIES, countryFlag, CURRENCIES, currencySymbol, dialCode } from "@/lib/onboarding/countries";
 
 // Shared between every /onboarding form (personal, company, …) so their
 // inputs/selects look identical.
@@ -112,6 +112,48 @@ export function CurrencySelect({
         {CURRENCIES.map((c) => (
           <option key={c.code} value={c.code} className="text-ink">
             {c.code} — {c.name}
+          </option>
+        ))}
+      </select>
+      <SelectChevron />
+    </div>
+  );
+}
+
+/** Picks a dial code by picking a country — `value`/`onChange` carry the
+ * 2-letter country code (like CountrySelect), not the "+XX" string itself,
+ * so the caller can resolve it via dialCode() the same way everywhere
+ * else does. Same transparent-select-plus-overlay shell as CurrencySelect,
+ * showing just the flag + dial code when closed; the open list spells out
+ * the country name too, since several entries can share a dial code
+ * (+1 for US and CA, for instance) and the code alone can't disambiguate. */
+export function DialCodeSelect({
+  name,
+  value,
+  onChange,
+}: {
+  name?: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-base leading-none sm:text-sm"
+      >
+        {countryFlag(value)} {dialCode(value)}
+      </span>
+      <select
+        name={name}
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${inputClasses} w-full appearance-none pl-14 pr-8 text-transparent`}
+      >
+        {COUNTRIES.map((c) => (
+          <option key={c.code} value={c.code} className="text-ink">
+            {c.name} ({dialCode(c.code)})
           </option>
         ))}
       </select>

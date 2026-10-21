@@ -79,7 +79,10 @@ export async function saveCompanyInfo(formData: FormData) {
 
   const parsed = companyInfoSchema.safeParse({
     companyCountry: (formData.get("companyCountry") as string) ?? "",
-    relationshipType: (formData.get("relationshipType") as string) ?? "",
+    // One or more checked checkboxes, all named "relationshipType"
+    // (company-form.tsx) — getAll, not get, so every checked value comes
+    // through rather than just the first.
+    relationshipType: formData.getAll("relationshipType") as string[],
     kvkNumber: ((formData.get("kvkNumber") as string) ?? "").trim(),
     companyName: ((formData.get("companyName") as string) ?? "").trim(),
     companyStreet: ((formData.get("companyStreet") as string) ?? "").trim(),
@@ -107,7 +110,11 @@ export async function saveCompanyInfo(formData: FormData) {
   const orgFields = {
     name: companyName,
     country: companyCountry,
-    relationship_type: relationshipType,
+    // relationship_type is a single text column (migration 0012) — joined
+    // here rather than storing an array, same read-back split in
+    // company-form.tsx (parseStoredRelationshipTypes) and
+    // contact-details/finish.ts (expandRelationshipTypes).
+    relationship_type: relationshipType.join(","),
     kvk_number: kvkNumber || null,
     street: companyStreet,
     postal_code: companyPostalCode,

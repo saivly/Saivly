@@ -279,3 +279,47 @@ const PHONE_PLACEHOLDERS: Record<string, string> = {
 export function phonePlaceholder(country: string): string {
   return PHONE_PLACEHOLDERS[country] ?? `${dialCode(country)} 6 12345678`;
 }
+
+/** Same example number as phonePlaceholder, minus the dial code — for a
+ * phone field split into a separate dial-code dropdown + subscriber-number
+ * input (see personal-form.tsx), where the dial code already has its own
+ * place in the UI and repeating it in the second field's placeholder would
+ * just be noise. */
+export function phoneDigitsPlaceholder(country: string): string {
+  const full = phonePlaceholder(country);
+  const prefix = dialCode(country);
+  return full.startsWith(prefix) ? full.slice(prefix.length).trim() : full;
+}
+
+/** Splits a stored "+<dial code> <digits>" phone number back into the
+ * country whose dial code it used and the subscriber-number remainder —
+ * the inverse of joining dialCode(country) + digits back together. Several
+ * countries share a dial code (+1: US/CA, ...), so this can't always
+ * recover the *exact* country originally picked — preferring
+ * fallbackCountry's own dial code when it matches avoids re-guessing a
+ * country already known to be right (e.g. an existing NL number should
+ * stay NL, not fall through to some other +31 match — there isn't one,
+ * but the same principle holds for genuinely shared codes like +1).
+ */
+export function splitStoredPhoneNumber(
+  stored: string,
+  fallbackCountry: string
+): { country: string; digits: string } {
+  const trimmed = stored.trim();
+  if (!trimmed) return { country: fallbackCountry, digits: "" };
+
+  const fallbackDial = dialCode(fallbackCountry);
+  if (trimmed.startsWith(fallbackDial)) {
+    return { country: fallbackCountry, digits: trimmed.slice(fallbackDial.length).trim() };
+  }
+
+  const match = COUNTRIES.find((c) => trimmed.startsWith(dialCode(c.code)));
+  if (match) {
+    return { country: match.code, digits: trimmed.slice(dialCode(match.code).length).trim() };
+  }
+
+  // No recognizable dial code at all (e.g. a number saved before this
+  // split existed) — treat the whole thing as the subscriber number under
+  // fallbackCountry's dial code rather than losing it.
+  return { country: fallbackCountry, digits: trimmed };
+}

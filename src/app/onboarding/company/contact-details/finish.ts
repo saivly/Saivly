@@ -16,10 +16,13 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 type AdyenChainResult = { ok: true } | { ok: false; error: string };
 
-// "all" is a form-only sentinel (see ENTITY_RELATIONSHIP_TYPES in
-// lib/zod.ts) — companyInfoSchema accepts it as a valid relationshipType
-// value, but Adyen has no such value, so it's expanded back out into the
-// three real ones here, right before it reaches createAdyenOrganization.
+// organisations.relationship_type (migration 0012) is a single text
+// column holding however many of the three Adyen relationship values
+// apply, comma-joined by saveCompanyInfo (see company-form.tsx's
+// checkboxes) — split back out here, right before it reaches
+// createAdyenOrganization. "all" is a pre-checkbox sentinel meaning "all
+// three" (back when this was a single-select dropdown) — kept only so an
+// organisation saved under that older shape still expands correctly.
 const ALL_RELATIONSHIP_TYPES: AdyenEntityRelationshipType[] = [
   "signatory",
   "uboThroughOwnership",
@@ -27,9 +30,11 @@ const ALL_RELATIONSHIP_TYPES: AdyenEntityRelationshipType[] = [
 ];
 
 function expandRelationshipTypes(value: string): AdyenEntityRelationshipType[] {
-  return value === "all"
-    ? ALL_RELATIONSHIP_TYPES
-    : [value as AdyenEntityRelationshipType];
+  if (value === "all") return ALL_RELATIONSHIP_TYPES;
+  return value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean) as AdyenEntityRelationshipType[];
 }
 
 /**

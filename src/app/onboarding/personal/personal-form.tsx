@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { flattenError } from "zod";
-import { phonePlaceholder } from "@/lib/onboarding/countries";
+import { dialCode, phoneDigitsPlaceholder, splitStoredPhoneNumber } from "@/lib/onboarding/countries";
 import { provincesForCountry } from "@/lib/onboarding/provinces";
 import { savePersonalInfo, lookupResidentialAddress } from "./actions";
-import { inputClasses, SelectChevron, CountrySelect } from "../form-controls";
+import { inputClasses, SelectChevron, CountrySelect, DialCodeSelect } from "../form-controls";
 import { personalInfoSchema } from "@/lib/zod";
 
 type Existing = {
@@ -234,7 +234,17 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
   // matches it, and it means this select (like the one above) always shows
   // a flag instead of sitting on the blank "Select…" placeholder.
   const [nationality, setNationality] = useState(existing.nationality || country);
-  const [phoneNumber, setPhoneNumber] = useState(existing.phoneNumber);
+  // The phone field is split into a dial-code dropdown + a plain
+  // subscriber-number box (see DialCodeSelect) rather than one free-text
+  // field — splitStoredPhoneNumber recovers both pieces from whatever
+  // combined string was saved before, defaulting the dial code to the
+  // country of residence like a fresh signup would.
+  const initialPhone = splitStoredPhoneNumber(
+    existing.phoneNumber,
+    existing.residentialCountry || "NL"
+  );
+  const [phoneCountry, setPhoneCountry] = useState(initialPhone.country);
+  const [phoneDigits, setPhoneDigits] = useState(initialPhone.digits);
   const [postalCode, setPostalCode] = useState(existing.residentialPostalCode);
   const [houseNumber, setHouseNumber] = useState("");
   const [street, setStreet] = useState(existing.residentialStreet);
@@ -270,6 +280,11 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
   function touch(field: string) {
     setTouched((t) => ({ ...t, [field]: true }));
   }
+  // dialCode(phoneCountry) + the typed subscriber number — recombined into
+  // the single string personalInfoSchema (and the server) actually expect,
+  // same split/join pattern as residentialStreet + houseNumber below.
+  const phoneNumber = `${dialCode(phoneCountry)} ${phoneDigits}`.trim();
+
   const parsed = personalInfoSchema.safeParse({
     dateOfBirth,
     phoneNumber,
@@ -288,6 +303,11 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
   function handleCountryChange(next: string) {
     setCountry(next);
+    // The phone dial code follows the country of residence — a shopper
+    // can still pick a different one afterwards (e.g. a foreign mobile
+    // number), but changing residence again re-syncs it, same as every
+    // other country-derived default on this form.
+    setPhoneCountry(next);
     // A province code (or a house number, which only this country's form
     // even collects separately) from the old country is meaningless once
     // the country changes, so don't carry either over silently.
@@ -369,21 +389,32 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
       <label className="flex flex-col gap-1.5 text-sm">
         Phone number
-        <input
-          type="tel"
-          name="phoneNumber"
-          required
-          autoComplete="tel"
-          placeholder={phonePlaceholder(country)}
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          onBlur={() => touch("phoneNumber")}
-          aria-invalid={!!fieldError("phoneNumber")}
-          className={inputClasses}
-        />
+        <div className="flex gap-2">
+          <div className="w-32 shrink-0">
+            <DialCodeSelect
+              value={phoneCountry}
+              onChange={setPhoneCountry}
+            />
+          </div>
+          <input
+            type="tel"
+            required
+            autoComplete="tel-national"
+            placeholder={phoneDigitsPlaceholder(phoneCountry)}
+            value={phoneDigits}
+            onChange={(e) => setPhoneDigits(e.target.value)}
+            onBlur={() => touch("phoneNumber")}
+            aria-invalid={!!fieldError("phoneNumber")}
+            className={`${inputClasses} flex-1`}
+          />
+        </div>
         {fieldError("phoneNumber") && (
           <span className="text-xs text-danger">{fieldError("phoneNumber")}</span>
         )}
+        {/* The two fields above are UI-only — this hidden input carries
+            the recombined "+<dial code> <digits>" string that
+            personalInfoSchema (and the server) actually validate/store. */}
+        <input type="hidden" name="phoneNumber" value={phoneNumber} />
       </label>
 
       {isNL && (
