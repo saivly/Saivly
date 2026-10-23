@@ -341,3 +341,59 @@ export async function createAdyenOnboardingLink(
 
   return result.ok ? result.data.url : null;
 }
+
+export type AdyenVerificationStatus = "verified" | "pending" | "incomplete";
+
+type CheckVerificationErrorsResponse = {
+  problems?: {
+    entity?: { id?: string; type?: string };
+    verificationErrors?: { type: string; message?: string }[];
+  }[];
+};
+
+// VerificationError.type values that mean the shopper actually needs to
+// go back and do something — left a required field blank, entered
+// something invalid, or had a document rejected outright. "pendingStatus"
+// and "dataReview" both mean Adyen is still reviewing something already
+// submitted — not an action item, and not something a revisit to the
+// hosted onboarding link would fix — so those don't count as blocking.
+const BLOCKING_VERIFICATION_ERROR_TYPES = new Set([
+  "dataMissing",
+  "invalidInput",
+  "rejected",
+]);
+
+/**
+ * Calls POST /legalEntities/{id}/checkVerificationErrors — Adyen's
+ * purpose-built "is everything filled in" check. Returns every
+ * verification problem for this legal entity *and its associated
+ * entities* in one request (per Adyen's docs: "Returns the verification
+ * errors for a legal entity and its supporting entities"), so calling it
+ * once on the organization legal entity also surfaces problems on its
+ * associated individual (e.g. a missing residential-address field) —
+ * no need to call it a second time for the individual leg.
+ *
+ * Returns null if the request itself couldn't be made (Adyen
+ * unreachable, not configured, etc.) — distinct from "verified", so a
+ * caller can choose to fail open on an API hiccup rather than block
+ * onboarding on something that isn't actually the shopper's fault.
+ */
+export async function checkAdyenVerificationStatus(
+  legalEntityId: string
+): Promise<AdyenVerificationStatus | null> {
+  const result = await adyenRequest<CheckVerificationErrorsResponse>(
+    "legalEntity",
+    `/legalEntities/${legalEntityId}/checkVerificationErrors`,
+    { method: "POST" }
+  );
+
+  if (!result.ok) return null;
+
+  const errors = (result.data.problems ?? []).flatMap(
+    (p) => p.verificationErrors ?? []
+  );
+  if (errors.length === 0) return "verified";
+  return errors.some((e) => BLOCKING_VERIFICATION_ERROR_TYPES.has(e.type))
+    ? "incomplete"
+    : "pending";
+}

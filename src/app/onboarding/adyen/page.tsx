@@ -88,9 +88,7 @@ export default async function AdyenVerificationStep({
 
         <div className="flex items-center justify-between gap-3">
           <form action={startAdyenVerification}>
-            <button className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent-soft">
-              Review with Adyen again
-            </button>
+            <ContinueButton variant="outline" idleLabel="Review with Adyen again" />
           </form>
           <Link
             href={next ? `/onboarding/${next}` : "/dashboard"}
