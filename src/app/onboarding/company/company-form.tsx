@@ -271,21 +271,31 @@ export default function CompanyForm({
 
   return (
     <form action={saveCompanyInfo} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1.5 text-sm">
-        Country of registration
-        <CountrySelect
-          name="companyCountry"
-          value={country}
-          onChange={setCountry}
-          options={COMPANY_COUNTRIES}
-        />
-      </label>
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+        <label className="flex flex-col gap-1.5">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+            Country of registration
+          </span>
+          <CountrySelect
+            name="companyCountry"
+            value={country}
+            onChange={setCountry}
+            options={COMPANY_COUNTRIES}
+          />
+        </label>
+      </div>
 
-      <fieldset className="flex flex-col gap-1.5 text-sm">
-        <legend className="mb-0.5">Your relationship to the company</legend>
+      <div
+        role="group"
+        aria-label="Your relationship to the company (multiple options possible)"
+        className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm"
+      >
+        <p className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+          Your relationship to the company (multiple options possible)
+        </p>
         <div className="flex flex-col gap-2">
           {RELATIONSHIP_OPTIONS.map((o) => (
-            <label key={o.value} className="flex items-center gap-2.5">
+            <label key={o.value} className="ml-3 flex items-center gap-2.5">
               <input
                 type="checkbox"
                 name="relationshipType"
@@ -303,11 +313,11 @@ export default function CompanyForm({
         {fieldError("relationshipType") && (
           <span className="text-xs text-danger">{fieldError("relationshipType")}</span>
         )}
-      </fieldset>
+      </div>
 
       {isNL && (
         <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3">
-          <p className="text-xs font-medium tracking-wide text-muted uppercase">
+          <p className="mb-2 text-xs font-medium tracking-wide text-muted uppercase">
             Find your company in the KVK register
           </p>
           {usingTestData && (

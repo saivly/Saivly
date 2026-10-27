@@ -76,66 +76,78 @@ export default function ContactDetailsForm({
 
   return (
     <form action={saveContactDetails} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1.5 text-sm">
-        Website (if applicable)
-        <input
-          type="url"
-          name={isVve ? undefined : "website"}
-          disabled={isVve}
-          placeholder={isVve ? "" : "https://example.com"}
-          value={isVve ? "" : website}
-          onChange={(e) => setWebsite(e.target.value)}
-          onBlur={() => touch("website")}
-          aria-invalid={!!fieldError("website")}
-          className={`${inputClasses} disabled:opacity-70`}
-        />
-        {/* {isVve && (
-          <span className="text-xs text-muted">
-            Not applicable for homeowners&apos; associations.
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+            Website (if applicable)
           </span>
-        )} */}
-        {fieldError("website") && (
-          <span className="text-xs text-danger">{fieldError("website")}</span>
-        )}
-      </label>
+          <input
+            type="url"
+            name={isVve ? undefined : "website"}
+            disabled={isVve}
+            placeholder={isVve ? "" : "https://example.com"}
+            value={isVve ? "" : website}
+            onChange={(e) => setWebsite(e.target.value)}
+            onBlur={() => touch("website")}
+            aria-invalid={!!fieldError("website")}
+            className={`${inputClasses} disabled:opacity-70`}
+          />
+          {/* {isVve && (
+            <span className="text-xs text-muted">
+              Not applicable for homeowners&apos; associations.
+            </span>
+          )} */}
+          {fieldError("website") && (
+            <span className="text-xs text-danger">{fieldError("website")}</span>
+          )}
+        </label>
+      </div>
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        Company email address
-        <input
-          type="email"
-          name="supportEmail"
-          required
-          value={supportEmail}
-          onChange={(e) => setSupportEmail(e.target.value)}
-          onBlur={() => touch("supportEmail")}
-          aria-invalid={!!fieldError("supportEmail")}
-          className={inputClasses}
-        />
-        {/* <span className="text-xs text-muted">
-          Where homeowners can reach the association with questions.
-        </span> */}
-        {fieldError("supportEmail") && (
-          <span className="text-xs text-danger">{fieldError("supportEmail")}</span>
-        )}
-      </label>
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+            Company email address
+          </span>
+          <input
+            type="email"
+            name="supportEmail"
+            required
+            value={supportEmail}
+            onChange={(e) => setSupportEmail(e.target.value)}
+            onBlur={() => touch("supportEmail")}
+            aria-invalid={!!fieldError("supportEmail")}
+            className={inputClasses}
+          />
+          {/* <span className="text-xs text-muted">
+            Where homeowners can reach the association with questions.
+          </span> */}
+          {fieldError("supportEmail") && (
+            <span className="text-xs text-danger">{fieldError("supportEmail")}</span>
+          )}
+        </label>
+      </div>
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        Company phone number
-        <input
-          type="tel"
-          name="supportPhone"
-          required
-          placeholder={phonePlaceholder(existing.companyCountry)}
-          value={supportPhone}
-          onChange={(e) => setSupportPhone(e.target.value)}
-          onBlur={() => touch("supportPhone")}
-          aria-invalid={!!fieldError("supportPhone")}
-          className={inputClasses}
-        />
-        {fieldError("supportPhone") && (
-          <span className="text-xs text-danger">{fieldError("supportPhone")}</span>
-        )}
-      </label>
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+            Company phone number
+          </span>
+          <input
+            type="tel"
+            name="supportPhone"
+            required
+            placeholder={phonePlaceholder(existing.companyCountry)}
+            value={supportPhone}
+            onChange={(e) => setSupportPhone(e.target.value)}
+            onBlur={() => touch("supportPhone")}
+            aria-invalid={!!fieldError("supportPhone")}
+            className={inputClasses}
+          />
+          {fieldError("supportPhone") && (
+            <span className="text-xs text-danger">{fieldError("supportPhone")}</span>
+          )}
+        </label>
+      </div>
 
       <ContinueButton formValid={parsed.success} />
 

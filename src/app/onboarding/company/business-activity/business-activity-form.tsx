@@ -85,66 +85,72 @@ export default function BusinessActivityForm({
 
   return (
     <form action={saveBusinessActivity} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1.5 text-sm">
-        Industry
-        {isVve ? (
-          <>
-            {/* The underlying Adyen industry code (passed in via
-                `existing.industryCode`, see business-activity/page.tsx) is
-                a real-estate classification, not something a homeowners'
-                association would recognise itself in — show the plain
-                label instead and carry the real code through via the
-                hidden input below. */}
-            <input
-              type="text"
-              value="Home Association"
-              disabled
-              readOnly
-              className={`${inputClasses} disabled:opacity-70`}
-            />
-            <input type="hidden" name="industryCode" value={industryCode} />
-          </>
-        ) : (
-          <div className="relative">
-            <select
-              name="industryCode"
-              required
-              value={industryCode}
-              onChange={(e) => setIndustryCode(e.target.value)}
-              onBlur={() => touch("industryCode")}
-              aria-invalid={!!fieldError("industryCode")}
-              className={`${inputClasses} w-full appearance-none pr-8`}
-            >
-              <option value="" disabled>
-                Select…
-              </option>
-              {INDUSTRY_CODE_GROUPS.map((group) => (
-                <optgroup key={group.sector} label={group.sector}>
-                  {group.codes.map((i) => (
-                    <option key={i.code} value={i.code}>
-                      {i.description}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <SelectChevron />
-          </div>
-        )}
-        <span className="text-xs text-muted">
-          {isVve
-            ? "Fixed for homeowners' associations."
-            : "Adyen's own classification, closest to what the organisation actually does day to day."}
-        </span>
-        {fieldError("industryCode") && (
-          <span className="text-xs text-danger">{fieldError("industryCode")}</span>
-        )}
-      </label>
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+            Industry
+          </span>
+          {isVve ? (
+            <>
+              {/* The underlying Adyen industry code (passed in via
+                  `existing.industryCode`, see business-activity/page.tsx) is
+                  a real-estate classification, not something a homeowners'
+                  association would recognise itself in — show the plain
+                  label instead and carry the real code through via the
+                  hidden input below. */}
+              <input
+                type="text"
+                value="Home Association"
+                disabled
+                readOnly
+                className={`${inputClasses} disabled:opacity-70`}
+              />
+              <input type="hidden" name="industryCode" value={industryCode} />
+            </>
+          ) : (
+            <div className="relative">
+              <select
+                name="industryCode"
+                required
+                value={industryCode}
+                onChange={(e) => setIndustryCode(e.target.value)}
+                onBlur={() => touch("industryCode")}
+                aria-invalid={!!fieldError("industryCode")}
+                className={`${inputClasses} w-full appearance-none pr-8`}
+              >
+                <option value="" disabled>
+                  Select…
+                </option>
+                {INDUSTRY_CODE_GROUPS.map((group) => (
+                  <optgroup key={group.sector} label={group.sector}>
+                    {group.codes.map((i) => (
+                      <option key={i.code} value={i.code}>
+                        {i.description}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+          )}
+          <span className="text-xs text-muted">
+            {isVve
+              ? "Fixed for homeowners' associations."
+              : "Adyen's own classification, closest to what the organisation actually does day to day."}
+          </span>
+          {fieldError("industryCode") && (
+            <span className="text-xs text-danger">{fieldError("industryCode")}</span>
+          )}
+        </label>
+      </div>
 
-      <div className="flex flex-col gap-1.5 text-sm">
-        {isVve
-          ? "Expected Monthly contribution for this account"
-          : "Estimated annual reserve fund contributions"}
+      <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-panel p-3 text-sm">
+        <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+          {isVve
+            ? "Expected Monthly contribution for this account"
+            : "Estimated annual reserve fund contributions"}
+        </span>
         <div className="grid grid-cols-[1fr_3fr] gap-3">
           <label className="flex flex-col gap-1.5">
             <span className="sr-only">Currency</span>
@@ -182,46 +188,54 @@ export default function BusinessActivityForm({
         )}
       </div>
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        VAT number
-        <input
-          type="text"
-          name={isVve ? undefined : "vatNumber"}
-          disabled={isVve}
-          value={isVve ? "" : vatNumber}
-          onChange={(e) => setVatNumber(e.target.value)}
-          onBlur={() => touch("vatNumber")}
-          aria-invalid={!!fieldError("vatNumber")}
-          className={`${inputClasses} disabled:opacity-70`}
-        />
-        <span className="text-xs text-muted">
-          {isVve
-            ? "Homeowners’ associations are VAT-exempt."
-            : "Leave blank if the organisation doesn’t have one — most don’t."}
-        </span>
-        {fieldError("vatNumber") && (
-          <span className="text-xs text-danger">{fieldError("vatNumber")}</span>
-        )}
-      </label>
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+            VAT number
+          </span>
+          <input
+            type="text"
+            name={isVve ? undefined : "vatNumber"}
+            disabled={isVve}
+            value={isVve ? "" : vatNumber}
+            onChange={(e) => setVatNumber(e.target.value)}
+            onBlur={() => touch("vatNumber")}
+            aria-invalid={!!fieldError("vatNumber")}
+            className={`${inputClasses} disabled:opacity-70`}
+          />
+          <span className="text-xs text-muted">
+            {isVve
+              ? "Homeowners’ associations are VAT-exempt."
+              : "Leave blank if the organisation doesn’t have one — most don’t."}
+          </span>
+          {fieldError("vatNumber") && (
+            <span className="text-xs text-danger">{fieldError("vatNumber")}</span>
+          )}
+        </label>
+      </div>
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        Business description
-        <textarea
-          name="businessDescription"
-          rows={3}
-          value={businessDescription}
-          onChange={(e) => setBusinessDescription(e.target.value)}
-          onBlur={() => touch("businessDescription")}
-          aria-invalid={!!fieldError("businessDescription")}
-          className={`${inputClasses} resize-none`}
-        />
-        <span className="text-xs text-muted">
-          A short description of what the organisation does.
-        </span>
-        {fieldError("businessDescription") && (
-          <span className="text-xs text-danger">{fieldError("businessDescription")}</span>
-        )}
-      </label>
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+            Business description
+          </span>
+          <textarea
+            name="businessDescription"
+            rows={3}
+            value={businessDescription}
+            onChange={(e) => setBusinessDescription(e.target.value)}
+            onBlur={() => touch("businessDescription")}
+            aria-invalid={!!fieldError("businessDescription")}
+            className={`${inputClasses} resize-none`}
+          />
+          <span className="text-xs text-muted">
+            A short description of what the organisation does.
+          </span>
+          {fieldError("businessDescription") && (
+            <span className="text-xs text-danger">{fieldError("businessDescription")}</span>
+          )}
+        </label>
+      </div>
 
       <ContinueButton formValid={parsed.success} />
 
