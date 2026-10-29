@@ -73,6 +73,16 @@ async function resolveOrganisationId(
   ids: AdyenConfigurationIdentifiers
 ): Promise<string | null> {
   if (ids.balanceAccountId) {
+    // Orgs can have several balance accounts (migration 0020); only the
+    // first one is also on organisations, so check balance_accounts first
+    // — same lookup as the transfer webhooks.
+    const { data: account } = await admin
+      .from("balance_accounts")
+      .select("organisation_id")
+      .eq("adyen_balance_account_id", ids.balanceAccountId)
+      .maybeSingle();
+    if (account) return account.organisation_id;
+
     const { data } = await admin
       .from("organisations")
       .select("id")

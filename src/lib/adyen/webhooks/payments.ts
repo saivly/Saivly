@@ -51,10 +51,19 @@ export function verifyAllItems(body: AdyenPaymentWebhookEnvelope, hmacKey: strin
  * Until then this always returns null and every row lands with
  * organisation_id unset — still stored, just unlinked.
  */
-function resolveOrganisationIdFromMerchantReference(merchantReference: string | undefined): string | null {
+async function resolveOrganisationIdFromMerchantReference(
+  admin: ReturnType<typeof createAdminClient>,
+  merchantReference: string | undefined
+): Promise<string | null> {
   const uuid = merchantReference?.split(":")[0];
   const isUuid = uuid && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid);
-  return isUuid ? uuid : null;
+  if (!isUuid) return null;
+  // Only link to an org that exists. A reference that merely *starts* with
+  // some other uuid (e.g. an order id) would otherwise violate the
+  // organisation_id foreign key, fail the insert, and make Adyen retry the
+  // whole batch forever.
+  const { data } = await admin.from("organisations").select("id").eq("id", uuid).maybeSingle();
+  return data?.id ?? null;
 }
 
 export type StoreWebhookResult =
@@ -72,7 +81,7 @@ export async function storePaymentWebhookEvent(
   live: boolean
 ): Promise<StoreWebhookResult> {
   const admin = createAdminClient();
-  const organisationId = resolveOrganisationIdFromMerchantReference(item.merchantReference);
+  const organisationId = await resolveOrganisationIdFromMerchantReference(admin, item.merchantReference);
 
   const { data, error } = await admin
     .from("adyen_payment_webhook_events")
