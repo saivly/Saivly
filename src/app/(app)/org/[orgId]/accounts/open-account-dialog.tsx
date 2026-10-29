@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useT } from "@/app/i18n-provider";
+import Select from "@/components/select";
 import { Button, Field, Icon, buttonStyles, inputStyles } from "@/components/dashboard/ui";
 import { ACCOUNT_CURRENCIES } from "@/lib/dashboard/constants";
 import { openAccount, type OpenAccountState } from "./actions";
@@ -49,13 +50,7 @@ export default function OpenAccountButton({ orgId, disabledReason }: { orgId: st
               <input name="name" required maxLength={60} placeholder={t("e.g. Reserve account")} className={inputStyles} />
             </Field>
             <Field label={t("Currency")}>
-              <select name="currency" defaultValue="EUR" className={inputStyles}>
-                {ACCOUNT_CURRENCIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              <Select name="currency" defaultValue="EUR" options={ACCOUNT_CURRENCIES.map((c) => ({ value: c, label: c }))} />
             </Field>
             {state.error && <p className="text-sm text-db-danger">{t(state.error)}</p>}
             <div className="mt-2 flex justify-end gap-3">

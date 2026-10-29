@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { flattenError } from "zod";
 import { dialCode, phoneDigitsPlaceholder, splitStoredPhoneNumber } from "@/lib/onboarding/countries";
 import { provincesForCountry } from "@/lib/onboarding/provinces";
 import { savePersonalInfo, lookupResidentialAddress } from "./actions";
-import { inputClasses, SelectChevron, CountrySelect, DialCodeSelect } from "../form-controls";
+import { inputClasses, CountrySelect, DialCodeSelect } from "../form-controls";
+import Select from "@/components/select";
 import { personalInfoSchema } from "@/lib/zod";
 import { intlLocale } from "@/lib/i18n";
 import { useT } from "@/app/i18n-provider";
@@ -23,6 +24,29 @@ type Existing = {
 };
 
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
+
+// How long to wait after the last keystroke in postcode / house number
+// before looking the address up — long enough not to fire mid-typing
+// ("12" on the way to "121"), short enough to feel instant.
+const LOOKUP_DEBOUNCE_MS = 600;
+
+// The saved street is "<street> <house number>" in one column (the form
+// recombines them on submit). Split it back apart when the page is
+// revisited, so the house number lands in its own field again:
+//   "Keizersgracht 12" -> ["Keizersgracht", "12"]
+//   "Hoofdstraat 41-2" / "12A" / "12 bis" -> number keeps its addition
+//   "Plein 1944 3"     -> ["Plein 1944", "3"] (the last number wins)
+// Anything that doesn't end in a house number is left untouched.
+const HOUSE_NUMBER_AT_END = /^(.+)\s(\d+(?:[-/]?[A-Za-z0-9]{1,4})?(?:\s[A-Za-z]{1,4})?)$/;
+
+function lookupKey(postalCode: string, houseNumber: string): string {
+  return `${postalCode.replace(/\s+/g, "").toUpperCase()}|${houseNumber.trim()}`;
+}
+
+function splitStreetAndHouseNumber(combined: string): { street: string; houseNumber: string } {
+  const match = combined.trim().match(HOUSE_NUMBER_AT_END);
+  return match ? { street: match[1].trim(), houseNumber: match[2] } : { street: combined, houseNumber: "" };
+}
 
 /** Month names in the given language, January first. */
 function monthNames(locale: string): string[] {
@@ -137,68 +161,41 @@ function DateOfBirthFields({
   }, [isoValue]);
 
   return (
-    <div className="flex flex-col gap-1.5 text-sm">
-      {t("Date of birth")}
+    <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+      <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">{t("Date of birth")}</span>
       <div className="flex gap-3">
-        <div className="relative flex-[2]">
-          <select
-            required
+        <div className="flex-[2]">
+          <Select
             value={day}
-            onChange={(e) => setDay(e.target.value)}
+            onChange={setDay}
             onBlur={() => setTouched(true)}
-            aria-invalid={!!error}
-            className={`${inputClasses} w-full appearance-none pr-8`}
-          >
-            <option value="" disabled>
-              {t("Day")}
-            </option>
-            {DAYS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-          <SelectChevron />
+            invalid={!!error}
+            placeholder={t("Day")}
+            aria-label={t("Day")}
+            options={DAYS.map((d) => ({ value: d, label: d }))}
+          />
         </div>
-        <div className="relative flex-[5]">
-          <select
-            required
+        <div className="flex-[5]">
+          <Select
             value={month}
-            onChange={(e) => setMonth(e.target.value)}
+            onChange={setMonth}
             onBlur={() => setTouched(true)}
-            aria-invalid={!!error}
-            className={`${inputClasses} w-full appearance-none pr-8`}
-          >
-            <option value="" disabled>
-              {t("Month")}
-            </option>
-            {months.map((name, i) => (
-              <option key={name} value={i + 1}>
-                {name}
-              </option>
-            ))}
-          </select>
-          <SelectChevron />
+            invalid={!!error}
+            placeholder={t("Month")}
+            aria-label={t("Month")}
+            options={months.map((name, i) => ({ value: String(i + 1), label: name }))}
+          />
         </div>
-        <div className="relative flex-[3]">
-          <select
-            required
+        <div className="flex-[3]">
+          <Select
             value={year}
-            onChange={(e) => setYear(e.target.value)}
+            onChange={setYear}
             onBlur={() => setTouched(true)}
-            aria-invalid={!!error}
-            className={`${inputClasses} w-full appearance-none pr-8`}
-          >
-            <option value="" disabled>
-              {t("Year")}
-            </option>
-            {YEARS.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-          <SelectChevron />
+            invalid={!!error}
+            placeholder={t("Year")}
+            aria-label={t("Year")}
+            options={YEARS.map((y) => ({ value: y, label: y }))}
+          />
         </div>
       </div>
       {error && <span className="text-xs text-danger">{error}</span>}
@@ -243,8 +240,13 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
   const [phoneCountry, setPhoneCountry] = useState(initialPhone.country);
   const [phoneDigits, setPhoneDigits] = useState(initialPhone.digits);
   const [postalCode, setPostalCode] = useState(existing.residentialPostalCode);
-  const [houseNumber, setHouseNumber] = useState("");
-  const [street, setStreet] = useState(existing.residentialStreet);
+  // Only NL collects the house number in its own field (see below).
+  const initialAddress =
+    (existing.residentialCountry || "NL") === "NL"
+      ? splitStreetAndHouseNumber(existing.residentialStreet)
+      : { street: existing.residentialStreet, houseNumber: "" };
+  const [houseNumber, setHouseNumber] = useState(initialAddress.houseNumber);
+  const [street, setStreet] = useState(initialAddress.street);
   const [city, setCity] = useState(existing.residentialCity);
   const [province, setProvince] = useState(existing.residentialProvince);
   const [looking, setLooking] = useState(false);
@@ -254,7 +256,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
   // those fields are meant to come from the lookup, not be typed ahead of
   // it. Starts true when editing an already-saved NL address (nothing to
   // re-check yet), false otherwise — including on first arrival, where
-  // houseNumber is always blank (see below) so no lookup has run yet.
+  // no lookup has run yet.
   const [lookupDone, setLookupDone] = useState(
     Boolean(existing.residentialStreet)
   );
@@ -311,14 +313,32 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
     // the country changes, so don't carry either over silently.
     setProvince("");
     setHouseNumber("");
+    invalidateLookup();
     // Force a fresh lookup for the newly-selected country's address —
     // only matters when landing on NL (addressLocked is always false
     // otherwise), harmless either way.
     setLookupDone(false);
   }
 
+  // The postcode + house number the last lookup was for, and a counter
+  // so only the newest lookup's result is ever applied (an older, slower
+  // request finishing late must not overwrite a newer answer).
+  const lastLookupKey = useRef<string | null>(
+    existing.residentialStreet && initialAddress.houseNumber
+      ? lookupKey(existing.residentialPostalCode, initialAddress.houseNumber)
+      : null
+  );
+  const lookupSeq = useRef(0);
+
+  function invalidateLookup() {
+    lastLookupKey.current = null;
+    lookupSeq.current++;
+    setLooking(false);
+  }
+
   function handlePostalCodeChange(value: string) {
     setPostalCode(value);
+    invalidateLookup();
     // The street/city currently shown (if any) belong to the *previous*
     // postcode — re-lock until a lookup confirms the new one.
     if (isNL) setLookupDone(false);
@@ -326,6 +346,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
   function handleHouseNumberChange(value: string) {
     setHouseNumber(value);
+    invalidateLookup();
     if (isNL) setLookupDone(false);
   }
 
@@ -333,10 +354,17 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
     if (!isNL) return;
     if (!NL_POSTAL_CODE.test(nextPostalCode.trim()) || !nextHouseNumber.trim()) return;
 
+    // Already looked up (e.g. the debounce fired, then the user tabbed out).
+    const key = lookupKey(nextPostalCode, nextHouseNumber);
+    if (key === lastLookupKey.current) return;
+    lastLookupKey.current = key;
+    const seq = ++lookupSeq.current;
+
     setLooking(true);
     setLookupError(null);
     try {
       const found = await lookupResidentialAddress(nextPostalCode, nextHouseNumber);
+      if (seq !== lookupSeq.current) return; // the user changed something meanwhile
       if (found) {
         setStreet(found.street);
         setCity(found.city);
@@ -349,33 +377,48 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
         );
       }
     } catch {
+      if (seq !== lookupSeq.current) return;
       setLookupError(
         t("Address lookup is temporarily unavailable — fill it in by hand.")
       );
     } finally {
-      setLooking(false);
-      setLookupDone(true);
+      if (seq === lookupSeq.current) {
+        setLooking(false);
+        setLookupDone(true);
+      }
     }
   }
 
+  // Look the address up as soon as the user pauses typing — no need to
+  // leave the field first. (Leaving it still triggers a lookup straight
+  // away; runLookup skips it if this one already ran.)
+  useEffect(() => {
+    if (!isNL) return;
+    const timer = setTimeout(() => runLookup(postalCode, houseNumber), LOOKUP_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // runLookup is a fresh closure every render — only the inputs it
+    // reads should restart the timer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postalCode, houseNumber, isNL]);
+
   return (
-    <form action={savePersonalInfo} className="flex flex-col gap-4">
+    <form noValidate action={savePersonalInfo} className="flex flex-col gap-4">
       <DateOfBirthFields
         defaultValue={existing.dateOfBirth}
         onValidityChange={setDateOfBirth}
       />
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("Country of residence")}
+      <div className="grid grid-cols-2 gap-3 rounded-lg border border-line bg-panel p-3 text-sm">
+        <label className="flex flex-col gap-1.5">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">{t("Country of residence")}</span>
           <CountrySelect
             name="residentialCountry"
             value={country}
             onChange={handleCountryChange}
           />
         </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("Nationality")}
+        <label className="flex flex-col gap-1.5">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">{t("Nationality")}</span>
           <CountrySelect
             name="nationality"
             value={nationality}
@@ -385,8 +428,8 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
         </label>
       </div>
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        {t("Phone number")}
+      <label className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+        <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">{t("Phone number")}</span>
         <div className="flex gap-2">
           <div className="w-32 shrink-0">
             <DialCodeSelect
@@ -415,179 +458,170 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
         <input type="hidden" name="phoneNumber" value={phoneNumber} />
       </label>
 
-      {isNL && (
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1.5 text-sm">
-            {t("Postal code")}
-            <input
-              type="text"
-              required
-              value={postalCode}
-              onChange={(e) => handlePostalCodeChange(e.target.value)}
-              onBlur={() => {
-                touch("residentialPostalCode");
-                runLookup(postalCode, houseNumber);
-              }}
-              aria-invalid={!!fieldError("residentialPostalCode")}
-              autoComplete="postal-code"
-              placeholder="1234 AB"
-              className={inputClasses}
-            />
-            {fieldError("residentialPostalCode") && (
-              <span className="text-xs text-danger">
-                {fieldError("residentialPostalCode")}
-              </span>
-            )}
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm">
-            {t("House number")}
-            <input
-              type="text"
-              required
-              value={houseNumber}
-              onChange={(e) => handleHouseNumberChange(e.target.value)}
-              onBlur={() => {
-                touch("residentialStreet");
-                runLookup(postalCode, houseNumber);
-              }}
-              aria-invalid={!!fieldError("residentialStreet")}
-              placeholder={t("12 or 41-2")}
-              className={inputClasses}
-            />
-          </label>
-        </div>
-      )}
-
-      {isNL && (looking || lookupError) && (
-        <p className={`text-xs ${lookupError ? "text-danger" : "text-muted"}`}>
-          {looking ? t("Looking up address…") : lookupError}
-        </p>
-      )}
-
-      <label className="flex flex-col gap-1.5 text-sm">
-        {t("Street address")}
-        <input
-          type="text"
-          required
-          autoComplete="street-address"
-          value={street}
-          onChange={(e) => setStreet(e.target.value)}
-          onBlur={() => touch("residentialStreet")}
-          readOnly={addressLocked}
-          aria-invalid={!!fieldError("residentialStreet")}
-          className={`${inputClasses} ${addressLocked ? "cursor-not-allowed opacity-60" : ""}`}
-        />
-        {/* Locked (NL, no confirmed lookup yet): explain why instead of the
-            generic "required" error — this isn't a validation failure, it's
-            waiting on the postcode + house number lookup above. */}
-        {addressLocked ? (
-          <span className="text-xs text-muted">
-            {t("Fill in the postcode and house number above — we'll look this up for you.")}
-          </span>
-        ) : (
-          // House number (NL) feeds the same submitted field — only show
-          // the message once here, not duplicated under both boxes.
-          fieldError("residentialStreet") && (
-            <span className="text-xs text-danger">{fieldError("residentialStreet")}</span>
-          )
+      <div className="flex flex-col gap-4 rounded-lg border border-line bg-panel p-3 text-sm">
+        <span className="-mb-2 pb-2 text-xs font-medium tracking-wide text-muted uppercase">{t("Residential address")}</span>
+        {isNL && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5 text-sm">
+              {t("Postal code")}
+              <input
+                type="text"
+                required
+                value={postalCode}
+                onChange={(e) => handlePostalCodeChange(e.target.value)}
+                onBlur={() => {
+                  touch("residentialPostalCode");
+                  runLookup(postalCode, houseNumber);
+                }}
+                aria-invalid={!!fieldError("residentialPostalCode")}
+                autoComplete="postal-code"
+                placeholder="1234 AB"
+                className={inputClasses}
+              />
+              {fieldError("residentialPostalCode") && (
+                <span className="text-xs text-danger">
+                  {fieldError("residentialPostalCode")}
+                </span>
+              )}
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm">
+              {t("House number")}
+              <input
+                type="text"
+                required
+                value={houseNumber}
+                onChange={(e) => handleHouseNumberChange(e.target.value)}
+                onBlur={() => {
+                  touch("residentialStreet");
+                  runLookup(postalCode, houseNumber);
+                }}
+                aria-invalid={!!fieldError("residentialStreet")}
+                placeholder={t("12 or 41-2")}
+                className={inputClasses}
+              />
+            </label>
+          </div>
         )}
-      </label>
-      {/* The backend only has a single street column, and the house number
-          field above (NL only) is what actually collects the number — so
-          recombine here rather than showing it back in the street box.
-          For non-NL, there's no separate house-number field and houseNumber
-          stays "", so this is just `street` unchanged. */}
-      <input
-        type="hidden"
-        name="residentialStreet"
-        value={[street, houseNumber].filter(Boolean).join(" ")}
-      />
 
-      <div className={`grid gap-3 ${isNL ? "grid-cols-2" : "grid-cols-3"}`}>
+        {isNL && (looking || lookupError) && (
+          <p className={`text-xs ${lookupError ? "text-danger" : "text-muted"}`}>
+            {looking ? t("Looking up address…") : lookupError}
+          </p>
+        )}
+
         <label className="flex flex-col gap-1.5 text-sm">
-          {t("City")}
+          {t("Street")}
           <input
             type="text"
-            name="residentialCity"
             required
-            autoComplete="address-level2"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            onBlur={() => touch("residentialCity")}
+            autoComplete="street-address"
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            onBlur={() => touch("residentialStreet")}
             readOnly={addressLocked}
-            aria-invalid={!!fieldError("residentialCity")}
+            aria-invalid={!!fieldError("residentialStreet")}
             className={`${inputClasses} ${addressLocked ? "cursor-not-allowed opacity-60" : ""}`}
           />
-          {!addressLocked && fieldError("residentialCity") && (
-            <span className="text-xs text-danger">{fieldError("residentialCity")}</span>
+          {/* Locked (NL, no confirmed lookup yet): explain why instead of the
+              generic "required" error — this isn't a validation failure, it's
+              waiting on the postcode + house number lookup above. */}
+          {addressLocked ? (
+            <span className="text-xs text-muted">
+              {t("Fill in the postcode and house number above — we'll look this up for you.")}
+            </span>
+          ) : (
+            // House number (NL) feeds the same submitted field — only show
+            // the message once here, not duplicated under both boxes.
+            fieldError("residentialStreet") && (
+              <span className="text-xs text-danger">{fieldError("residentialStreet")}</span>
+            )
           )}
         </label>
+        {/* The backend only has a single street column, and the house number
+            field above (NL only) is what actually collects the number — so
+            recombine here rather than showing it back in the street box.
+            For non-NL, there's no separate house-number field and houseNumber
+            stays "", so this is just `street` unchanged. */}
+        <input
+          type="hidden"
+          name="residentialStreet"
+          value={[street, houseNumber].filter(Boolean).join(" ")}
+        />
 
-        <label className="flex flex-col gap-1.5 text-sm">
-          {t("Province")}
-          {provinceOptions ? (
-            <div className="relative">
-              <select
+        <div className={`grid gap-3 ${isNL ? "grid-cols-2" : "grid-cols-3"}`}>
+          <label className="flex flex-col gap-1.5 text-sm">
+            {t("City")}
+            <input
+              type="text"
+              name="residentialCity"
+              required
+              autoComplete="address-level2"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              onBlur={() => touch("residentialCity")}
+              readOnly={addressLocked}
+              aria-invalid={!!fieldError("residentialCity")}
+              className={`${inputClasses} ${addressLocked ? "cursor-not-allowed opacity-60" : ""}`}
+            />
+            {!addressLocked && fieldError("residentialCity") && (
+              <span className="text-xs text-danger">{fieldError("residentialCity")}</span>
+            )}
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm">
+            {t("Province")}
+            {provinceOptions ? (
+              <Select
                 name="residentialProvince"
-                required
+                value={province}
+                onChange={setProvince}
+                onBlur={() => touch("residentialProvince")}
+                invalid={!!fieldError("residentialProvince")}
+                searchable={provinceOptions.length > 12}
+                options={provinceOptions.map((p) => ({ value: p.code, label: t(p.name) }))}
+              />
+            ) : (
+              <input
+                type="text"
+                name="residentialProvince"
+                autoComplete="address-level1"
                 value={province}
                 onChange={(e) => setProvince(e.target.value)}
                 onBlur={() => touch("residentialProvince")}
                 aria-invalid={!!fieldError("residentialProvince")}
-                className={`${inputClasses} w-full appearance-none pr-8`}
-              >
-                <option value="" disabled>
-                  {t("Select…")}
-                </option>
-                {provinceOptions.map((p) => (
-                  <option key={p.code} value={p.code}>
-                    {t(p.name)}
-                  </option>
-                ))}
-              </select>
-              <SelectChevron />
-            </div>
-          ) : (
-            <input
-              type="text"
-              name="residentialProvince"
-              autoComplete="address-level1"
-              value={province}
-              onChange={(e) => setProvince(e.target.value)}
-              onBlur={() => touch("residentialProvince")}
-              aria-invalid={!!fieldError("residentialProvince")}
-              placeholder={t("Province / region")}
-              className={inputClasses}
-            />
-          )}
-          {fieldError("residentialProvince") && (
-            <span className="text-xs text-danger">{fieldError("residentialProvince")}</span>
-          )}
-        </label>
-
-        {isNL ? (
-          <input type="hidden" name="residentialPostalCode" value={postalCode} />
-        ) : (
-          <label className="flex flex-col gap-1.5 text-sm">
-            {t("Postal code")}
-            <input
-              type="text"
-              name="residentialPostalCode"
-              required
-              autoComplete="postal-code"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-              onBlur={() => touch("residentialPostalCode")}
-              aria-invalid={!!fieldError("residentialPostalCode")}
-              className={inputClasses}
-            />
-            {fieldError("residentialPostalCode") && (
-              <span className="text-xs text-danger">
-                {fieldError("residentialPostalCode")}
-              </span>
+                placeholder={t("Province / region")}
+                className={inputClasses}
+              />
+            )}
+            {fieldError("residentialProvince") && (
+              <span className="text-xs text-danger">{fieldError("residentialProvince")}</span>
             )}
           </label>
-        )}
+
+          {isNL ? (
+            <input type="hidden" name="residentialPostalCode" value={postalCode} />
+          ) : (
+            <label className="flex flex-col gap-1.5 text-sm">
+              {t("Postal code")}
+              <input
+                type="text"
+                name="residentialPostalCode"
+                required
+                autoComplete="postal-code"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                onBlur={() => touch("residentialPostalCode")}
+                aria-invalid={!!fieldError("residentialPostalCode")}
+                className={inputClasses}
+              />
+              {fieldError("residentialPostalCode") && (
+                <span className="text-xs text-danger">
+                  {fieldError("residentialPostalCode")}
+                </span>
+              )}
+            </label>
+          )}
+        </div>
       </div>
 
       <ContinueButton formValid={parsed.success} />

@@ -133,7 +133,7 @@ export default function PlanPicker({
   const yearlySaving = fullYearly - yearlyTotal;
 
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form noValidate action={action} className="flex flex-col gap-5">
       <input type="hidden" name="plan" value={plan.id} />
       <input type="hidden" name="billingInterval" value={interval} />
 

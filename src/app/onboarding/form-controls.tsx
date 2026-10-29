@@ -11,6 +11,7 @@ import {
 } from "@/lib/onboarding/countries";
 import { intlLocale } from "@/lib/i18n";
 import { useT } from "@/app/i18n-provider";
+import Select from "@/components/select";
 
 /** Country list with names in the current language. */
 function useLocalizedCountries(options: { code: string; name: string }[]) {
@@ -19,24 +20,17 @@ function useLocalizedCountries(options: { code: string; name: string }[]) {
 }
 
 // Shared between every /onboarding form (personal, company, …) so their
-// inputs/selects look identical.
+// inputs look identical — and identical to the dropdowns (see
+// components/select.tsx), which use the same border, radius and focus.
 export const inputClasses =
-  "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-accent sm:text-sm";
+  "rounded-lg border border-db-input bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-accent aria-[invalid=true]:border-danger sm:text-sm";
 
-/** Chevron for our appearance-none selects — closer in and larger than the
- * default browser arrow, which sat right at the edge and rendered tiny. */
-export function SelectChevron() {
+/** Flag emoji sized to sit next to option text. */
+function Flag({ code }: { code: string }) {
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-    >
-      <path d="M5.5 7.5L10 12l4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <span aria-hidden className="w-5 shrink-0 text-center text-lg leading-none">
+      {countryFlag(code)}
+    </span>
   );
 }
 
@@ -44,62 +38,35 @@ export function CountrySelect({
   name,
   value,
   onChange,
+  onBlur,
   placeholder,
   options = COUNTRIES,
 }: {
   name: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   /** Defaults to every country — pass a subset (e.g. COMPANY_COUNTRIES) to
    * restrict which ones this particular dropdown offers. */
   options?: { code: string; name: string }[];
 }) {
   const localized = useLocalizedCountries(options);
-  // <option> text can't be styled — a flag emoji inside it is stuck at the
-  // same size as the country name next to it. To make the flag noticeably
-  // bigger without also blowing up the text (and staying the same size as
-  // every other field), the option list stays plain text and a standalone,
-  // larger flag glyph is layered on top of the closed control instead.
   return (
-    <div className="relative">
-      {value && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xl leading-none"
-        >
-          {countryFlag(value)}
-        </span>
-      )}
-      <select
-        name={name}
-        required
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${inputClasses} w-full appearance-none pr-8 ${value ? "pl-9" : ""}`}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {localized.map((c) => (
-          <option key={c.code} value={c.code}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-      <SelectChevron />
-    </div>
+    <Select
+      name={name}
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
+      placeholder={placeholder}
+      // A short list (company countries) doesn't need a search box.
+      searchable={localized.length > 8}
+      options={localized.map((c) => ({ value: c.code, label: c.name, icon: <Flag code={c.code} /> }))}
+    />
   );
 }
 
-/** Same shell as CountrySelect, but instead of a flag glyph laid over
- * plain text, the select's own text is made transparent and a "USD - $"
- * overlay stands in for it when closed — full "USD — US Dollar" names
- * stay legible in the open dropdown since each <option> gets its color
- * set back explicitly, which (being specified rather than inherited)
- * wins over the transparent color coming down from the <select>. */
+/** Currency picker: "USD — US Dollar" in the menu, "USD - $" when closed. */
 export function CurrencySelect({
   name,
   value,
@@ -110,40 +77,26 @@ export function CurrencySelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="relative">
-      {value && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-ink sm:text-sm"
-        >
-          {value} - {currencySymbol(value)}
-        </span>
-      )}
-      <select
-        name={name}
-        required
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${inputClasses} w-full appearance-none pr-8 text-transparent`}
-      >
-        {CURRENCIES.map((c) => (
-          <option key={c.code} value={c.code} className="text-ink">
-            {c.code} — {c.name}
-          </option>
-        ))}
-      </select>
-      <SelectChevron />
-    </div>
+    <Select
+      name={name}
+      value={value}
+      onChange={onChange}
+      searchable
+      options={CURRENCIES.map((c) => ({
+        value: c.code,
+        label: `${c.code} — ${c.name}`,
+        selectedLabel: `${c.code} - ${currencySymbol(c.code)}`,
+      }))}
+    />
   );
 }
 
 /** Picks a dial code by picking a country — `value`/`onChange` carry the
  * 2-letter country code (like CountrySelect), not the "+XX" string itself,
  * so the caller can resolve it via dialCode() the same way everywhere
- * else does. Same transparent-select-plus-overlay shell as CurrencySelect,
- * showing just the flag + dial code when closed; the open list spells out
- * the country name too, since several entries can share a dial code
- * (+1 for US and CA, for instance) and the code alone can't disambiguate. */
+ * else does. Closed it shows just flag + dial code; the menu spells out
+ * the country name too, since several countries share a dial code (+1
+ * for US and CA, for instance). */
 export function DialCodeSelect({
   name,
   value,
@@ -153,29 +106,22 @@ export function DialCodeSelect({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useT();
   const localized = useLocalizedCountries(COUNTRIES);
   return (
-    <div className="relative">
-      <span
-        aria-hidden
-        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-base leading-none sm:text-sm"
-      >
-        {countryFlag(value)} {dialCode(value)}
-      </span>
-      <select
-        name={name}
-        required
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${inputClasses} w-full appearance-none pl-14 pr-8 text-transparent`}
-      >
-        {localized.map((c) => (
-          <option key={c.code} value={c.code} className="text-ink">
-            {c.name} ({dialCode(c.code)})
-          </option>
-        ))}
-      </select>
-      <SelectChevron />
-    </div>
+    <Select
+      name={name}
+      value={value}
+      onChange={onChange}
+      searchable
+      aria-label={t("Country calling code")}
+      menuClassName="min-w-[18rem]"
+      options={localized.map((c) => ({
+        value: c.code,
+        label: `${c.name} (${dialCode(c.code)})`,
+        selectedLabel: dialCode(c.code),
+        icon: <Flag code={c.code} />,
+      }))}
+    />
   );
 }

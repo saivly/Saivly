@@ -5,7 +5,8 @@ import { useFormStatus } from "react-dom";
 import { flattenError } from "zod";
 import Link from "next/link";
 import { saveBusinessActivity } from "../actions";
-import { inputClasses, SelectChevron } from "../../form-controls";
+import { inputClasses } from "../../form-controls";
+import Select from "@/components/select";
 import { currencySymbol } from "@/lib/onboarding/countries";
 import {
   RESERVE_FUND_RANGE_IDS,
@@ -105,7 +106,7 @@ export default function BusinessActivityForm({
   }
 
   return (
-    <form action={saveBusinessActivity} className="flex flex-col gap-4">
+    <form noValidate action={saveBusinessActivity} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
@@ -129,34 +130,21 @@ export default function BusinessActivityForm({
               <input type="hidden" name="industryCode" value={industryCode} />
             </>
           ) : (
-            <div className="relative">
-              <select
-                name="industryCode"
-                required
-                value={industryCode}
-                onChange={(e) => setIndustryCode(e.target.value)}
-                onBlur={() => touch("industryCode")}
-                aria-invalid={!!fieldError("industryCode")}
-                className={`${inputClasses} w-full appearance-none pr-8`}
-              >
-                <option value="" disabled>
-                  {t("Select…")}
-                </option>
-                {INDUSTRY_CODE_GROUPS.map((group) => (
-                  <optgroup
-                    key={group.sector}
-                    label={(isDutch && INDUSTRY_SECTORS_NL[group.sector]) || group.sector}
-                  >
-                    {group.codes.map((i) => (
-                      <option key={i.code} value={i.code}>
-                        {(isDutch && INDUSTRY_DESCRIPTIONS_NL[i.code]) || i.description}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <SelectChevron />
-            </div>
+            <Select
+              name="industryCode"
+              value={industryCode}
+              onChange={setIndustryCode}
+              onBlur={() => touch("industryCode")}
+              invalid={!!fieldError("industryCode")}
+              searchable
+              options={INDUSTRY_CODE_GROUPS.map((group) => ({
+                label: (isDutch && INDUSTRY_SECTORS_NL[group.sector]) || group.sector,
+                options: group.codes.map((code) => ({
+                  value: code.code,
+                  label: (isDutch && INDUSTRY_DESCRIPTIONS_NL[code.code]) || code.description,
+                })),
+              }))}
+            />
           )}
           <span className="text-xs text-muted">
             {isVve
@@ -277,24 +265,20 @@ export default function BusinessActivityForm({
               <input type="hidden" name="vatExemptionReason" value="industryExemption" />
             </>
           ) : (
-            <div className="relative">
-              <select
-                name="vatExemptionReason"
-                value={vatExemptionReason}
-                onChange={(e) => setVatExemptionReason(e.target.value)}
-                onBlur={() => touch("vatExemptionReason")}
-                aria-invalid={!!fieldError("vatExemptionReason")}
-                className={`${inputClasses} w-full appearance-none pr-8`}
-              >
-                <option value="">{t("Not exempt")}</option>
-                {VAT_EXEMPTION_REASONS.map((reason) => (
-                  <option key={reason} value={reason}>
-                    {t(VAT_EXEMPTION_REASON_LABELS[reason])}
-                  </option>
-                ))}
-              </select>
-              <SelectChevron />
-            </div>
+            <Select
+              name="vatExemptionReason"
+              value={vatExemptionReason}
+              onChange={setVatExemptionReason}
+              onBlur={() => touch("vatExemptionReason")}
+              invalid={!!fieldError("vatExemptionReason")}
+              options={[
+                { value: "", label: t("Not exempt") },
+                ...VAT_EXEMPTION_REASONS.map((reason) => ({
+                  value: reason,
+                  label: t(VAT_EXEMPTION_REASON_LABELS[reason]),
+                })),
+              ]}
+            />
           )}
           <span className="text-xs text-muted">
             {isVve

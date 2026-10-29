@@ -79,7 +79,7 @@ export default function ContactDetailsForm({
   }
 
   return (
-    <form action={saveContactDetails} className="flex flex-col gap-4">
+    <form noValidate action={saveContactDetails} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">

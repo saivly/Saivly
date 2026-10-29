@@ -11,6 +11,22 @@ import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/onboarding/count
 import { companyInfoSchema } from "@/lib/zod";
 import { useT } from "@/app/i18n-provider";
 
+// UK and US addresses (the only countries with manual entry here — NL
+// goes through KVK) put the house number first: "10 Downing Street".
+// The form asks for street and number separately, then recombines them
+// in that order into the single companyStreet column; on a revisit the
+// saved value is split back apart the same way.
+const NUMBER_FIRST = /^(\d+[A-Za-z]?(?:[-/]\d+[A-Za-z]?)?)\s+(.+)$/;
+
+function splitStreet(combined: string): { street: string; houseNumber: string } {
+  const match = combined.trim().match(NUMBER_FIRST);
+  return match ? { houseNumber: match[1], street: match[2] } : { street: combined, houseNumber: "" };
+}
+
+function joinStreet(street: string, houseNumber: string): string {
+  return [houseNumber.trim(), street.trim()].filter(Boolean).join(" ");
+}
+
 type Existing = {
   companyCountry: string;
   relationshipType: string;
@@ -176,6 +192,26 @@ export default function CompanyForm({
   // login/auth-panels.tsx: re-parse on every change, but only surface a
   // field's error once the user has actually left it, so errors don't
   // flash red before they've had a chance to type anything.
+  // Manual-entry street + house number (UK/US), kept apart in the form
+  // and joined into fields.companyStreet, which is what gets submitted.
+  const [streetParts, setStreetParts] = useState(() =>
+    existing.companyCountry && existing.companyCountry !== "NL"
+      ? splitStreet(existing.companyStreet)
+      : { street: "", houseNumber: "" }
+  );
+  function updateStreetParts(next: { street: string; houseNumber: string }) {
+    setStreetParts(next);
+    setFields((f) => ({ ...f, companyStreet: joinStreet(next.street, next.houseNumber) }));
+  }
+  function handleCountryChange(next: string) {
+    setCountry(next);
+    // A KVK pick (NL) may have replaced companyStreet meanwhile — the
+    // manual fields are what's shown for UK/US, so resync to them.
+    if (next !== "NL") {
+      setFields((f) => ({ ...f, companyStreet: joinStreet(streetParts.street, streetParts.houseNumber) }));
+    }
+  }
+
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   function touch(field: string) {
     setTouched((t) => ({ ...t, [field]: true }));
@@ -274,7 +310,7 @@ export default function CompanyForm({
   }
 
   return (
-    <form action={saveCompanyInfo} className="flex flex-col gap-4">
+    <form noValidate action={saveCompanyInfo} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
@@ -283,7 +319,7 @@ export default function CompanyForm({
           <CountrySelect
             name="companyCountry"
             value={country}
-            onChange={setCountry}
+            onChange={handleCountryChange}
             options={COMPANY_COUNTRIES}
           />
         </label>
@@ -456,8 +492,8 @@ export default function CompanyForm({
         null
       ) : (
         <>
-          <label className="flex flex-col gap-1.5 text-sm">
-            {t("Company name")}
+          <label className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
+            <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">{t("Company name")}</span>
             <input
               type="text"
               name="companyName"
@@ -473,46 +509,66 @@ export default function CompanyForm({
             )}
           </label>
 
-          <label className="flex flex-col gap-1.5 text-sm">
-            {t("Street address")}
-            <input
-              type="text"
-              name="companyStreet"
-              required
-              value={fields.companyStreet}
-              onChange={(e) => updateField("companyStreet", e.target.value)}
-              onBlur={() => touch("companyStreet")}
-              aria-invalid={!!fieldError("companyStreet")}
-              className={inputClasses}
-            />
-            {fieldError("companyStreet") && (
-              <span className="text-xs text-danger">{fieldError("companyStreet")}</span>
-            )}
-          </label>
+          {/* Same layout as the residential address on the personal step,
+              without the postcode lookup (that only covers NL). */}
+          <div className="flex flex-col gap-4 rounded-lg border border-line bg-panel p-3 text-sm">
+            <span className="-mb-2 pb-2 text-xs font-medium tracking-wide text-muted uppercase">{t("Registered address")}</span>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1.5">
+                {t("Postal code")}
+                <input
+                  type="text"
+                  name="companyPostalCode"
+                  required
+                  autoComplete="postal-code"
+                  value={fields.companyPostalCode}
+                  onChange={(e) => updateField("companyPostalCode", e.target.value)}
+                  onBlur={() => touch("companyPostalCode")}
+                  aria-invalid={!!fieldError("companyPostalCode")}
+                  className={inputClasses}
+                />
+                {fieldError("companyPostalCode") && (
+                  <span className="text-xs text-danger">{fieldError("companyPostalCode")}</span>
+                )}
+              </label>
+              <label className="flex flex-col gap-1.5">
+                {t("House number")}
+                <input
+                  type="text"
+                  value={streetParts.houseNumber}
+                  onChange={(e) => updateStreetParts({ ...streetParts, houseNumber: e.target.value })}
+                  placeholder={t("e.g. 10")}
+                  className={inputClasses}
+                />
+              </label>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5 text-sm">
-              {t("Postal code")}
+            <label className="flex flex-col gap-1.5">
+              {t("Street")}
               <input
                 type="text"
-                name="companyPostalCode"
                 required
-                value={fields.companyPostalCode}
-                onChange={(e) => updateField("companyPostalCode", e.target.value)}
-                onBlur={() => touch("companyPostalCode")}
-                aria-invalid={!!fieldError("companyPostalCode")}
+                autoComplete="address-line1"
+                value={streetParts.street}
+                onChange={(e) => updateStreetParts({ ...streetParts, street: e.target.value })}
+                onBlur={() => touch("companyStreet")}
+                aria-invalid={!!fieldError("companyStreet")}
                 className={inputClasses}
               />
-              {fieldError("companyPostalCode") && (
-                <span className="text-xs text-danger">{fieldError("companyPostalCode")}</span>
+              {fieldError("companyStreet") && (
+                <span className="text-xs text-danger">{fieldError("companyStreet")}</span>
               )}
             </label>
-            <label className="flex flex-col gap-1.5 text-sm">
+            {/* What's actually saved: "<number> <street>". */}
+            <input type="hidden" name="companyStreet" value={fields.companyStreet} />
+
+            <label className="flex flex-col gap-1.5">
               {t("City")}
               <input
                 type="text"
                 name="companyCity"
                 required
+                autoComplete="address-level2"
                 value={fields.companyCity}
                 onChange={(e) => updateField("companyCity", e.target.value)}
                 onBlur={() => touch("companyCity")}
@@ -534,7 +590,7 @@ export default function CompanyForm({
           is in flight, see ContinueButton). Industry, reserve fund, and
           VAT number are asked next on the business-activity screen;
           support contact and website after that, on contact-details. */}
-      <ContinueButton disabledUntilReady={isNL && !hasSelectedCompany} />
+      <ContinueButton disabledUntilReady={!parsed.success || (isNL && !hasSelectedCompany)} />
 
       {/* Only meaningful before the org actually exists: once created (or
           joined), /onboarding/organisation's own guard just bounces past

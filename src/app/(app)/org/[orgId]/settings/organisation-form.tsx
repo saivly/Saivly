@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useT } from "@/app/i18n-provider";
-import { Field, inputStyles } from "@/components/dashboard/ui";
+import Select from "@/components/select";
+import { Field } from "@/components/dashboard/ui";
 import { ACCOUNT_CURRENCIES } from "@/lib/dashboard/constants";
 import { updateOrganisation, type SettingsState } from "./actions";
 
@@ -10,9 +11,18 @@ import { updateOrganisation, type SettingsState } from "./actions";
 export default function OrganisationForm({ orgId, currency, disabled }: { orgId: string; currency: string; disabled: boolean }) {
   const { t } = useT();
   const [state, action, pending] = useActionState<SettingsState, FormData>(updateOrganisation, {});
+  const [value, setValue] = useState(currency);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Submit after the new value has rendered into the hidden input.
+  useEffect(() => {
+    if (value !== currency) formRef.current?.requestSubmit();
+    // Only a change made here should save — not a new `currency` prop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   return (
-    <form action={action}>
+    <form ref={formRef} action={action}>
       <input type="hidden" name="orgId" value={orgId} />
       <Field
         label={t("Default currency")}
@@ -28,19 +38,13 @@ export default function OrganisationForm({ orgId, currency, disabled }: { orgId:
           )
         }
       >
-        <select
+        <Select
           name="currency"
-          defaultValue={currency}
+          value={value}
+          onChange={setValue}
           disabled={disabled || pending}
-          onChange={(e) => e.currentTarget.form?.requestSubmit()}
-          className={inputStyles}
-        >
-          {ACCOUNT_CURRENCIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          options={ACCOUNT_CURRENCIES.map((c) => ({ value: c, label: c }))}
+        />
       </Field>
     </form>
   );

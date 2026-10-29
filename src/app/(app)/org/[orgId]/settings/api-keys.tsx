@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useT } from "@/app/i18n-provider";
+import Select from "@/components/select";
 import { Button, Field, Icon, buttonStyles, inputStyles } from "@/components/dashboard/ui";
 import { createApiKey, revokeApiKey, type ApiKeyState } from "./actions";
 
@@ -86,10 +87,14 @@ export default function ApiKeys({ orgId, keys, disabled }: { orgId: string; keys
             <input name="name" required maxLength={60} placeholder={t("e.g. Production")} className={inputStyles} />
           </Field>
           <Field label={t("Environment")}>
-            <select name="environment" defaultValue="live" className={inputStyles}>
-              <option value="live">{t("Live")}</option>
-              <option value="test">{t("Test")}</option>
-            </select>
+            <Select
+              name="environment"
+              defaultValue="live"
+              options={[
+                { value: "live", label: t("Live") },
+                { value: "test", label: t("Test") },
+              ]}
+            />
           </Field>
           <div className="flex gap-2">
             <button type="button" onClick={() => setCreating(false)} className={`${buttonStyles.secondary} text-sm`}>

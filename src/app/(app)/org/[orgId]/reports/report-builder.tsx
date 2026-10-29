@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { useT } from "@/app/i18n-provider";
-import { Button, Field, IconChip, Segmented, inputStyles, segmentStyles, type ChipTone } from "@/components/dashboard/ui";
+import Select from "@/components/select";
+import { Button, Field, IconChip, Segmented, segmentStyles, type ChipTone } from "@/components/dashboard/ui";
 import { REPORT_FORMATS, REPORT_PERIODS, type ReportFormat, type ReportPeriod, type ReportType } from "@/lib/dashboard/constants";
 import { createReport, type CreateReportState } from "./actions";
 
@@ -71,25 +72,23 @@ export default function ReportBuilder({
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] items-end gap-4">
         <Field label={t("Period")}>
-          <select name="period" defaultValue="last_month" disabled={type === "balances"} className={inputStyles}>
-            {REPORT_PERIODS.map((p) => (
-              <option key={p} value={p}>
-                {t(PERIOD_LABELS[p])}
-              </option>
-            ))}
-          </select>
+          {/* Balances are always "as of now", so the period doesn't apply. */}
+          <Select
+            name="period"
+            defaultValue="last_month"
+            disabled={type === "balances"}
+            options={REPORT_PERIODS.map((p) => ({ value: p, label: t(PERIOD_LABELS[p]) }))}
+          />
         </Field>
-        {/* A disabled select isn't submitted — balances are always "as of now". */}
-        {type === "balances" && <input type="hidden" name="period" value="this_month" />}
         <Field label={t("Account")}>
-          <select name="account" defaultValue={defaultAccount} className={inputStyles}>
-            <option value="all">{t("All accounts")}</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            name="account"
+            defaultValue={defaultAccount}
+            options={[
+              { value: "all", label: t("All accounts") },
+              ...accounts.map((a) => ({ value: a.id, label: a.name })),
+            ]}
+          />
         </Field>
         <div className="flex flex-col gap-1.5">
           <span className="text-[13px] font-medium text-db-text">{t("Format")}</span>
