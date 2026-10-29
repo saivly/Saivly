@@ -17,7 +17,11 @@ export const config = {
      * - _next/static, _next/image, favicon
      * - common image/font files, icons and the web manifest
      *   (browsers fetch these without a session; they must not redirect)
+     * - api/webhooks/: server-to-server calls (Adyen) that never carry a
+     *   login cookie. The login guard would 307 them to /login, so Adyen
+     *   sees every delivery fail. Each webhook route authenticates the
+     *   caller itself (Basic auth + HMAC signature) and fails closed.
      */
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|api/webhooks/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };
