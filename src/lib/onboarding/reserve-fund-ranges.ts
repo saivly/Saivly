@@ -1,3 +1,5 @@
+import type { T } from "@/lib/i18n";
+
 // Options for the reserve-fund question on the business-activity step
 // (see business-activity-form.tsx). The user picks a range rather than
 // typing an amount; Adyen still needs a single number (annualTurnover /
@@ -44,16 +46,21 @@ export function reserveFundRangeFor(amount: number): ReserveFundRangeId {
   ).id;
 }
 
-export function reserveFundRangeLabel(id: ReserveFundRangeId, currency: string): string {
+export function reserveFundRangeLabel(
+  id: ReserveFundRangeId,
+  currency: string,
+  t: T = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => String(vars?.[k] ?? "")),
+  intlLocale = "en"
+): string {
   const fmt = (n: number) =>
-    new Intl.NumberFormat("en", {
+    new Intl.NumberFormat(intlLocale, {
       style: "currency",
       currency,
       currencyDisplay: "narrowSymbol",
       maximumFractionDigits: 0,
     }).format(n);
   const r = RESERVE_FUND_RANGES.find((x) => x.id === id)!;
-  if (r.min === 0) return `Less than ${fmt(r.max!)}`;
-  if (r.max === null) return `More than ${fmt(r.min)}`;
-  return `Between ${fmt(r.min)} and ${fmt(r.max)}`;
+  if (r.min === 0) return t("Less than {amount}", { amount: fmt(r.max!) });
+  if (r.max === null) return t("More than {amount}", { amount: fmt(r.min) });
+  return t("Between {min} and {max}", { min: fmt(r.min), max: fmt(r.max) });
 }

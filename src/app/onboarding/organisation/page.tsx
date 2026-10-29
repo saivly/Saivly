@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding/onboarding";
+import { getT } from "@/lib/i18n-server";
 
 function BuildingIcon({ className }: { className?: string }) {
   return (
@@ -72,16 +73,16 @@ export default async function OrganisationChoiceStep() {
     const next = firstIncompleteStep(status);
     redirect(next ? `/onboarding/${next}` : "/dashboard");
   }
+  const t = await getT();
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Do you want to create a new organisation?
+          {t("Do you want to create a new organisation?")}
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 4 — every account belongs to an organisation. Start one,
-          or join an existing one!
+          {t("Step 2 of 4 — every account belongs to an organisation. Start one, or join an existing one!")}
         </p>
       </div>
 
@@ -96,8 +97,8 @@ export default async function OrganisationChoiceStep() {
               <Icon className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-semibold">{title}</p>
-              <p className="mt-1 text-sm text-muted">{body}</p>
+              <p className="font-semibold">{t(title)}</p>
+              <p className="mt-1 text-sm text-muted">{t(body)}</p>
             </div>
           </Link>
         ))}

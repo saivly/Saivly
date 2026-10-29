@@ -1,6 +1,22 @@
 "use client";
 
-import { COUNTRIES, countryFlag, CURRENCIES, currencySymbol, dialCode } from "@/lib/onboarding/countries";
+import { useMemo } from "react";
+import {
+  COUNTRIES,
+  countryFlag,
+  CURRENCIES,
+  currencySymbol,
+  dialCode,
+  localizeCountries,
+} from "@/lib/onboarding/countries";
+import { intlLocale } from "@/lib/i18n";
+import { useT } from "@/app/i18n-provider";
+
+/** Country list with names in the current language. */
+function useLocalizedCountries(options: { code: string; name: string }[]) {
+  const { locale } = useT();
+  return useMemo(() => localizeCountries(options, intlLocale(locale)), [options, locale]);
+}
 
 // Shared between every /onboarding form (personal, company, …) so their
 // inputs/selects look identical.
@@ -39,6 +55,7 @@ export function CountrySelect({
    * restrict which ones this particular dropdown offers. */
   options?: { code: string; name: string }[];
 }) {
+  const localized = useLocalizedCountries(options);
   // <option> text can't be styled — a flag emoji inside it is stuck at the
   // same size as the country name next to it. To make the flag noticeably
   // bigger without also blowing up the text (and staying the same size as
@@ -66,7 +83,7 @@ export function CountrySelect({
             {placeholder}
           </option>
         )}
-        {options.map((c) => (
+        {localized.map((c) => (
           <option key={c.code} value={c.code}>
             {c.name}
           </option>
@@ -136,6 +153,7 @@ export function DialCodeSelect({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const localized = useLocalizedCountries(COUNTRIES);
   return (
     <div className="relative">
       <span
@@ -151,7 +169,7 @@ export function DialCodeSelect({
         onChange={(e) => onChange(e.target.value)}
         className={`${inputClasses} w-full appearance-none pl-14 pr-8 text-transparent`}
       >
-        {COUNTRIES.map((c) => (
+        {localized.map((c) => (
           <option key={c.code} value={c.code} className="text-ink">
             {c.name} ({dialCode(c.code)})
           </option>

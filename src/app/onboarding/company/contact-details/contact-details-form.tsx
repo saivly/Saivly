@@ -8,6 +8,7 @@ import { saveContactDetails } from "../actions";
 import { inputClasses } from "../../form-controls";
 import { phonePlaceholder } from "@/lib/onboarding/countries";
 import { contactDetailsSchema } from "@/lib/zod";
+import { useT } from "@/app/i18n-provider";
 
 type Existing = {
   companyCountry: string;
@@ -29,12 +30,13 @@ type Existing = {
 // properly styled, validation feedback.
 function ContinueButton({ formValid }: { formValid: boolean }) {
   const { pending } = useFormStatus();
+  const { t } = useT();
   return (
     <button
       disabled={pending || !formValid}
       className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
     >
-      {pending ? "Saving…" : "Continue"}
+      {pending ? t("Saving…") : t("Continue")}
     </button>
   );
 }
@@ -51,6 +53,7 @@ export default function ContactDetailsForm({
    * form itself. */
   isVve: boolean;
 }) {
+  const { t } = useT();
   const [website, setWebsite] = useState(existing.website);
   const [supportEmail, setSupportEmail] = useState(existing.supportEmail);
   const [supportPhone, setSupportPhone] = useState(existing.supportPhone);
@@ -71,7 +74,8 @@ export default function ContactDetailsForm({
   const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
   function fieldError(field: keyof typeof fieldErrors) {
     if (!touched[field]) return undefined;
-    return fieldErrors[field]?.[0];
+    const message = fieldErrors[field]?.[0];
+    return message && t(message);
   }
 
   return (
@@ -79,7 +83,7 @@ export default function ContactDetailsForm({
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            Website (if applicable)
+            {t("Website (if applicable)")}
           </span>
           <input
             type="url"
@@ -106,7 +110,7 @@ export default function ContactDetailsForm({
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            Company email address
+            {t("Company email address")}
           </span>
           <input
             type="email"
@@ -130,7 +134,7 @@ export default function ContactDetailsForm({
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            Company phone number
+            {t("Company phone number")}
           </span>
           <input
             type="tel"
@@ -155,7 +159,7 @@ export default function ContactDetailsForm({
         href="/onboarding/company/business-activity"
         className="self-start text-sm text-muted hover:underline"
       >
-        ← Back
+        ← {t("Back")}
       </Link>
     </form>
   );

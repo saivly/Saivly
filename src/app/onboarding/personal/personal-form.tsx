@@ -8,6 +8,8 @@ import { provincesForCountry } from "@/lib/onboarding/provinces";
 import { savePersonalInfo, lookupResidentialAddress } from "./actions";
 import { inputClasses, SelectChevron, CountrySelect, DialCodeSelect } from "../form-controls";
 import { personalInfoSchema } from "@/lib/zod";
+import { intlLocale } from "@/lib/i18n";
+import { useT } from "@/app/i18n-provider";
 
 type Existing = {
   dateOfBirth: string;
@@ -22,20 +24,11 @@ type Existing = {
 
 const NL_POSTAL_CODE = /^\d{4}\s?[A-Za-z]{2}$/;
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+/** Month names in the given language, January first. */
+function monthNames(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" });
+  return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(Date.UTC(2000, i, 1))));
+}
 
 const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1));
 
@@ -67,6 +60,8 @@ function DateOfBirthFields({
   defaultValue: string;
   onValidityChange: (isoValue: string) => void;
 }) {
+  const { t, locale } = useT();
+  const months = monthNames(intlLocale(locale));
   const [initialYear = "", initialMonth = "", initialDay = ""] = (
     defaultValue || ""
   ).split("-");
@@ -124,13 +119,13 @@ function DateOfBirthFields({
   // judge, just an incomplete one.
   let error: string | null = null;
   if (touched) {
-    if (allEmpty) error = "Date of birth is required.";
+    if (allEmpty) error = t("Date of birth is required.");
     else if (isComplete) {
-      if (!isRealDate) error = "That date doesn't exist.";
+      if (!isRealDate) error = t("That date doesn't exist.");
       else if (new Date(isoValue) > new Date())
-        error = "Date of birth can’t be in the future.";
+        error = t("Date of birth can’t be in the future.");
       else if (!isAdult(isoValue))
-        error = "You must be at least 18 years old.";
+        error = t("You must be at least 18 years old.");
     }
   }
 
@@ -143,7 +138,7 @@ function DateOfBirthFields({
 
   return (
     <div className="flex flex-col gap-1.5 text-sm">
-      Date of birth
+      {t("Date of birth")}
       <div className="flex gap-3">
         <div className="relative flex-[2]">
           <select
@@ -155,7 +150,7 @@ function DateOfBirthFields({
             className={`${inputClasses} w-full appearance-none pr-8`}
           >
             <option value="" disabled>
-              Day
+              {t("Day")}
             </option>
             {DAYS.map((d) => (
               <option key={d} value={d}>
@@ -175,9 +170,9 @@ function DateOfBirthFields({
             className={`${inputClasses} w-full appearance-none pr-8`}
           >
             <option value="" disabled>
-              Month
+              {t("Month")}
             </option>
-            {MONTHS.map((name, i) => (
+            {months.map((name, i) => (
               <option key={name} value={i + 1}>
                 {name}
               </option>
@@ -195,7 +190,7 @@ function DateOfBirthFields({
             className={`${inputClasses} w-full appearance-none pr-8`}
           >
             <option value="" disabled>
-              Year
+              {t("Year")}
             </option>
             {YEARS.map((y) => (
               <option key={y} value={y}>
@@ -218,17 +213,19 @@ function DateOfBirthFields({
 // ../company/company-form.tsx).
 function ContinueButton({ formValid }: { formValid: boolean }) {
   const { pending } = useFormStatus();
+  const { t } = useT();
   return (
     <button
       disabled={pending || !formValid}
       className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
     >
-      {pending ? "Saving…" : "Continue"}
+      {pending ? t("Saving…") : t("Continue")}
     </button>
   );
 }
 
 export default function PersonalForm({ existing }: { existing: Existing }) {
+  const { t } = useT();
   const [country, setCountry] = useState(existing.residentialCountry || "NL");
   // Defaults to the country of residence — most shoppers' nationality
   // matches it, and it means this select (like the one above) always shows
@@ -298,7 +295,8 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
   const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
   function fieldError(field: keyof typeof fieldErrors) {
     if (!touched[field]) return undefined;
-    return fieldErrors[field]?.[0];
+    const message = fieldErrors[field]?.[0];
+    return message && t(message);
   }
 
   function handleCountryChange(next: string) {
@@ -347,12 +345,12 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
         // Not found — unlock street/city for manual entry rather than
         // leaving the user stuck with no way to proceed.
         setLookupError(
-          "No address found for that postcode + house number — fill it in by hand."
+          t("No address found for that postcode + house number — fill it in by hand.")
         );
       }
     } catch {
       setLookupError(
-        "Address lookup is temporarily unavailable — fill it in by hand."
+        t("Address lookup is temporarily unavailable — fill it in by hand.")
       );
     } finally {
       setLooking(false);
@@ -369,7 +367,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5 text-sm">
-          Country of residence
+          {t("Country of residence")}
           <CountrySelect
             name="residentialCountry"
             value={country}
@@ -377,18 +375,18 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
           />
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
-          Nationality
+          {t("Nationality")}
           <CountrySelect
             name="nationality"
             value={nationality}
             onChange={setNationality}
-            placeholder="Select…"
+            placeholder={t("Select…")}
           />
         </label>
       </div>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        Phone number
+        {t("Phone number")}
         <div className="flex gap-2">
           <div className="w-32 shrink-0">
             <DialCodeSelect
@@ -420,7 +418,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
       {isNL && (
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5 text-sm">
-            Postal code
+            {t("Postal code")}
             <input
               type="text"
               required
@@ -442,7 +440,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
             )}
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
-            House number
+            {t("House number")}
             <input
               type="text"
               required
@@ -453,7 +451,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
                 runLookup(postalCode, houseNumber);
               }}
               aria-invalid={!!fieldError("residentialStreet")}
-              placeholder="12 or 41-2"
+              placeholder={t("12 or 41-2")}
               className={inputClasses}
             />
           </label>
@@ -462,12 +460,12 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
       {isNL && (looking || lookupError) && (
         <p className={`text-xs ${lookupError ? "text-danger" : "text-muted"}`}>
-          {looking ? "Looking up address…" : lookupError}
+          {looking ? t("Looking up address…") : lookupError}
         </p>
       )}
 
       <label className="flex flex-col gap-1.5 text-sm">
-        Street address
+        {t("Street address")}
         <input
           type="text"
           required
@@ -484,7 +482,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
             waiting on the postcode + house number lookup above. */}
         {addressLocked ? (
           <span className="text-xs text-muted">
-            Fill in the postcode and house number above — we&apos;ll look this up for you.
+            {t("Fill in the postcode and house number above — we'll look this up for you.")}
           </span>
         ) : (
           // House number (NL) feeds the same submitted field — only show
@@ -507,7 +505,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
 
       <div className={`grid gap-3 ${isNL ? "grid-cols-2" : "grid-cols-3"}`}>
         <label className="flex flex-col gap-1.5 text-sm">
-          City
+          {t("City")}
           <input
             type="text"
             name="residentialCity"
@@ -526,7 +524,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
         </label>
 
         <label className="flex flex-col gap-1.5 text-sm">
-          Province
+          {t("Province")}
           {provinceOptions ? (
             <div className="relative">
               <select
@@ -539,11 +537,11 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
                 className={`${inputClasses} w-full appearance-none pr-8`}
               >
                 <option value="" disabled>
-                  Select…
+                  {t("Select…")}
                 </option>
                 {provinceOptions.map((p) => (
                   <option key={p.code} value={p.code}>
-                    {p.name}
+                    {t(p.name)}
                   </option>
                 ))}
               </select>
@@ -558,7 +556,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
               onChange={(e) => setProvince(e.target.value)}
               onBlur={() => touch("residentialProvince")}
               aria-invalid={!!fieldError("residentialProvince")}
-              placeholder="Province / region"
+              placeholder={t("Province / region")}
               className={inputClasses}
             />
           )}
@@ -571,7 +569,7 @@ export default function PersonalForm({ existing }: { existing: Existing }) {
           <input type="hidden" name="residentialPostalCode" value={postalCode} />
         ) : (
           <label className="flex flex-col gap-1.5 text-sm">
-            Postal code
+            {t("Postal code")}
             <input
               type="text"
               name="residentialPostalCode"

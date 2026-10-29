@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
+import { getT } from "@/lib/i18n-server";
 
 /**
  * Joining an existing organisation isn't wired up yet (see ./actions.ts
@@ -19,16 +20,16 @@ export default async function JoinOrganisationStep() {
   const status = await getOnboardingStatus(supabase, user.id);
   if (!status.personalDone) redirect("/onboarding/personal");
   if (status.organisationDone) redirect("/onboarding");
+  const t = await getT();
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Joining an organisation isn&apos;t available yet
+          {t("Joining an organisation isn't available yet")}
         </h1>
         <p className="mt-2 text-sm text-muted">
-          We&apos;re still building this. In the meantime, please contact
-          your organisation&apos;s admin and ask them to add you directly.
+          {t("We're still building this. In the meantime, please contact your organisation's admin and ask them to add you directly.")}
         </p>
       </div>
 
@@ -36,7 +37,7 @@ export default async function JoinOrganisationStep() {
         href="/onboarding/organisation"
         className="self-start rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition-colors hover:bg-surface"
       >
-        ← Back
+        ← {t("Back")}
       </Link>
     </div>
   );

@@ -90,6 +90,23 @@ export function countryName(code: string): string {
   return COUNTRIES.find((c) => c.code === code)?.name ?? code;
 }
 
+/** `options` with names in the given language (e.g. "nl-NL" → "Duitsland"),
+ * sorted by that name. Falls back to the English name if Intl can't. */
+export function localizeCountries(
+  options: { code: string; name: string }[],
+  intlLocale: string
+): { code: string; name: string }[] {
+  let names: Intl.DisplayNames | null = null;
+  try {
+    names = new Intl.DisplayNames([intlLocale], { type: "region" });
+  } catch {
+    return options;
+  }
+  return options
+    .map((c) => ({ code: c.code, name: names?.of(c.code) ?? c.name }))
+    .sort((a, b) => a.name.localeCompare(b.name, intlLocale));
+}
+
 // One currency per supported company country — enough for the annual
 // turnover figure that feeds Adyen's businessLine.sourceOfFunds (see
 // createAdyenBusinessLine in src/lib/adyen/legalEntity.ts). Falls back to

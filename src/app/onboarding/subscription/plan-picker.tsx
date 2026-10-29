@@ -3,12 +3,13 @@
 import { useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { PLAN_OPTIONS, BILLING_INTERVALS } from "@/lib/zod";
+import { useT } from "@/app/i18n-provider";
 
 type PlanId = (typeof PLAN_OPTIONS)[number];
 type BillingInterval = (typeof BILLING_INTERVALS)[number];
 
-const eur = (n: number) =>
-  new Intl.NumberFormat("en-IE", {
+const formatEur = (n: number, locale: string) =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
@@ -100,12 +101,13 @@ const PRIVACY_URL = "/privacy";
 
 function SubmitButton({ planName, disabled }: { planName: string; disabled: boolean }) {
   const { pending } = useFormStatus();
+  const { t } = useT();
   return (
     <button
       disabled={pending || disabled}
       className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
     >
-      {pending ? "Saving…" : `Continue with ${planName}`}
+      {pending ? t("Saving…") : t("Continue with {plan}", { plan: planName })}
     </button>
   );
 }
@@ -119,6 +121,8 @@ export default function PlanPicker({
   initialPlan: PlanId | null;
   initialInterval: BillingInterval | null;
 }) {
+  const { t, locale } = useT();
+  const eur = (n: number) => formatEur(n, locale === "nl" ? "nl-NL" : "en-IE");
   const [selected, setSelected] = useState<PlanId>(initialPlan ?? "starter");
   const [interval, setBillingInterval] = useState<BillingInterval>(initialInterval ?? "monthly");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -139,14 +143,14 @@ export default function PlanPicker({
           <Icon name="gift" />
         </span>
         <div>
-          <p className="text-sm font-medium">Your first month is free</p>
-          <p className="text-xs text-muted">Try any plan free for 30 days. Cancel anytime.</p>
+          <p className="text-sm font-medium">{t("Your first month is free")}</p>
+          <p className="text-xs text-muted">{t("Try any plan free for 30 days. Cancel anytime.")}</p>
         </div>
       </div>
 
       {/* Billing interval toggle */}
       <div className="flex justify-center">
-        <div role="radiogroup" aria-label="Billing" className="inline-flex gap-1 rounded-full bg-accent-soft p-1">
+        <div role="radiogroup" aria-label={t("Billing")} className="inline-flex gap-1 rounded-full bg-accent-soft p-1">
           {BILLING_INTERVALS.map((i) => {
             const active = i === interval;
             return (
@@ -160,10 +164,10 @@ export default function PlanPicker({
                   active ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"
                 }`}
               >
-                {i === "monthly" ? "Monthly" : "Yearly"}
+                {i === "monthly" ? t("Monthly") : t("Yearly")}
                 {i === "yearly" && (
                   <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-xs font-medium text-success">
-                    Save up to {MAX_YEARLY_DISCOUNT}%
+                    {t("Save up to {percent}%", { percent: MAX_YEARLY_DISCOUNT })}
                   </span>
                 )}
               </button>
@@ -175,7 +179,7 @@ export default function PlanPicker({
       {/* Segmented plan switcher */}
       <div
         role="tablist"
-        aria-label="Plans"
+        aria-label={t("Plans")}
         className="grid grid-cols-3 gap-1 rounded-lg bg-accent-soft p-1"
       >
         {PLANS.map((p) => {
@@ -203,11 +207,11 @@ export default function PlanPicker({
           <h2 className="text-xl font-semibold tracking-tight">{plan.name}</h2>
           {plan.badge && (
             <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-on-accent">
-              {plan.badge}
+              {t(plan.badge)}
             </span>
           )}
         </div>
-        <p className="mt-2 text-sm text-muted">{plan.description}</p>
+        <p className="mt-2 text-sm text-muted">{t(plan.description)}</p>
 
         <div className="my-5 border-t border-line" />
 
@@ -218,18 +222,20 @@ export default function PlanPicker({
           <span className="text-3xl font-semibold tracking-tight">
             {eur(yearly ? yearlyTotal : plan.price)}
           </span>
-          <span className="text-sm text-muted">{yearly ? "per year" : "per month"}</span>
+          <span className="text-sm text-muted">{yearly ? t("per year") : t("per month")}</span>
         </p>
         <p className="mt-1 text-xs text-muted">
           {yearly
-            ? `You save ${eur(yearlySaving)} compared to monthly billing`
-            : `Billed monthly. Switch to yearly and save ${eur(yearlySaving)}.`}
+            ? t("You save {amount} compared to monthly billing", { amount: eur(yearlySaving) })
+            : t("Billed monthly. Switch to yearly and save {amount}.", { amount: eur(yearlySaving) })}
         </p>
 
         <div className="my-5 border-t border-line" />
 
         {plan.includesFrom && (
-          <p className="mb-3 text-xs text-muted">Everything in {plan.includesFrom}, plus</p>
+          <p className="mb-3 text-xs text-muted">
+            {t("Everything in {plan}, plus", { plan: plan.includesFrom })}
+          </p>
         )}
         <ul className="flex flex-col gap-3">
           {plan.features.map((f, i) => (
@@ -239,9 +245,9 @@ export default function PlanPicker({
               </span>
               <div>
                 <p className={`text-sm ${i === 0 ? "font-medium text-ink" : "text-muted"}`}>
-                  {f.title}
+                  {t(f.title)}
                 </p>
-                {f.detail && <p className="text-xs text-muted">{f.detail}</p>}
+                {f.detail && <p className="text-xs text-muted">{t(f.detail)}</p>}
               </div>
             </li>
           ))}
@@ -258,13 +264,13 @@ export default function PlanPicker({
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-accent"
         />
         <span>
-          I agree to the{" "}
+          {t("I agree to the")}{" "}
           <a href={TERMS_URL} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
-            Terms of Service
+            {t("Terms of Service")}
           </a>{" "}
-          and{" "}
+          {t("and")}{" "}
           <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
-            Privacy Policy
+            {t("Privacy Policy")}
           </a>
           .
         </span>

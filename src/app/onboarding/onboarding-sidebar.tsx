@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ONBOARDING_STEPS } from "@/lib/onboarding/onboarding";
-import type { MessageKey, Messages } from "@/lib/i18n";
-
-// Translated step label, falling back to the English one in ONBOARDING_STEPS.
-function stepLabel(t: Messages, key: string, fallback: string) {
-  return t[`step.${key}` as MessageKey] ?? fallback;
-}
+import { useT } from "@/app/i18n-provider";
 
 type Step = (typeof ONBOARDING_STEPS)[number];
 type SubStep = Extract<Step, { subSteps: readonly unknown[] }>["subSteps"][number];
@@ -17,20 +12,19 @@ export default function OnboardingSidebar({
   steps,
   stepDone,
   subStepDone,
-  t,
 }: {
   steps: readonly Step[];
-  t: Messages;
   stepDone: Record<string, boolean>;
   /** Keyed by sub-step key (see ONBOARDING_STEPS' organisation.subSteps). */
   subStepDone: Record<string, boolean>;
 }) {
   const pathname = usePathname();
+  const { t } = useT();
 
   return (
     <nav className="shrink-0 md:w-56">
       <h2 className="mb-4 text-sm font-medium tracking-wide text-muted uppercase">
-        {t["sidebar.title"]}
+        {t("Onboarding")}
       </h2>
       <ol className="flex flex-row gap-2 overflow-x-auto md:flex-col md:gap-1 md:overflow-visible">
         {steps.map((step, i) => {
@@ -60,7 +54,7 @@ export default function OnboardingSidebar({
               }`}
             >
               <StepIcon done={done} active={active} index={i} />
-              <span className="truncate">{stepLabel(t, step.key, step.label)}</span>
+              <span className="truncate">{t(step.label)}</span>
             </div>
           );
 
@@ -89,7 +83,6 @@ export default function OnboardingSidebar({
                       sub={sub}
                       pathname={pathname}
                       done={subStepDone[sub.key]}
-                      t={t}
                     />
                   ))}
                 </ol>
@@ -106,13 +99,12 @@ function SubStepItem({
   sub,
   pathname,
   done,
-  t,
 }: {
   sub: SubStep;
   pathname: string;
   done: boolean;
-  t: Messages;
 }) {
+  const { t } = useT();
   const active = (sub.paths as readonly string[]).some(
     (p) => pathname === `/onboarding/${p}`
   );
@@ -130,7 +122,7 @@ function SubStepItem({
       }`}
     >
       <SubStepIcon done={done} active={active} />
-      <span className="truncate">{stepLabel(t, sub.key, sub.label)}</span>
+      <span className="truncate">{t(sub.label)}</span>
     </div>
   );
 

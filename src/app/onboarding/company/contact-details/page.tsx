@@ -4,6 +4,7 @@ import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import { getKvkCompanyDetails } from "@/lib/onboarding/kvk";
 import { isHomeownersAssociation } from "@/lib/adyen/legalEntity";
 import ContactDetailsForm from "./contact-details-form";
+import { getT } from "@/lib/i18n-server";
 
 export default async function ContactDetailsStep({
   searchParams,
@@ -11,6 +12,7 @@ export default async function ContactDetailsStep({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -70,16 +72,16 @@ export default async function ContactDetailsStep({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Contact details
+          {t("Contact details")}
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 4 — how customers and Adyen can reach {org.name}.
+          {t("Step 2 of 4 — how customers and Adyen can reach {name}.", { name: org.name })}
         </p>
       </div>
 
       {error && (
         <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-          {error}
+          {t(error)}
         </p>
       )}
 

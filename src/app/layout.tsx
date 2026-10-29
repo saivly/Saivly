@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { getLocale, getTheme } from "@/lib/i18n-server";
+import { I18nProvider } from "./i18n-provider";
 
 export const metadata: Metadata = {
   title: "Saivly",
@@ -15,7 +16,9 @@ export default async function RootLayout({
   const [locale, theme] = await Promise.all([getLocale(), getTheme()]);
   return (
     <html lang={locale} className={theme === "dark" ? "dark" : undefined}>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        <I18nProvider locale={locale}>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

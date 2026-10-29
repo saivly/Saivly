@@ -2,25 +2,25 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { setLocale } from "@/app/preferences/actions";
-import { LOCALES, LOCALE_NAMES, THEME_COOKIE, type Locale, type Messages, type Theme } from "@/lib/i18n";
+import { LOCALES, LOCALE_NAMES, THEME_COOKIE, type Locale, type Theme } from "@/lib/i18n";
+import { useT } from "@/app/i18n-provider";
 
 export default function OnboardingHeader({
   locale,
   theme: initialTheme,
-  t,
 }: {
   locale: Locale;
   theme: Theme;
-  t: Messages;
 }) {
+  const { t } = useT();
   return (
     <header className="border-b border-line bg-panel">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-end gap-2 px-6">
-        <LanguageMenu locale={locale} label={t["header.language"]} />
-        <ThemeToggle initialTheme={initialTheme} t={t} />
+        <LanguageMenu locale={locale} label={t("Language")} />
+        <ThemeToggle initialTheme={initialTheme} />
         <form action="/auth/signout" method="post">
           <button className="rounded-lg px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-accent-soft">
-            {t["header.logout"]}
+            {t("Log out")}
           </button>
         </form>
       </div>
@@ -94,7 +94,8 @@ function LanguageMenu({ locale, label }: { locale: Locale; label: string }) {
   );
 }
 
-function ThemeToggle({ initialTheme, t }: { initialTheme: Theme; t: Messages }) {
+function ThemeToggle({ initialTheme }: { initialTheme: Theme }) {
+  const { t } = useT();
   const [theme, setTheme] = useState(initialTheme);
 
   // Applied client-side straight away; the cookie lets the server render
@@ -106,7 +107,7 @@ function ThemeToggle({ initialTheme, t }: { initialTheme: Theme; t: Messages }) 
     document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
   }
 
-  const label = theme === "dark" ? t["header.theme.toLight"] : t["header.theme.toDark"];
+  const label = theme === "dark" ? t("Switch to light mode") : t("Switch to dark mode");
   return (
     <button
       type="button"

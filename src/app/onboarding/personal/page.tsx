@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PersonalForm from "./personal-form";
+import { getT } from "@/lib/i18n-server";
 
 export default async function PersonalInfoStep({
   searchParams,
@@ -8,6 +9,7 @@ export default async function PersonalInfoStep({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -28,17 +30,16 @@ export default async function PersonalInfoStep({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Personal information
+          {t("Personal information")}
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 1 of 4 — a few details we&apos;re required to collect about
-          you.
+          {t("Step 1 of 4 — a few details we're required to collect about you.")}
         </p>
       </div>
 
       {error && (
         <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-          {error}
+          {t(error)}
         </p>
       )}
 

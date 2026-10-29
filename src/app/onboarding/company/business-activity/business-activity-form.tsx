@@ -13,6 +13,9 @@ import {
 } from "@/lib/onboarding/reserve-fund-ranges";
 import { INDUSTRY_CODE_GROUPS } from "@/lib/onboarding/industry-codes";
 import { businessActivitySchema, VAT_EXEMPTION_REASONS } from "@/lib/zod";
+import { INDUSTRY_DESCRIPTIONS_NL, INDUSTRY_SECTORS_NL } from "@/lib/onboarding/industry-codes.nl";
+import { intlLocale } from "@/lib/i18n";
+import { useT } from "@/app/i18n-provider";
 
 const VAT_EXEMPTION_REASON_LABELS: Record<(typeof VAT_EXEMPTION_REASONS)[number], string> = {
   belowTaxThreshold: "Revenue below tax threshold",
@@ -41,12 +44,13 @@ type Existing = {
 // properly styled, validation feedback.
 function ContinueButton({ formValid }: { formValid: boolean }) {
   const { pending } = useFormStatus();
+  const { t } = useT();
   return (
     <button
       disabled={pending || !formValid}
       className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
     >
-      {pending ? "Saving…" : "Continue"}
+      {pending ? t("Saving…") : t("Continue")}
     </button>
   );
 }
@@ -66,13 +70,15 @@ export default function BusinessActivityForm({
   /** ISO 4217 code from the company's country — used in the range labels. */
   currency: string;
 }) {
+  const { t, locale } = useT();
+  const isDutch = locale === "nl";
   const [industryCode, setIndustryCode] = useState(existing.industryCode);
   const [reserveFundRange, setReserveFundRange] = useState(existing.reserveFundRange);
   const [reserveFundAmount, setReserveFundAmount] = useState(existing.reserveFundAmount);
   const [vatNumber, setVatNumber] = useState(existing.vatNumber);
   const [vatExemptionReason, setVatExemptionReason] = useState(existing.vatExemptionReason);
   const [businessDescription, setBusinessDescription] = useState(
-    existing.businessDescription || (isVve ? HOMEOWNERS_ASSOCIATION_DESCRIPTION : "")
+    existing.businessDescription || (isVve ? t(HOMEOWNERS_ASSOCIATION_DESCRIPTION) : "")
   );
 
   // Live client-side mirror of businessActivitySchema (lib/zod.ts — same
@@ -94,7 +100,8 @@ export default function BusinessActivityForm({
   const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
   function fieldError(field: keyof typeof fieldErrors) {
     if (!touched[field]) return undefined;
-    return fieldErrors[field]?.[0];
+    const message = fieldErrors[field]?.[0];
+    return message && t(message);
   }
 
   return (
@@ -102,7 +109,7 @@ export default function BusinessActivityForm({
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            Industry
+            {t("Industry")}
           </span>
           {isVve ? (
             <>
@@ -114,7 +121,7 @@ export default function BusinessActivityForm({
                   hidden input below. */}
               <input
                 type="text"
-                value="Home Association"
+                value={t("Home Association")}
                 disabled
                 readOnly
                 className={`${inputClasses} disabled:opacity-70`}
@@ -133,13 +140,16 @@ export default function BusinessActivityForm({
                 className={`${inputClasses} w-full appearance-none pr-8`}
               >
                 <option value="" disabled>
-                  Select…
+                  {t("Select…")}
                 </option>
                 {INDUSTRY_CODE_GROUPS.map((group) => (
-                  <optgroup key={group.sector} label={group.sector}>
+                  <optgroup
+                    key={group.sector}
+                    label={(isDutch && INDUSTRY_SECTORS_NL[group.sector]) || group.sector}
+                  >
                     {group.codes.map((i) => (
                       <option key={i.code} value={i.code}>
-                        {i.description}
+                        {(isDutch && INDUSTRY_DESCRIPTIONS_NL[i.code]) || i.description}
                       </option>
                     ))}
                   </optgroup>
@@ -150,8 +160,8 @@ export default function BusinessActivityForm({
           )}
           <span className="text-xs text-muted">
             {isVve
-              ? "Fixed for homeowners' associations."
-              : "Adyen's own classification, closest to what the organisation actually does day to day."}
+              ? t("Fixed for homeowners' associations.")
+              : t("Adyen's own classification, closest to what the organisation actually does day to day.")}
           </span>
           {fieldError("industryCode") && (
             <span className="text-xs text-danger">{fieldError("industryCode")}</span>
@@ -164,14 +174,14 @@ export default function BusinessActivityForm({
         aria-invalid={!!fieldError("reserveFundRange")}
       >
         <legend className="sr-only">
-          {isVve ? "Expected monthly contribution" : "Estimated annual reserve fund contributions"}
+          {isVve ? t("Expected monthly contribution") : t("Estimated annual reserve fund contributions")}
         </legend>
         <span className="text-xs font-medium tracking-wide text-muted uppercase">
           {isVve
-            ? "Expected Monthly contribution for this account"
-            : "Estimated annual reserve fund contributions"}
+            ? t("Expected Monthly contribution for this account")
+            : t("Estimated annual reserve fund contributions")}
         </span>
-        <span className="pb-2 text-xs text-muted">Give your best estimate</span>
+        <span className="pb-2 text-xs text-muted">{t("Give your best estimate")}</span>
         <div className="flex flex-col gap-2">
           {RESERVE_FUND_RANGE_IDS.map((id) => (
             <label
@@ -190,14 +200,14 @@ export default function BusinessActivityForm({
                 }}
                 className="h-4 w-4 shrink-0 accent-accent"
               />
-              {reserveFundRangeLabel(id, currency)}
+              {reserveFundRangeLabel(id, currency, t, intlLocale(locale))}
             </label>
           ))}
         </div>
         {reserveFundRange === "over100k" && (
           <label className="mt-2 flex flex-col gap-1.5">
             <span className="text-xs text-muted">
-              {isVve ? "Expected monthly amount" : "Expected annual amount"}
+              {isVve ? t("Expected monthly amount") : t("Expected annual amount")}
             </span>
             <div className="relative">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
@@ -208,7 +218,7 @@ export default function BusinessActivityForm({
                 inputMode="numeric"
                 name="reserveFundAmount"
                 autoFocus
-                placeholder="150,000"
+                placeholder={isDutch ? "150.000" : "150,000"}
                 value={reserveFundAmount}
                 onChange={(e) => setReserveFundAmount(e.target.value)}
                 onBlur={() => touch("reserveFundAmount")}
@@ -229,7 +239,7 @@ export default function BusinessActivityForm({
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            VAT number
+            {t("VAT number")}
           </span>
           <input
             type="text"
@@ -243,8 +253,8 @@ export default function BusinessActivityForm({
           />
           <span className="text-xs text-muted">
             {isVve
-              ? "Homeowners’ associations are VAT-exempt."
-              : "Leave blank if the organisation doesn’t have one — most don’t."}
+              ? t("Homeowners’ associations are VAT-exempt.")
+              : t("Leave blank if the organisation doesn’t have one — most don’t.")}
           </span>
           {fieldError("vatNumber") && (
             <span className="text-xs text-danger">{fieldError("vatNumber")}</span>
@@ -253,13 +263,13 @@ export default function BusinessActivityForm({
 
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            VAT exemption reason
+            {t("VAT exemption reason")}
           </span>
           {isVve ? (
             <>
               <input
                 type="text"
-                value={VAT_EXEMPTION_REASON_LABELS.industryExemption}
+                value={t(VAT_EXEMPTION_REASON_LABELS.industryExemption)}
                 disabled
                 readOnly
                 className={`${inputClasses} border-line bg-line/50 text-muted opacity-100`}
@@ -276,10 +286,10 @@ export default function BusinessActivityForm({
                 aria-invalid={!!fieldError("vatExemptionReason")}
                 className={`${inputClasses} w-full appearance-none pr-8`}
               >
-                <option value="">Not exempt</option>
+                <option value="">{t("Not exempt")}</option>
                 {VAT_EXEMPTION_REASONS.map((reason) => (
                   <option key={reason} value={reason}>
-                    {VAT_EXEMPTION_REASON_LABELS[reason]}
+                    {t(VAT_EXEMPTION_REASON_LABELS[reason])}
                   </option>
                 ))}
               </select>
@@ -288,8 +298,8 @@ export default function BusinessActivityForm({
           )}
           <span className="text-xs text-muted">
             {isVve
-              ? "Fixed for homeowners' associations."
-              : "Only relevant if the organisation has no VAT number."}
+              ? t("Fixed for homeowners' associations.")
+              : t("Only relevant if the organisation has no VAT number.")}
           </span>
           {fieldError("vatExemptionReason") && (
             <span className="text-xs text-danger">{fieldError("vatExemptionReason")}</span>
@@ -300,7 +310,7 @@ export default function BusinessActivityForm({
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            Business description
+            {t("Business description")}
           </span>
           <textarea
             name="businessDescription"
@@ -312,7 +322,7 @@ export default function BusinessActivityForm({
             className={`${inputClasses} resize-none`}
           />
           <span className="text-xs text-muted">
-            A short description of what the organisation does.
+            {t("A short description of what the organisation does.")}
           </span>
           {fieldError("businessDescription") && (
             <span className="text-xs text-danger">{fieldError("businessDescription")}</span>
@@ -326,7 +336,7 @@ export default function BusinessActivityForm({
         href="/onboarding/company"
         className="self-start text-sm text-muted hover:underline"
       >
-        ← Back
+        ← {t("Back")}
       </Link>
     </form>
   );

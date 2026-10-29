@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus, firstIncompleteStep } from "@/lib/onboarding/onboarding";
 import { startAdyenVerification } from "./actions";
 import ContinueButton from "./continue-button";
+import { getT } from "@/lib/i18n-server";
 
 function ShieldIcon({ className }: { className?: string }) {
   return (
@@ -44,6 +45,7 @@ export default async function AdyenVerificationStep({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -65,10 +67,10 @@ export default async function AdyenVerificationStep({
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Verify your identity with Adyen
+            {t("Verify your identity with Adyen")}
           </h1>
           <p className="mt-2 text-sm text-muted">
-            Step 3 of 4 — you&apos;ve completed this step.
+            {t("Step 3 of 4 — you've completed this step.")}
           </p>
         </div>
 
@@ -77,24 +79,22 @@ export default async function AdyenVerificationStep({
             <CheckIcon className="h-5 w-5" />
           </div>
           <div>
-            <p className="font-semibold">You&apos;re verified with Adyen</p>
+            <p className="font-semibold">{t("You're verified with Adyen")}</p>
             <p className="mt-1 text-sm text-muted">
-              Your organisation went through Adyen&apos;s hosted verification.
-              If Adyen needs anything else from you, they&apos;ll ask —
-              otherwise there&apos;s nothing more to do here.
+              {t("Your organisation went through Adyen's hosted verification. If Adyen needs anything else from you, they'll ask — otherwise there's nothing more to do here.")}
             </p>
           </div>
         </div>
 
         <div className="flex items-center justify-between gap-3">
           <form action={startAdyenVerification}>
-            <ContinueButton variant="outline" idleLabel="Review with Adyen again" />
+            <ContinueButton variant="outline" idleLabel={t("Review with Adyen again")} pendingLabel={t("Redirecting…")} />
           </form>
           <Link
             href={next ? `/onboarding/${next}` : "/dashboard"}
             className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90"
           >
-            Continue
+            {t("Continue")}
           </Link>
         </div>
       </div>
@@ -105,48 +105,43 @@ export default async function AdyenVerificationStep({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Verify your identity with Adyen
+          {t("Verify your identity with Adyen")}
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 3 of 4 — to complete onboarding, we partner with{" "}
-          <span className="font-medium text-ink">Adyen</span> — the payments
-          infrastructure used by platforms like eBay, Uber, and Spotify — to
-          verify your organisation and keep payouts secure.
+          {t("Step 3 of 4 — to complete onboarding, we partner with Adyen — the payments infrastructure used by platforms like eBay, Uber, and Spotify — to verify your organisation and keep payouts secure.")}
         </p>
       </div>
 
       {error && (
         <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-          {error}
+          {t(error)}
         </p>
       )}
 
       <div className="rounded-xl border border-line bg-panel p-5">
         <div className="flex items-center gap-2.5">
           <ShieldIcon className="h-5 w-5 shrink-0 text-muted" />
-          <p className="font-semibold">What to expect</p>
+          <p className="font-semibold">{t("What to expect")}</p>
         </div>
         <p className="mt-1 text-sm text-muted">
-          You&apos;ll be redirected to a secure page hosted by Adyen, then
-          brought straight back here when you&apos;re done.
+          {t("You'll be redirected to a secure page hosted by Adyen, then brought straight back here when you're done.")}
         </p>
         <ul className="mt-4 flex flex-col gap-2.5 text-sm">
           {EXPECTATIONS.map((item) => (
             <li key={item} className="flex items-start gap-2.5">
               <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-              <span>{item}</span>
+              <span>{t(item)}</span>
             </li>
           ))}
         </ul>
       </div>
 
       <p className="text-xs text-muted">
-        Adyen only shares your verification status with us — never your
-        documents or bank details directly.
+        {t("Adyen only shares your verification status with us — never your documents or bank details directly.")}
       </p>
 
       <form action={startAdyenVerification}>
-        <ContinueButton />
+        <ContinueButton idleLabel={t("Continue to Adyen")} pendingLabel={t("Redirecting…")} />
       </form>
     </div>
   );

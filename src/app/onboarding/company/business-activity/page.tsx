@@ -9,6 +9,7 @@ import {
 } from "@/lib/adyen/legalEntity";
 import BusinessActivityForm from "./business-activity-form";
 import { reserveFundRangeFor } from "@/lib/onboarding/reserve-fund-ranges";
+import { getT } from "@/lib/i18n-server";
 
 export default async function BusinessActivityStep({
   searchParams,
@@ -16,6 +17,7 @@ export default async function BusinessActivityStep({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -66,16 +68,16 @@ export default async function BusinessActivityStep({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Business activity
+          {t("Business activity")}
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 4 — a few more details about {org.name}.
+          {t("Step 2 of 4 — a few more details about {name}.", { name: org.name })}
         </p>
       </div>
 
       {error && (
         <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-          {error}
+          {t(error)}
         </p>
       )}
 

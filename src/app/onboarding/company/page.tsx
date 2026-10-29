@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import CompanyForm from "./company-form";
+import { getT } from "@/lib/i18n-server";
 
 export default async function CompanyInfoStep({
   searchParams,
@@ -9,6 +10,7 @@ export default async function CompanyInfoStep({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -48,16 +50,16 @@ export default async function CompanyInfoStep({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Company information
+          {t("Company information")}
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 2 of 4 — tell us about the business you&apos;re setting up.
+          {t("Step 2 of 4 — tell us about the business you're setting up.")}
         </p>
       </div>
 
       {error && (
         <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-          {error}
+          {t(error)}
         </p>
       )}
 

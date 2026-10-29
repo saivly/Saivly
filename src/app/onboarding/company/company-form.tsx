@@ -9,6 +9,7 @@ import type { KvkSearchResult } from "@/lib/onboarding/kvk";
 import { inputClasses, CountrySelect } from "../form-controls";
 import { COMPANY_COUNTRIES, COMPANY_COUNTRY_CODES } from "@/lib/onboarding/countries";
 import { companyInfoSchema } from "@/lib/zod";
+import { useT } from "@/app/i18n-provider";
 
 type Existing = {
   companyCountry: string;
@@ -105,12 +106,13 @@ function parseStoredRelationshipTypes(stored: string): RelationshipValue[] {
 // before the first finishes could still double up that insert.
 function ContinueButton({ disabledUntilReady }: { disabledUntilReady: boolean }) {
   const { pending } = useFormStatus();
+  const { t } = useT();
   return (
     <button
       disabled={pending || disabledUntilReady}
       className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
     >
-      {pending ? "Saving…" : "Continue"}
+      {pending ? t("Saving…") : t("Continue")}
     </button>
   );
 }
@@ -125,6 +127,7 @@ export default function CompanyForm({
   /** Null until this organisation has actually been created (first save). */
   organisationId: string | null;
 }) {
+  const { t } = useT();
   // Clamp to NL/GB/US: a pre-existing org saved before that restriction
   // existed could carry any country code, which wouldn't match any option
   // in the now-restricted CountrySelect below.
@@ -189,7 +192,8 @@ export default function CompanyForm({
   const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
   function fieldError(field: keyof typeof fieldErrors) {
     if (!touched[field]) return undefined;
-    return fieldErrors[field]?.[0];
+    const message = fieldErrors[field]?.[0];
+    return message && t(message);
   }
 
   useEffect(() => {
@@ -225,10 +229,10 @@ export default function CompanyForm({
       const found = await searchKvk(trimmed);
       setResults(found);
       if (found.length === 0) {
-        setKvkError("No matches. Try the KVK number instead.");
+        setKvkError(t("No matches. Try the KVK number instead."));
       }
     } catch {
-      setKvkError("KVK lookup is temporarily unavailable — try again in a moment.");
+      setKvkError(t("KVK lookup is temporarily unavailable — try again in a moment."));
     } finally {
       setSearching(false);
     }
@@ -240,7 +244,7 @@ export default function CompanyForm({
     try {
       const found = await getKvkDetails(kvkNumber);
       if (!found) {
-        setKvkError("Couldn't load that company's details — try again.");
+        setKvkError(t("Couldn't load that company's details — try again."));
         return;
       }
       setFields({
@@ -254,7 +258,7 @@ export default function CompanyForm({
       setResults(null);
       setQuery("");
     } catch {
-      setKvkError("Couldn't load that company's details — try again.");
+      setKvkError(t("Couldn't load that company's details — try again."));
     } finally {
       setSearching(false);
     }
@@ -274,7 +278,7 @@ export default function CompanyForm({
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5">
           <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            Country of registration
+            {t("Country of registration")}
           </span>
           <CountrySelect
             name="companyCountry"
@@ -287,11 +291,11 @@ export default function CompanyForm({
 
       <div
         role="group"
-        aria-label="Your relationship to the company (multiple options possible)"
+        aria-label={t("Your relationship to the company (multiple options possible)")}
         className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm"
       >
         <p className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
-          Your relationship to the company (multiple options possible)
+          {t("Your relationship to the company (multiple options possible)")}
         </p>
         <div className="flex flex-col gap-2">
           {RELATIONSHIP_OPTIONS.map((o) => (
@@ -306,7 +310,7 @@ export default function CompanyForm({
                 aria-invalid={!!fieldError("relationshipType")}
                 className="h-4 w-4 shrink-0 rounded border-line accent-accent"
               />
-              {o.label}
+              {t(o.label)}
             </label>
           ))}
         </div>
@@ -318,13 +322,11 @@ export default function CompanyForm({
       {isNL && (
         <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3">
           <p className="mb-2 text-xs font-medium tracking-wide text-muted uppercase">
-            Find your company in the KVK register
+            {t("Find your company in the KVK register")}
           </p>
           {usingTestData && (
             <p className="rounded-md border border-line bg-surface px-2 py-1 text-xs text-muted">
-              Dev mode: searching KVK&apos;s sandbox test data (fictional
-              companies), not the live register. Set KVK_API_KEY to search
-              real companies.
+              {t("Dev mode: searching KVK's sandbox test data (fictional companies), not the live register. Set KVK_API_KEY to search real companies.")}
             </p>
           )}
           <div className="flex gap-2">
@@ -338,7 +340,7 @@ export default function CompanyForm({
                   runSearch();
                 }
               }}
-              placeholder="Company name or KVK number"
+              placeholder={t("Company name or KVK number")}
               className={`${inputClasses} flex-1`}
             />
             <button
@@ -347,7 +349,7 @@ export default function CompanyForm({
               disabled={searching || !query.trim()}
               className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-surface disabled:opacity-50"
             >
-              {searching ? "Searching…" : "Search"}
+              {searching ? t("Searching…") : t("Search")}
             </button>
           </div>
 
@@ -389,7 +391,7 @@ export default function CompanyForm({
 
       {hasSelectedCompany ? (
         <div className="flex flex-col gap-3">
-          <p className="text-base font-semibold">Company details</p>
+          <p className="text-base font-semibold">{t("Company details")}</p>
           <div className="rounded-xl border border-line bg-panel p-5">
             <div className="flex items-center gap-2.5">
               <BuildingIcon className="h-5 w-5 shrink-0 text-muted" />
@@ -398,19 +400,19 @@ export default function CompanyForm({
 
             <dl className="mt-4 grid grid-cols-[20px_auto_1fr] items-start gap-x-2.5 gap-y-3 text-sm">
               <HashIcon className="h-4 w-4 text-muted" />
-              <dt className="text-muted">KVK number</dt>
+              <dt className="text-muted">{t("KVK number")}</dt>
               <dd className="min-w-0">{fields.kvkNumber}</dd>
 
               {details.legalForm && (
                 <>
                   <ScaleIcon className="h-4 w-4 text-muted" />
-                  <dt className="text-muted">Legal form</dt>
+                  <dt className="text-muted">{t("Legal form")}</dt>
                   <dd className="min-w-0">{details.legalForm}</dd>
                 </>
               )}
 
               <PinIcon className="h-4 w-4 text-muted" />
-              <dt className="text-muted">Address</dt>
+              <dt className="text-muted">{t("Address")}</dt>
               <dd className="min-w-0">
                 {[
                   fields.companyStreet,
@@ -425,7 +427,7 @@ export default function CompanyForm({
               {details.mainActivity && (
                 <>
                   <BriefcaseIcon className="h-4 w-4 text-muted" />
-                  <dt className="text-muted">Main activity</dt>
+                  <dt className="text-muted">{t("Main activity")}</dt>
                   <dd className="min-w-0">{details.mainActivity}</dd>
                 </>
               )}
@@ -436,7 +438,7 @@ export default function CompanyForm({
               onClick={changeCompany}
               className="mt-4 text-sm text-accent hover:underline"
             >
-              Change company
+              {t("Change company")}
             </button>
           </div>
 
@@ -455,7 +457,7 @@ export default function CompanyForm({
       ) : (
         <>
           <label className="flex flex-col gap-1.5 text-sm">
-            Company name
+            {t("Company name")}
             <input
               type="text"
               name="companyName"
@@ -472,7 +474,7 @@ export default function CompanyForm({
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
-            Street address
+            {t("Street address")}
             <input
               type="text"
               name="companyStreet"
@@ -490,7 +492,7 @@ export default function CompanyForm({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5 text-sm">
-              Postal code
+              {t("Postal code")}
               <input
                 type="text"
                 name="companyPostalCode"
@@ -506,7 +508,7 @@ export default function CompanyForm({
               )}
             </label>
             <label className="flex flex-col gap-1.5 text-sm">
-              City
+              {t("City")}
               <input
                 type="text"
                 name="companyCity"
@@ -543,7 +545,7 @@ export default function CompanyForm({
           href="/onboarding/organisation"
           className="self-start text-sm text-muted hover:underline"
         >
-          ← Back
+          ← {t("Back")}
         </Link>
       )}
     </form>
