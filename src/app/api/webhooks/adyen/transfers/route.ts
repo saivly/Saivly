@@ -1,4 +1,5 @@
 import { after, NextResponse } from "next/server";
+import { safeWebhookHandler } from "@/lib/adyen/webhooks/safe-handler";
 import { adyenWebhookBasicAuth, adyenWebhookHmacKey } from "@/lib/adyen/config";
 import { verifyBasicAuth } from "@/lib/adyen/webhooks/basic-auth";
 import { verifyHeaderHmac } from "@/lib/adyen/webhooks/hmac";
@@ -21,7 +22,7 @@ import {
  * module doc on processTransferWebhookEvent for why processing is split
  * out from the response.
  */
-export async function POST(request: Request) {
+async function handle(request: Request): Promise<Response> {
   const hmacKey = adyenWebhookHmacKey("transfers");
   if (!hmacKey) {
     console.error("[adyen:webhooks:transfers] HMAC key not set — rejecting notification.");
@@ -70,3 +71,5 @@ export async function POST(request: Request) {
 
   return new NextResponse("[accepted]", { status: 200 });
 }
+
+export const POST = safeWebhookHandler("transfers", handle);

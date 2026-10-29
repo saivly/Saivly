@@ -12,7 +12,7 @@ export function createAdminClient() {
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   if (!secretKey) {
     throw new Error(
-      "SUPABASE_SECRET_KEY is not set — required for MFA recovery."
+      "SUPABASE_SECRET_KEY is not set — required for Adyen webhooks, reports and MFA recovery."
     );
   }
   return createSupabaseClient<Database>(
