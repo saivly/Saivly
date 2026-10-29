@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   const supabase = await createClient();
   await supabase.auth.signOut();
-  const res = NextResponse.redirect(new URL("/login", request.url), {
+  const res = NextResponse.redirect(new URL("/login?signed_out=1", request.url), {
     status: 302,
   });
   // Not strictly required — the proxy re-stamps/re-checks these fresh on

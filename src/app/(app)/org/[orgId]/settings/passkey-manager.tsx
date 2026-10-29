@@ -74,10 +74,11 @@ export default function PasskeyManager() {
   }
 
   return (
-    <section className="rounded-xl border border-line bg-panel p-5">
-      <h2 className="mb-4 text-sm font-medium tracking-wide text-muted uppercase">
-        Passkeys
-      </h2>
+    <section className="rounded-xl border border-db-border bg-white p-5 sm:p-6">
+      <h2 className="mb-1 text-base font-semibold text-db-ink">Passkeys</h2>
+      <p className="mb-4 text-sm text-db-muted">
+        Sign in with your fingerprint, face or device PIN instead of a code.
+      </p>
 
       {error && (
         <p className="mb-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
@@ -111,7 +112,7 @@ export default function PasskeyManager() {
       <button
         onClick={addPasskey}
         disabled={busy}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90 disabled:opacity-50"
+        className="rounded-lg bg-db-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-db-primary-hover disabled:opacity-50"
       >
         {busy ? "Waiting for browser…" : "Add a passkey"}
       </button>

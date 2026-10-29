@@ -35,3 +35,77 @@ html.dark {
 body {
   @apply bg-surface text-ink antialiased;
 }
+
+/* ------------------------------------------------------------------
+   Dashboard (/org/[orgId]/…) design tokens. Utility names are prefixed
+   so they never collide with the onboarding tokens above; `.dash` (set
+   on the org layout's root) also re-points the shared tokens (ink,
+   line, accent, …) so existing components rendered inside the
+   dashboard — the invoice upload form, passkey manager — match it.
+   The dashboard design is light-only.
+   ------------------------------------------------------------------ */
+@theme {
+  --color-db-ink: #16202e;
+  --color-db-text: #475569;
+  --color-db-muted: #64748b;
+  --color-db-faint: #94a3b8;
+  --color-db-page: #f5f7fa;
+  --color-db-subtle: #f8fafc;
+  --color-db-border: #e5e9f0;
+  --color-db-row: #f0f2f6;
+  --color-db-input: #d9dfe8;
+  --color-db-segment: #ebeff5;
+
+  --color-db-side: #0f1b2d;
+  --color-db-side-line: #1e2c42;
+  --color-db-side-active: #1e2e48;
+  --color-db-side-text: #b4c0d2;
+  --color-db-side-muted: #7f8ea6;
+  --color-db-side-label: #64748b;
+  --color-db-side-avatar: #2a3b55;
+
+  --color-db-primary: #2f6fdb;
+  --color-db-primary-hover: #1f55b3;
+  --color-db-bright: #3b82f6;
+  --color-db-light: #60a5fa;
+  --color-db-tint: #e8f0fd;
+  --color-db-selected: #f3f7fe;
+  --color-db-bar-out: #bfd3f5;
+
+  --color-db-success: #0f7a55;
+  --color-db-success-tint: #e7f6ef;
+  --color-db-success-dot: #10b981;
+  --color-db-warning: #9a5b00;
+  --color-db-warning-tint: #fdf3e1;
+  --color-db-danger: #b42318;
+  --color-db-danger-tint: #fdecec;
+  --color-db-violet: #6d4fc2;
+  --color-db-violet-tint: #f0ecfb;
+  --color-db-toggle-off: #cbd5e1;
+}
+
+.dash {
+  color-scheme: light;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+  font-family: var(--font-sans);
+  background: var(--color-db-page);
+  color: var(--color-db-ink);
+
+  --color-surface: #f5f7fa;
+  --color-panel: #ffffff;
+  --color-line: #e5e9f0;
+  --color-ink: #16202e;
+  --color-muted: #64748b;
+  --color-accent: #2f6fdb;
+  --color-accent-soft: #e8f0fd;
+  --color-on-accent: #ffffff;
+  --color-danger: #b42318;
+  --color-success: #0f7a55;
+}
+
+.material-symbols-rounded {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  line-height: 1;
+  user-select: none;
+}

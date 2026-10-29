@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { Card, CardTitle, PageHeader } from "@/components/dashboard/ui";
+import { getT } from "@/lib/i18n-server";
 import UploadInvoiceForm from "./upload-invoice-form";
 import { deleteInvoice } from "./actions";
 
@@ -27,7 +29,7 @@ export default async function InvoicesPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const supabase = await createClient();
+  const [supabase, t] = await Promise.all([createClient(), getT()]);
 
   // RLS (invoices_select_member) already scopes this to the current
   // user's org, but we filter explicitly anyway — this route only ever
@@ -53,17 +55,14 @@ export default async function InvoicesPage({
   );
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-16">
-      <header>
-        <h1 className="text-2xl font-semibold">Invoices</h1>
-      </header>
+    <>
+      <PageHeader title={t("Invoices")} subtitle={t("Upload and keep track of your invoices.")} />
 
+      <div className="flex max-w-[720px] flex-col gap-6">
       <UploadInvoiceForm orgId={orgId} />
 
-      <section className="rounded-xl border border-line bg-panel p-5">
-        <h2 className="mb-4 text-sm font-medium tracking-wide text-muted uppercase">
-          All invoices
-        </h2>
+      <Card>
+        <CardTitle>{t("All invoices")}</CardTitle>
 
         <ul className="flex flex-col gap-2">
           {(invoices ?? []).map((invoice) => {
@@ -128,11 +127,12 @@ export default async function InvoicesPage({
           })}
           {(invoices ?? []).length === 0 && (
             <li className="text-sm text-muted">
-              No invoices yet. Upload one above.
+              {t("No invoices yet. Upload one above.")}
             </li>
           )}
         </ul>
-      </section>
-    </div>
+      </Card>
+      </div>
+    </>
   );
 }

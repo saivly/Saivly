@@ -2,160 +2,59 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { useT } from "@/app/i18n-provider";
+import { Icon, buttonStyles } from "@/components/dashboard/ui";
 
-const NAV_ITEMS: { segment: string; label: string; icon: ReactNode }[] = [
-  {
-    segment: "dashboard",
-    label: "Dashboard",
-    icon: (
-      <path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 011-1h0a1 1 0 011 1v4a1 1 0 001 1h4a1 1 0 001-1V10" />
-    ),
-  },
-  {
-    segment: "payments",
-    label: "Payments",
-    icon: (
-      <>
-        <rect x="3" y="5" width="18" height="14" rx="2" />
-        <path d="M3 10h18" />
-      </>
-    ),
-  },
-  {
-    segment: "invoices",
-    label: "Invoices",
-    icon: (
-      <>
-        <path d="M6 3h12a1 1 0 011 1v16l-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1V4a1 1 0 011-1z" />
-        <path d="M8 8h8M8 12h8M8 16h5" />
-      </>
-    ),
-  },
-  {
-    segment: "accounts",
-    label: "Accounts",
-    icon: (
-      <>
-        <path d="M3 10l9-6 9 6" />
-        <path d="M5 10v9M9 10v9M15 10v9M19 10v9" />
-        <path d="M3 21h18" />
-      </>
-    ),
-  },
-  {
-    segment: "analytics",
-    label: "Analytics",
-    icon: (
-      <>
-        <path d="M4 20V10M12 20V4M20 20v-7" />
-      </>
-    ),
-  },
-  {
-    segment: "users",
-    label: "Users",
-    icon: (
-      <>
-        <circle cx="9" cy="8" r="3" />
-        <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
-        <path d="M16 5.5a3 3 0 010 5.9" />
-        <path d="M21 20c0-2.8-1.9-5.1-4.5-5.8" />
-      </>
-    ),
-  },
-  {
-    segment: "reports",
-    label: "Reports",
-    icon: (
-      <>
-        <path d="M7 3h7l4 4v14a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
-        <path d="M14 3v4a1 1 0 001 1h4" />
-        <path d="M9 13h6M9 17h6" />
-      </>
-    ),
-  },
-  {
-    segment: "settings",
-    label: "Settings",
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1.04-1.56 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.56-1.04H3a2 2 0 110-4h.09a1.7 1.7 0 001.56-1.04 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9a1.7 1.7 0 001.04-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9a1.7 1.7 0 001.56 1.04H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.56 1.04z" />
-      </>
-    ),
-  },
+const NAV_ITEMS: { segment: string; label: string; icon: string }[] = [
+  { segment: "dashboard", label: "Overview", icon: "space_dashboard" },
+  { segment: "accounts", label: "Accounts", icon: "account_balance_wallet" },
+  { segment: "payments", label: "Payments & payouts", icon: "swap_horiz" },
+  { segment: "invoices", label: "Invoices", icon: "request_quote" },
+  { segment: "reports", label: "Reports", icon: "bar_chart" },
+  { segment: "settings", label: "Settings", icon: "settings" },
 ];
 
-function NavIcon({ children }: { children: ReactNode }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5 shrink-0"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
+function LogoutDialog({ orgName, onCancel }: { orgName: string; onCancel: () => void }) {
+  const { t } = useT();
 
-function NavLinks({
-  orgBase,
-  pathname,
-  onNavigate,
-}: {
-  orgBase: string;
-  pathname: string;
-  onNavigate?: () => void;
-}) {
-  return (
-    <nav className="flex flex-1 flex-col gap-1 px-3">
-      {NAV_ITEMS.map((item) => {
-        const href = `${orgBase}/${item.segment}`;
-        const active = pathname === href || pathname.startsWith(href + "/");
-        return (
-          <Link
-            key={item.segment}
-            href={href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              active
-                ? "border border-white/15 bg-white/10 text-white"
-                : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            <NavIcon>{item.icon}</NavIcon>
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
 
-/** Building/landmark glyph next to the organisation name. */
-function OrgIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4 shrink-0"
-      aria-hidden="true"
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(15,27,45,.45)] p-4"
+      onClick={onCancel}
     >
-      <path d="M4 21V8l8-5 8 5v13" />
-      <path d="M4 21h16" />
-      <path d="M9 21v-6h6v6" />
-    </svg>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-title"
+        className="w-full max-w-[380px] rounded-[14px] bg-white p-7 text-db-ink shadow-[0_20px_50px_-10px_rgba(15,27,45,.35)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="mb-4 inline-flex rounded-lg bg-db-tint p-2 text-db-primary">
+          <Icon name="logout" size={22} />
+        </span>
+        <h2 id="logout-title" className="text-lg font-bold">
+          {t("Log out of {org}?", { org: orgName })}
+        </h2>
+        <p className="mt-1.5 text-sm text-db-muted">
+          {t("You'll need to sign in again to access your accounts.")}
+        </p>
+        <form action="/auth/signout" method="post" className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={onCancel} className={`${buttonStyles.secondary} text-sm`} autoFocus>
+            {t("Cancel")}
+          </button>
+          <button type="submit" className={buttonStyles.primary}>
+            {t("Log out")}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -164,106 +63,115 @@ export default function Sidebar({
   orgName,
   userName,
   userEmail,
+  initials,
+  roleLabel,
 }: {
   orgId: string;
   orgName: string;
   userName?: string | null;
   userEmail: string;
+  initials: string;
+  roleLabel: string;
 }) {
+  const { t } = useT();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const orgBase = `/org/${orgId}`;
+
+  const brand = (
+    <div className="flex items-center gap-3">
+      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-db-bright text-white">
+        <Icon name="account_balance" size={20} />
+      </span>
+      <span className="min-w-0 truncate text-base font-bold tracking-[.02em] text-white" title={orgName}>
+        {orgName}
+      </span>
+    </div>
+  );
 
   return (
     <>
-      {/* Mobile top bar */}
-      <div className="flex items-center justify-between gap-3 border-b border-line bg-panel px-4 py-3 md:hidden">
-        <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
-          <OrgIcon />
-          <span className="truncate">{orgName}</span>
-        </span>
+      {/* Below md the sidebar becomes a drawer behind this bar. */}
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 bg-db-side px-4 py-3 md:hidden">
+        {brand}
         <button
           onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="shrink-0 rounded-lg border border-line p-2 text-ink hover:bg-accent-soft"
+          aria-label={t("Open menu")}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-db-side-text hover:bg-db-side-active hover:text-white"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            className="h-5 w-5"
-          >
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Icon name="menu" size={22} />
         </button>
       </div>
 
-      {/* Mobile drawer overlay */}
       {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
+        <div className="fixed inset-0 z-40 bg-[rgba(15,27,45,.45)] md:hidden" onClick={() => setOpen(false)} />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 -translate-x-full flex-col bg-accent text-white transition-transform duration-200 md:sticky md:top-0 md:h-dvh md:translate-x-0 ${
-          open ? "translate-x-0" : ""
+        className={`fixed inset-y-0 left-0 z-50 flex w-[248px] shrink-0 flex-col bg-db-side transition-transform duration-200 md:sticky md:top-0 md:h-dvh md:translate-x-0 ${
+          open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-5 pt-6 pb-4">
-          <span className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
-            Saivly
-          </span>
+        <div className="flex items-center justify-between border-b border-db-side-line px-5 py-[22px]">
+          {brand}
           <button
             onClick={() => setOpen(false)}
-            aria-label="Close menu"
-            className="rounded-lg p-1 text-zinc-400 hover:text-white md:hidden"
+            aria-label={t("Close menu")}
+            className="rounded-lg p-1 text-db-side-text hover:text-white md:hidden"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              className="h-5 w-5"
-            >
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <Icon name="close" size={20} />
           </button>
         </div>
 
-        <div className="mx-3 mb-4 flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5">
-          <OrgIcon />
-          <span className="truncate text-sm font-medium text-white">
-            {orgName}
+        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
+          <span className="px-3 pb-2 text-[11px] font-semibold tracking-[.08em] text-db-side-label uppercase">
+            {t("Menu")}
           </span>
-        </div>
+          {NAV_ITEMS.map((item) => {
+            const href = `${orgBase}/${item.segment}`;
+            const active = pathname === href || pathname.startsWith(href + "/");
+            return (
+              <Link
+                key={item.segment}
+                href={href}
+                onClick={() => setOpen(false)}
+                aria-current={active ? "page" : undefined}
+                className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  active ? "bg-db-side-active text-white" : "text-db-side-text hover:text-white"
+                }`}
+              >
+                <Icon
+                  name={item.icon}
+                  size={20}
+                  className={active ? "text-db-light" : "text-db-side-muted group-hover:text-white"}
+                />
+                {t(item.label)}
+              </Link>
+            );
+          })}
+        </nav>
 
-        <NavLinks orgBase={orgBase} pathname={pathname} onNavigate={() => setOpen(false)} />
-
-        <div className="mt-auto border-t border-white/10 p-3">
-          <div className="mb-2 truncate px-2 text-xs text-zinc-400">
-            <span className="block truncate font-medium text-zinc-200">
-              {userName || "Account"}
-            </span>
-            <span className="block truncate">{userEmail}</span>
-          </div>
-          <form action="/auth/signout" method="post">
-            <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-400 hover:bg-white/5 hover:text-white">
-              <NavIcon>
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-                <path d="M16 17l5-5-5-5" />
-                <path d="M21 12H9" />
-              </NavIcon>
-              Log off
-            </button>
-          </form>
+        <div className="flex items-center gap-3 border-t border-db-side-line px-5 py-4">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-db-side-avatar text-[13px] font-semibold text-white">
+            {initials}
+          </span>
+          <span className="min-w-0 flex-1" title={userEmail}>
+            <span className="block truncate text-[13px] font-semibold text-white">{userName || userEmail}</span>
+            <span className="block truncate text-xs text-db-side-muted">{roleLabel}</span>
+          </span>
+          <button
+            onClick={() => setConfirmLogout(true)}
+            aria-label={t("Log out")}
+            title={t("Log out")}
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg text-db-side-text hover:bg-db-side-active hover:text-white"
+          >
+            <Icon name="logout" size={20} />
+          </button>
         </div>
       </aside>
+
+      {confirmLogout && <LogoutDialog orgName={orgName} onCancel={() => setConfirmLogout(false)} />}
     </>
   );
 }

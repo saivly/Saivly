@@ -39,9 +39,11 @@ export default function AuthPanels({
   signupError,
   next,
   sent,
+  signedOut,
 }: {
   initialMode: Mode;
   loginError?: string;
+  signedOut?: boolean;
   signupError?: string;
   next?: string;
   sent?: boolean;
@@ -348,6 +350,12 @@ export default function AuthPanels({
               <div className="h-px flex-1 bg-line" />
             </div>
 
+
+            {signedOut && !loginError && (
+              <p className="mt-6 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
+                You&apos;ve been logged out.
+              </p>
+            )}
 
             {loginError && (
               <p className="mt-6 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">

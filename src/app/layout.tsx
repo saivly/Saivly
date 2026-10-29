@@ -15,7 +15,10 @@ export default async function RootLayout({
   // Read server-side so the right language and theme are there on first paint.
   const [locale, theme] = await Promise.all([getLocale(), getTheme()]);
   return (
-    <html lang={locale} className={theme === "dark" ? "dark" : undefined}>
+    // suppressHydrationWarning: browser extensions (password/passkey
+    // managers) add attributes to <html> before React loads. Only affects
+    // this element's own attributes, not its children.
+    <html lang={locale} className={theme === "dark" ? "dark" : undefined} suppressHydrationWarning>
       <body className="min-h-dvh">
         <I18nProvider locale={locale}>{children}</I18nProvider>
       </body>
