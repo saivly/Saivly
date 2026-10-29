@@ -152,7 +152,10 @@ export async function updateSession(request: NextRequest) {
     const nowSeconds = Math.floor(Date.now() / 1000);
 
     if (startedAt && nowSeconds - startedAt > SESSION_MAX_AGE_SECONDS) {
-      await supabase.auth.signOut(); // invalidates the refresh token too, not just this cookie
+      // scope "local": revoke only this browser's refresh token. The default
+      // ("global") would also kill the user's other devices, which then hit
+      // "Refresh Token Not Found" on their next request.
+      await supabase.auth.signOut({ scope: "local" });
       const res = redirectTo(request, "/login", supabaseResponse);
       res.cookies.delete(SESSION_STARTED_COOKIE);
       res.cookies.delete(EMAIL_MFA_VERIFIED_COOKIE);
@@ -195,8 +198,17 @@ export async function updateSession(request: NextRequest) {
   //      it has one, otherwise the emailed-code fallback.
   //      (/auth/* is public, so all of these pages stay reachable.)
   if (user && !isPublic(pathname)) {
-    const { data: aal } =
-      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    // Pass the JWT so the factor list comes from the Auth server. Without it,
+    // Supabase reads `user.factors` from the cookie, which isn't signed:
+    // a user could edit it to hide their TOTP factor and skip step 2.
+    // (Reading session.access_token is fine; getClaims() above already
+    // verified and, if needed, refreshed it.)
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(
+      session?.access_token
+    );
 
     if (aal?.nextLevel === "aal2") {
       // 2. Verified authenticator app -> its per-session challenge is

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useT } from "@/app/i18n-provider";
 import { Icon, buttonStyles } from "@/components/dashboard/ui";
+import { Logo } from "@/components/logo";
 
 const NAV_ITEMS: { segment: string; label: string; icon: string }[] = [
   { segment: "dashboard", label: "Overview", icon: "space_dashboard" },
@@ -80,11 +81,9 @@ export default function Sidebar({
   const orgBase = `/org/${orgId}`;
 
   const brand = (
-    <div className="flex items-center gap-3">
-      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-db-bright text-white">
-        <Icon name="account_balance" size={20} />
-      </span>
-      <span className="min-w-0 truncate text-base font-bold tracking-[.02em] text-white" title={orgName}>
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <Logo size={24} markSize={28} tone="reversed" />
+      <span className="truncate text-xs font-medium text-db-side-muted" title={orgName}>
         {orgName}
       </span>
     </div>

@@ -15,8 +15,9 @@ export const config = {
     /*
      * Run on everything except static assets:
      * - _next/static, _next/image, favicon
-     * - common image/font files
+     * - common image/font files, icons and the web manifest
+     *   (browsers fetch these without a session; they must not redirect)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

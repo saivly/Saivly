@@ -3,7 +3,7 @@
 import type { Locale, Theme } from "@/lib/i18n";
 import { useT } from "@/app/i18n-provider";
 import { LanguageMenu, ThemeToggle } from "@/components/preferences";
-import { Icon } from "@/components/dashboard/ui";
+import { Logo } from "@/components/logo";
 
 export default function OnboardingHeader({
   locale,
@@ -16,13 +16,7 @@ export default function OnboardingHeader({
   return (
     <header className="border-b border-line bg-panel">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-6">
-        {/* Same brand mark as the dashboard sidebar. */}
-        <span className="mr-auto flex items-center gap-3">
-          <span className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-db-bright text-white">
-            <Icon name="account_balance" size={20} />
-          </span>
-          <span className="text-base font-bold tracking-[.02em] text-ink">Saivly</span>
-        </span>
+        <Logo size={20} markSize={24} className="mr-auto" />
         <LanguageMenu locale={locale} label={t("Language")} />
         <ThemeToggle initialTheme={initialTheme} />
         <form action="/auth/signout" method="post">

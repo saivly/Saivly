@@ -39,7 +39,7 @@ export async function login(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(msg)}`);
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: signIn, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -61,8 +61,11 @@ export async function login(formData: FormData) {
   // factor, that factor's per-session challenge is still mandatory —
   // route straight to it instead of bouncing off the proxy. A user with
   // no factor at all skips this: MFA is opt-in, not required to proceed.
-  const { data: aal } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  // Passing the JWT makes Supabase fetch the factor list from the Auth
+  // server instead of reading it from the (unsigned) cookie copy.
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(
+    signIn.session?.access_token
+  );
   const next = safeNext(formData.get("next") as string);
 
   if (aal?.currentLevel !== "aal2" && aal?.nextLevel === "aal2") {
