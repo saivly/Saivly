@@ -25,6 +25,18 @@ const jetBrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://saivly.com";
+
+// Tells search engines which image is the Saivly logo (Google shows it in
+// results). Files in public/brand are the public, stable brand URLs.
+const ORGANIZATION_JSON_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Saivly",
+  url: SITE_URL,
+  logo: `${SITE_URL}/brand/saivly-mark.png`,
+}).replace(/</g, "\\u003c");
+
 // Material Symbols, limited to the glyphs the app uses (see icons.ts).
 const ICON_FONT_URL = `https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&icon_names=${ICON_NAMES.join(",")}&display=block`;
 
@@ -44,6 +56,10 @@ export default async function RootLayout({
     >
       <head>
         <link rel="stylesheet" href={ICON_FONT_URL} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: ORGANIZATION_JSON_LD }}
+        />
       </head>
       <body className="min-h-dvh">
         <I18nProvider locale={locale}>{children}</I18nProvider>
