@@ -78,7 +78,7 @@ export default async function OrganisationChoiceStep() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[28px] leading-tight font-bold">
           {t("Do you want to create a new organisation?")}
         </h1>
         <p className="mt-2 text-sm text-muted">
@@ -91,9 +91,9 @@ export default async function OrganisationChoiceStep() {
           <Link
             key={href}
             href={href}
-            className="flex items-start gap-4 rounded-xl border border-line p-4 transition-colors hover:border-ink hover:bg-accent-soft"
+            className="flex items-start gap-4 rounded-xl border border-line p-4 transition-colors hover:border-accent hover:bg-accent-soft"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-ink text-on-accent">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
               <Icon className="h-5 w-5" />
             </div>
             <div>

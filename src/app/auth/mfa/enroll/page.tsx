@@ -109,7 +109,7 @@ export default function EnrollMfaPage() {
     return (
       <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
         <div>
-          <h1 className="text-2xl font-semibold">Save your backup codes</h1>
+          <h1 className="text-[28px] leading-tight font-bold">Save your backup codes</h1>
           <p className="mt-1 text-sm text-muted">
             Each code works once if you lose your authenticator. They
             won&apos;t be shown again — store them somewhere safe.
@@ -144,7 +144,7 @@ export default function EnrollMfaPage() {
 
         <button
           onClick={finish}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:bg-db-primary-hover"
         >
           I saved them — continue
         </button>
@@ -156,7 +156,7 @@ export default function EnrollMfaPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
       <div>
-        <h1 className="text-2xl font-semibold">Set up an authenticator app</h1>
+        <h1 className="text-[28px] leading-tight font-bold">Set up an authenticator app</h1>
         <p className="mt-1 text-sm text-muted">
           Scan the QR code with an authenticator app (1Password, Google
           Authenticator, Aegis…) — or, if you&apos;re setting this up on the
@@ -229,7 +229,7 @@ export default function EnrollMfaPage() {
             />
             <button
               disabled={busy || code.length !== 6}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:bg-db-primary-hover disabled:opacity-50"
             >
               {busy ? "Verifying…" : "Verify and continue"}
             </button>

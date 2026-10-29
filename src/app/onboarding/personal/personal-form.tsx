@@ -217,7 +217,7 @@ function ContinueButton({ formValid }: { formValid: boolean }) {
   return (
     <button
       disabled={pending || !formValid}
-      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover disabled:opacity-50"
     >
       {pending ? t("Saving…") : t("Continue")}
     </button>

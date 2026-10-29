@@ -148,7 +148,7 @@ export default function AuthPanels({
   if (sent) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[28px] leading-tight font-bold">
           Check your email
         </h1>
         <p className="text-muted">
@@ -176,9 +176,9 @@ export default function AuthPanels({
   const linkClasses =
     "font-medium text-ink underline decoration-line underline-offset-4 transition-colors hover:decoration-ink";
   const inputClasses =
-    "rounded-lg border border-line bg-panel px-3 py-2.5 outline-none transition-colors focus:border-ink";
+    "rounded-lg border border-line bg-panel px-3 py-2.5 outline-none transition-colors focus:border-accent";
   const loginInputClasses =
-    "rounded-xl border border-line bg-panel px-4 py-3 outline-none transition-colors focus:border-ink";
+    "rounded-xl border border-line bg-panel px-4 py-3 outline-none transition-colors focus:border-accent";
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-surface">
@@ -190,7 +190,7 @@ export default function AuthPanels({
         >
           <div className="mx-auto w-full max-w-sm">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">
+              <h1 className="text-[28px] leading-tight font-bold">
                 Create account
               </h1>
               <p className="mt-3 text-sm text-muted">
@@ -325,7 +325,7 @@ export default function AuthPanels({
           inert={!loginActive}
         >
           <div className="mx-auto w-full max-w-sm">
-            <h1 className="text-2xl font-semibold tracking-tight py-3">Login</h1>
+            <h1 className="text-[28px] leading-tight font-bold py-3">Login</h1>
 
             {passkeyError && (
               <p className="mt-5 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
@@ -411,7 +411,7 @@ export default function AuthPanels({
                 formAction={login}
                 disabled={!loginResult.success}
                 tabIndex={loginActive ? undefined : -1}
-                className="mt-1 rounded-xl bg-accent px-4 py-3 text-sm font-medium text-on-accent transition-opacity hover:opacity-85 disabled:opacity-50"
+                className="mt-1 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover disabled:opacity-50"
               >
                 Sign in
               </button>
@@ -462,7 +462,7 @@ function SignupSubmitButton({
       formAction={signup}
       disabled={pending || !formValid}
       tabIndex={tabIndex}
-      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-85 disabled:opacity-50"
+      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover disabled:opacity-50"
     >
       {pending ? "Creating account…" : "Create account"}
     </button>

@@ -67,7 +67,7 @@ export default async function BusinessActivityStep({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[28px] leading-tight font-bold">
           {t("Business activity")}
         </h1>
         <p className="mt-2 text-sm text-muted">

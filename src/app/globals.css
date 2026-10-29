@@ -4,58 +4,48 @@
    app/layout.tsx), not the OS setting. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --color-surface: #fafafa;
-  --color-panel: #ffffff;
-  --color-line: #e4e4e7;
-  --color-ink: #111113;
-  --color-muted: #71717a;
-  --color-accent: #18181b;
-  --color-accent-soft: #f4f4f5;
-  /* Text/icons placed on bg-accent or bg-ink. */
-  --color-on-accent: #ffffff;
-  --color-danger: #dc2626;
-  --color-success: #16a34a;
-}
-
-html.dark {
-  color-scheme: dark;
-  --color-surface: #09090b;
-  --color-panel: #18181b;
-  --color-line: #27272a;
-  --color-ink: #fafafa;
-  --color-muted: #a1a1aa;
-  --color-accent: #fafafa;
-  --color-accent-soft: #27272a;
-  --color-on-accent: #18181b;
-  --color-danger: #f87171;
-  --color-success: #22c55e;
-}
-
-body {
-  @apply bg-surface text-ink antialiased;
-}
-
 /* ------------------------------------------------------------------
-   Dashboard (/org/[orgId]/…) design tokens. Utility names are prefixed
-   so they never collide with the onboarding tokens above; `.dash` (set
-   on the org layout's root) also re-points the shared tokens (ink,
-   line, accent, …) so existing components rendered inside the
-   dashboard — the invoice upload form, passkey manager — match it.
-   The dashboard design is light-only.
+   One design system for the whole app (login, onboarding, dashboard),
+   based on the dashboard design. Light values here; dark values under
+   html.dark below. Every color is a token, so components never need
+   dark: variants of their own.
+
+   Two families of names, same palette:
+     surface / panel / line / ink / muted / accent / …  — the general
+       tokens used by login, auth and onboarding pages.
+     db-*  — the finer-grained dashboard tokens (sidebar, chart, status
+       tints, …). Where both exist they hold the same color.
    ------------------------------------------------------------------ */
 @theme {
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --color-surface: #f5f7fa;
+  --color-panel: #ffffff;
+  --color-line: #e5e9f0;
+  --color-ink: #16202e;
+  --color-muted: #64748b;
+  --color-accent: #2f6fdb;
+  --color-accent-soft: #e8f0fd;
+  /* Text/icons placed on bg-accent. */
+  --color-on-accent: #ffffff;
+  --color-danger: #b42318;
+  --color-success: #0f7a55;
+
   --color-db-ink: #16202e;
   --color-db-text: #475569;
   --color-db-muted: #64748b;
   --color-db-faint: #94a3b8;
   --color-db-page: #f5f7fa;
+  --color-db-card: #ffffff;
   --color-db-subtle: #f8fafc;
   --color-db-border: #e5e9f0;
   --color-db-row: #f0f2f6;
   --color-db-input: #d9dfe8;
   --color-db-segment: #ebeff5;
+  --color-db-segment-active: #ffffff;
 
+  /* The sidebar is dark in both themes. */
   --color-db-side: #0f1b2d;
   --color-db-side-line: #1e2c42;
   --color-db-side-active: #1e2e48;
@@ -70,6 +60,8 @@ body {
   --color-db-light: #60a5fa;
   --color-db-tint: #e8f0fd;
   --color-db-selected: #f3f7fe;
+  --color-db-info: #1f55b3;
+  --color-db-bar-in: #3b82f6;
   --color-db-bar-out: #bfd3f5;
 
   --color-db-success: #0f7a55;
@@ -84,24 +76,59 @@ body {
   --color-db-toggle-off: #cbd5e1;
 }
 
-.dash {
-  color-scheme: light;
-  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
-  font-family: var(--font-sans);
-  background: var(--color-db-page);
-  color: var(--color-db-ink);
+html.dark {
+  color-scheme: dark;
 
-  --color-surface: #f5f7fa;
-  --color-panel: #ffffff;
-  --color-line: #e5e9f0;
-  --color-ink: #16202e;
-  --color-muted: #64748b;
-  --color-accent: #2f6fdb;
-  --color-accent-soft: #e8f0fd;
+  --color-surface: #0b1220;
+  --color-panel: #111a2b;
+  --color-line: #1f2a3d;
+  --color-ink: #e6ebf2;
+  --color-muted: #8a99af;
+  --color-accent: #3d7fea;
+  --color-accent-soft: #16284a;
   --color-on-accent: #ffffff;
-  --color-danger: #b42318;
-  --color-success: #0f7a55;
+  --color-danger: #f87171;
+  --color-success: #34d399;
+
+  --color-db-ink: #e6ebf2;
+  --color-db-text: #b6c2d3;
+  --color-db-muted: #8a99af;
+  --color-db-faint: #66758c;
+  --color-db-page: #0b1220;
+  --color-db-card: #111a2b;
+  --color-db-subtle: #152036;
+  --color-db-border: #1f2a3d;
+  --color-db-row: #1a2436;
+  --color-db-input: #2a3850;
+  --color-db-segment: #0b1220;
+  --color-db-segment-active: #1f2c44;
+
+  --color-db-side: #08101d;
+  --color-db-side-line: #172236;
+  --color-db-side-active: #16243b;
+  --color-db-side-avatar: #22324c;
+
+  --color-db-primary: #3d7fea;
+  --color-db-primary-hover: #2f6fdb;
+  --color-db-tint: #16284a;
+  --color-db-selected: #13233f;
+  --color-db-info: #8ab4f8;
+  --color-db-bar-in: #4c8df6;
+  --color-db-bar-out: #2c4470;
+
+  --color-db-success: #34d399;
+  --color-db-success-tint: #0e2e25;
+  --color-db-warning: #f5b454;
+  --color-db-warning-tint: #33250c;
+  --color-db-danger: #f87171;
+  --color-db-danger-tint: #3a1517;
+  --color-db-violet: #a78bfa;
+  --color-db-violet-tint: #251c45;
+  --color-db-toggle-off: #334155;
+}
+
+body {
+  @apply bg-surface text-ink antialiased;
 }
 
 .material-symbols-rounded {

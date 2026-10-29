@@ -48,7 +48,7 @@ function ContinueButton({ formValid }: { formValid: boolean }) {
   return (
     <button
       disabled={pending || !formValid}
-      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover disabled:opacity-50"
     >
       {pending ? t("Saving…") : t("Continue")}
     </button>
@@ -186,7 +186,7 @@ export default function BusinessActivityForm({
           {RESERVE_FUND_RANGE_IDS.map((id) => (
             <label
               key={id}
-              className="flex cursor-pointer items-center gap-3 rounded-lg border border-line px-3 py-3 transition-colors hover:bg-accent-soft has-[:checked]:border-ink has-[:checked]:bg-accent-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+              className="flex cursor-pointer items-center gap-3 rounded-lg border border-line px-3 py-3 transition-colors hover:bg-accent-soft has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
             >
               <input
                 type="radio"

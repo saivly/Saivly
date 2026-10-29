@@ -162,7 +162,7 @@ function SubStepIcon({ done, active }: { done: boolean; active: boolean }) {
   return (
     <span
       className={`size-1.5 shrink-0 rounded-full ${
-        active ? "bg-ink" : "bg-line"
+        active ? "bg-accent" : "bg-line"
       }`}
       aria-hidden="true"
     />
@@ -200,7 +200,7 @@ function StepIcon({
   return (
     <span
       className={`flex size-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${
-        active ? "border-ink text-ink" : "border-line text-muted"
+        active ? "border-accent text-accent" : "border-line text-muted"
       }`}
     >
       {index + 1}

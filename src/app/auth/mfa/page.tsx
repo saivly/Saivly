@@ -18,7 +18,7 @@ export default async function MfaChallengePage({
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
       <div>
-        <h1 className="text-2xl font-semibold">Two-factor code</h1>
+        <h1 className="text-[28px] leading-tight font-bold">Two-factor code</h1>
         <p className="mt-1 text-sm text-muted">
           Enter the 6-digit code from your authenticator app.
         </p>
@@ -43,7 +43,7 @@ export default async function MfaChallengePage({
           placeholder="123456"
           className="rounded-lg border border-line bg-panel px-3 py-2 text-center text-lg tracking-[0.4em] outline-none focus:border-accent"
         />
-        <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90">
+        <button className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:bg-db-primary-hover">
           Continue
         </button>
       </form>

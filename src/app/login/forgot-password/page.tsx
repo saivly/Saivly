@@ -14,7 +14,7 @@ export default async function ForgotPasswordPage({
   if (sent) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 px-6 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[28px] leading-tight font-bold">
           Check your email
         </h1>
         <p className="text-muted">
@@ -55,10 +55,10 @@ export default async function ForgotPasswordPage({
             placeholder="Email address"
             required
             autoComplete="email"
-            className="rounded-xl border border-line bg-panel px-4 py-3 outline-none transition-colors focus:border-ink"
+            className="rounded-xl border border-line bg-panel px-4 py-3 outline-none transition-colors focus:border-accent"
           />
         </label>
-        <button className="rounded-xl bg-accent px-4 py-3 text-sm font-medium text-on-accent transition-opacity hover:opacity-85">
+        <button className="rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover">
           Send reset link
         </button>
       </form>

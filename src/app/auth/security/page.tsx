@@ -245,7 +245,7 @@ function SecurityPrompt() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[28px] leading-tight font-bold">
           Improve your account security
         </h1>
         <p className="mt-2 text-sm text-muted">
@@ -272,7 +272,7 @@ function SecurityPrompt() {
           const done = key === "authenticator" ? authenticatorDone : passkeyDone;
           const row = (
             <>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-on-accent">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
                 <Icon className="h-[18px] w-[18px]" />
               </span>
               <span className="min-w-0 flex-1">
@@ -324,7 +324,7 @@ function SecurityPrompt() {
         <button
           onClick={continueOnward}
           disabled={busy}
-          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover disabled:opacity-50"
         >
           {busy ? "Saving…" : "Next"}
         </button>

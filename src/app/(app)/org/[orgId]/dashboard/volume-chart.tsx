@@ -4,8 +4,8 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { useT } from "@/app/i18n-provider";
 import { intlLocale, type Locale } from "@/lib/i18n";
 
-const INCOMING = "#3B82F6";
-const OUTGOING = "#BFD3F5";
+const INCOMING = "var(--color-db-bar-in)";
+const OUTGOING = "var(--color-db-bar-out)";
 
 type Point = { month: string; incoming: number; outgoing: number };
 
@@ -51,27 +51,27 @@ export default function VolumeChart({ data, currency, locale }: { data: Point[];
         )}
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barGap={2} barCategoryGap="25%" margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="#F0F2F6" />
+            <CartesianGrid vertical={false} stroke="var(--color-db-row)" />
             <XAxis
               dataKey="month"
               tickFormatter={month}
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 11, fill: "#94A3B8" }}
+              tick={{ fontSize: 11, fill: "var(--color-db-faint)" }}
               interval={0}
             />
             <YAxis
               width={56}
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 11, fill: "#94A3B8" }}
+              tick={{ fontSize: 11, fill: "var(--color-db-faint)" }}
               tickFormatter={(v: number) => money(v, true)}
             />
             <Tooltip
-              cursor={{ fill: "#F5F7FA" }}
+              cursor={{ fill: "var(--color-db-subtle)" }}
               content={({ active, payload, label }) =>
                 active && payload?.length ? (
-                  <div className="rounded-lg border border-db-border bg-white px-3 py-2 text-xs shadow-md">
+                  <div className="rounded-lg border border-db-border bg-db-card px-3 py-2 text-xs shadow-md">
                     <div className="mb-1 font-semibold text-db-ink">{monthYear(String(label))}</div>
                     {payload.map((p) => (
                       <div key={String(p.dataKey)} className="flex items-center gap-2 text-db-text">

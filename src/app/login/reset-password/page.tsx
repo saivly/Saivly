@@ -45,11 +45,11 @@ export default async function ResetPasswordPage({
             pattern={PASSWORD_PATTERN}
             title={PASSWORD_HINT}
             autoComplete="new-password"
-            className="rounded-xl border border-line bg-panel px-4 py-3 outline-none transition-colors focus:border-ink"
+            className="rounded-xl border border-line bg-panel px-4 py-3 outline-none transition-colors focus:border-accent"
           />
           <span className="text-xs text-muted">{PASSWORD_HINT}</span>
         </label>
-        <button className="rounded-xl bg-accent px-4 py-3 text-sm font-medium text-on-accent transition-opacity hover:opacity-85">
+        <button className="rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover">
           Update password
         </button>
       </form>

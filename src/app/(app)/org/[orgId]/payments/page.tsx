@@ -108,7 +108,7 @@ export default async function PaymentsPage({
             <form role="search" className="min-w-[200px] flex-1">
               {filters.tab !== "all" && <input type="hidden" name="status" value={filters.tab} />}
               {filters.range !== "30d" && <input type="hidden" name="range" value={filters.range} />}
-              <label className="flex items-center gap-2 rounded-lg border border-db-border bg-white px-3 py-2 text-db-muted focus-within:border-db-primary">
+              <label className="flex items-center gap-2 rounded-lg border border-db-border bg-db-card px-3 py-2 text-db-muted focus-within:border-db-primary">
                 <Icon name="search" size={18} />
                 <input
                   type="search"

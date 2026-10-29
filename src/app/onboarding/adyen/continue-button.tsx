@@ -4,7 +4,7 @@ import { useFormStatus } from "react-dom";
 
 const VARIANT_CLASSES = {
   primary:
-    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto",
+    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover disabled:opacity-50 sm:w-auto",
   outline:
     "rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent-soft disabled:opacity-50",
 } as const;

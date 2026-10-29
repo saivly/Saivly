@@ -46,7 +46,7 @@ export function PageHeader({
 
 export function Card({ className, children, ...rest }: ComponentProps<"section">) {
   return (
-    <section className={cx("rounded-xl border border-db-border bg-white p-5 sm:p-6", className)} {...rest}>
+    <section className={cx("rounded-xl border border-db-border bg-db-card p-5 sm:p-6", className)} {...rest}>
       {children}
     </section>
   );
@@ -69,7 +69,7 @@ export const buttonStyles = {
   primary: cx(BUTTON_BASE, "bg-db-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-db-primary-hover"),
   secondary: cx(
     BUTTON_BASE,
-    "border border-db-border bg-white px-3.5 py-2 text-[13px] font-medium text-db-ink hover:bg-db-page"
+    "border border-db-border bg-db-card px-3.5 py-2 text-[13px] font-medium text-db-ink hover:bg-db-page"
   ),
   ghost: cx(BUTTON_BASE, "px-3 py-1.5 text-[13px] font-semibold text-db-primary hover:bg-db-tint"),
 };
@@ -113,7 +113,7 @@ const PILL_TONES: Record<PillTone, string> = {
   success: "bg-db-success-tint text-db-success",
   warning: "bg-db-warning-tint text-db-warning",
   danger: "bg-db-danger-tint text-db-danger",
-  info: "bg-db-tint text-db-primary-hover",
+  info: "bg-db-tint text-db-info",
   neutral: "bg-db-segment text-db-muted",
 };
 
@@ -143,7 +143,7 @@ export function segmentStyles(active: boolean, size: "sm" | "lg" = "sm") {
   return cx(
     "inline-flex items-center gap-1.5 rounded-md whitespace-nowrap transition-colors",
     size === "lg" ? "px-4 py-[7px] text-sm font-semibold" : "px-3.5 py-1.5 text-[13px] font-medium",
-    active ? "bg-white text-db-ink shadow-[0_1px_2px_rgba(15,27,45,.12)]" : "text-db-muted hover:text-db-ink"
+    active ? "bg-db-segment-active text-db-ink shadow-[0_1px_2px_rgba(15,27,45,.12)]" : "text-db-muted hover:text-db-ink"
   );
 }
 
@@ -217,7 +217,7 @@ export function TableEmpty({ children }: { children: ReactNode }) {
 
 // ---------- Forms ----------
 export const inputStyles =
-  "w-full rounded-lg border border-db-input bg-white px-3 py-2.5 text-base text-db-ink outline-none placeholder:text-db-faint focus:border-db-primary disabled:bg-db-subtle disabled:text-db-muted sm:text-sm";
+  "w-full rounded-lg border border-db-input bg-db-card px-3 py-2.5 text-base text-db-ink outline-none placeholder:text-db-faint focus:border-db-primary disabled:bg-db-subtle disabled:text-db-muted sm:text-sm";
 
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -241,7 +241,7 @@ export function ToggleVisual({ on }: { on: boolean }) {
     >
       <span
         className={cx(
-          "absolute top-[2px] h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-[left]",
+          "absolute top-[2px] h-[18px] w-[18px] rounded-full bg-db-card shadow-sm transition-[left]",
           on ? "left-5" : "left-[2px]"
         )}
       />

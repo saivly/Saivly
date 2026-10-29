@@ -31,7 +31,7 @@ export default function OpenAccountButton({ orgId, disabledReason }: { orgId: st
             aria-modal="true"
             aria-labelledby="open-account-title"
             onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-[420px] flex-col gap-4 rounded-[14px] bg-white p-7 shadow-[0_20px_50px_-10px_rgba(15,27,45,.35)]"
+            className="flex w-full max-w-[420px] flex-col gap-4 rounded-[14px] bg-db-card p-7 shadow-[0_20px_50px_-10px_rgba(15,27,45,.35)]"
           >
             <span className="inline-flex w-fit rounded-lg bg-db-tint p-2 text-db-primary">
               <Icon name="account_balance_wallet" size={22} />

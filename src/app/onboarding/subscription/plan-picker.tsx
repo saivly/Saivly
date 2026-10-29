@@ -105,7 +105,7 @@ function SubmitButton({ planName, disabled }: { planName: string; disabled: bool
   return (
     <button
       disabled={pending || disabled}
-      className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover disabled:opacity-50"
     >
       {pending ? t("Saving…") : t("Continue with {plan}", { plan: planName })}
     </button>
@@ -160,7 +160,7 @@ export default function PlanPicker({
                 role="radio"
                 aria-checked={active}
                 onClick={() => setBillingInterval(i)}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                   active ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"
                 }`}
               >
@@ -191,7 +191,7 @@ export default function PlanPicker({
               role="tab"
               aria-selected={active}
               onClick={() => setSelected(p.id)}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                 active ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"
               }`}
             >
@@ -206,7 +206,7 @@ export default function PlanPicker({
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">{plan.name}</h2>
           {plan.badge && (
-            <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-on-accent">
+            <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-on-accent">
               {t(plan.badge)}
             </span>
           )}

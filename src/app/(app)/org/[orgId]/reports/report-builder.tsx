@@ -55,7 +55,7 @@ export default function ReportBuilder({
                 className={`flex items-start gap-3 rounded-[10px] p-4 text-left transition-colors ${
                   selected
                     ? "border-[1.5px] border-db-primary bg-db-selected"
-                    : "border-[1.5px] border-db-border bg-white hover:bg-db-subtle"
+                    : "border-[1.5px] border-db-border bg-db-card hover:bg-db-subtle"
                 }`}
               >
                 <IconChip name={option.icon} tone={option.tone} size={18} />

@@ -19,7 +19,7 @@ export default function RangeSelect({ value }: { value: PaymentRange }) {
   const searchParams = useSearchParams();
 
   return (
-    <label className="relative inline-flex items-center gap-2 rounded-lg border border-db-border bg-white px-3.5 py-2 text-[13px] font-medium text-db-ink hover:bg-db-page">
+    <label className="relative inline-flex items-center gap-2 rounded-lg border border-db-border bg-db-card px-3.5 py-2 text-[13px] font-medium text-db-ink hover:bg-db-page">
       <Icon name="calendar_today" size={18} className="text-db-muted" />
       <span>{t(LABELS[value])}</span>
       <select

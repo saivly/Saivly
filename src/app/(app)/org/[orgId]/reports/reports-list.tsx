@@ -16,7 +16,7 @@ export type ReportItem = {
 
 const BADGE = {
   csv: "bg-db-success-tint text-db-success",
-  xlsx: "bg-db-tint text-db-primary-hover",
+  xlsx: "bg-db-tint text-db-info",
   pdf: "bg-db-danger-tint text-db-danger",
 };
 

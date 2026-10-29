@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ICON_NAMES } from "@/components/dashboard/icons";
 import { getLocale, getTheme } from "@/lib/i18n-server";
 import { I18nProvider } from "./i18n-provider";
 
@@ -8,6 +10,23 @@ export const metadata: Metadata = {
   description:
     "Next.js + TypeScript + Tailwind + Supabase Auth + RLS starter",
 };
+
+// One type system for the whole app; globals.css maps these to
+// font-sans / font-mono.
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-dm-sans",
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-jetbrains-mono",
+});
+
+// Material Symbols, limited to the glyphs the app uses (see icons.ts).
+const ICON_FONT_URL = `https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&icon_names=${ICON_NAMES.join(",")}&display=block`;
 
 export default async function RootLayout({
   children,
@@ -18,7 +37,14 @@ export default async function RootLayout({
     // suppressHydrationWarning: browser extensions (password/passkey
     // managers) add attributes to <html> before React loads. Only affects
     // this element's own attributes, not its children.
-    <html lang={locale} className={theme === "dark" ? "dark" : undefined} suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={`${dmSans.variable} ${jetBrainsMono.variable}${theme === "dark" ? " dark" : ""}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <link rel="stylesheet" href={ICON_FONT_URL} />
+      </head>
       <body className="min-h-dvh">
         <I18nProvider locale={locale}>{children}</I18nProvider>
       </body>

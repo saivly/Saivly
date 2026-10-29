@@ -25,7 +25,7 @@ export default async function EmailMfaChallengePage({
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
       <div>
-        <h1 className="text-2xl font-semibold">Confirm it&apos;s you</h1>
+        <h1 className="text-[28px] leading-tight font-bold">Confirm it&apos;s you</h1>
         <p className="mt-1 text-sm text-muted">
           {sent
             ? "Enter the 8-digit code we emailed you. It expires shortly — send a new one if it's been a while."
@@ -54,7 +54,7 @@ export default async function EmailMfaChallengePage({
               placeholder="12345678"
               className="rounded-lg border border-line bg-panel px-3 py-2 text-center text-lg tracking-[0.4em] outline-none focus:border-accent"
             />
-            <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90">
+            <button className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:bg-db-primary-hover">
               Continue
             </button>
           </form>
@@ -69,7 +69,7 @@ export default async function EmailMfaChallengePage({
       ) : (
         <form action={requestEmailCode} className="flex flex-col gap-4">
           <input type="hidden" name="next" value={next} />
-          <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90">
+          <button className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:bg-db-primary-hover">
             Email me a code
           </button>
         </form>

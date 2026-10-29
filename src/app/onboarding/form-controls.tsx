@@ -21,7 +21,7 @@ function useLocalizedCountries(options: { code: string; name: string }[]) {
 // Shared between every /onboarding form (personal, company, …) so their
 // inputs/selects look identical.
 export const inputClasses =
-  "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-ink sm:text-sm";
+  "rounded-lg border border-line bg-panel px-3 py-2.5 text-base outline-none transition-colors focus:border-accent sm:text-sm";
 
 /** Chevron for our appearance-none selects — closer in and larger than the
  * default browser arrow, which sat right at the edge and rendered tiny. */

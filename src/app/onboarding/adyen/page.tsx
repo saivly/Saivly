@@ -66,7 +66,7 @@ export default async function AdyenVerificationStep({
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-[28px] leading-tight font-bold">
             {t("Verify your identity with Adyen")}
           </h1>
           <p className="mt-2 text-sm text-muted">
@@ -92,7 +92,7 @@ export default async function AdyenVerificationStep({
           </form>
           <Link
             href={next ? `/onboarding/${next}` : "/dashboard"}
-            className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90"
+            className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-db-primary-hover"
           >
             {t("Continue")}
           </Link>
@@ -104,7 +104,7 @@ export default async function AdyenVerificationStep({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[28px] leading-tight font-bold">
           {t("Verify your identity with Adyen")}
         </h1>
         <p className="mt-2 text-sm text-muted">

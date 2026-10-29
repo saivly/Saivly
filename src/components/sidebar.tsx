@@ -33,7 +33,7 @@ function LogoutDialog({ orgName, onCancel }: { orgName: string; onCancel: () => 
         role="dialog"
         aria-modal="true"
         aria-labelledby="logout-title"
-        className="w-full max-w-[380px] rounded-[14px] bg-white p-7 text-db-ink shadow-[0_20px_50px_-10px_rgba(15,27,45,.35)]"
+        className="w-full max-w-[380px] rounded-[14px] bg-db-card p-7 text-db-ink shadow-[0_20px_50px_-10px_rgba(15,27,45,.35)]"
         onClick={(e) => e.stopPropagation()}
       >
         <span className="mb-4 inline-flex rounded-lg bg-db-tint p-2 text-db-primary">

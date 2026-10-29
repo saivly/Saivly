@@ -74,7 +74,7 @@ export default function PasskeyManager() {
   }
 
   return (
-    <section className="rounded-xl border border-db-border bg-white p-5 sm:p-6">
+    <section className="rounded-xl border border-db-border bg-db-card p-5 sm:p-6">
       <h2 className="mb-1 text-base font-semibold text-db-ink">Passkeys</h2>
       <p className="mb-4 text-sm text-db-muted">
         Sign in with your fingerprint, face or device PIN instead of a code.

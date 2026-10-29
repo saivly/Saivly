@@ -37,7 +37,7 @@ export default function ApiKeys({ orgId, keys, disabled }: { orgId: string; keys
         <div className="rounded-lg border border-db-success/30 bg-db-success-tint p-4">
           <p className="text-sm font-semibold text-db-success">{t("Copy your new key now — it won't be shown again.")}</p>
           <div className="mt-2 flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-md bg-white px-3 py-2 font-mono text-xs text-db-ink">{state.key}</code>
+            <code className="min-w-0 flex-1 truncate rounded-md bg-db-card px-3 py-2 font-mono text-xs text-db-ink">{state.key}</code>
             <button
               type="button"
               onClick={async () => {
