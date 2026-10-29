@@ -43,7 +43,7 @@ export default async function Dashboard() {
             // sm: back down to match the panel's text-sm everywhere else.
             className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-base outline-none focus:border-accent sm:text-sm"
           />
-          <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90">
+          <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90">
             Add
           </button>
         </form>

@@ -43,7 +43,7 @@ export default async function MfaChallengePage({
           placeholder="123456"
           className="rounded-lg border border-line bg-panel px-3 py-2 text-center text-lg tracking-[0.4em] outline-none focus:border-accent"
         />
-        <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90">
+        <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90">
           Continue
         </button>
       </form>

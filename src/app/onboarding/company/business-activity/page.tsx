@@ -8,6 +8,7 @@ import {
   HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE,
 } from "@/lib/adyen/legalEntity";
 import BusinessActivityForm from "./business-activity-form";
+import { reserveFundRangeFor } from "@/lib/onboarding/reserve-fund-ranges";
 
 export default async function BusinessActivityStep({
   searchParams,
@@ -40,7 +41,7 @@ export default async function BusinessActivityStep({
   const { data: org } = await supabase
     .from("organisations")
     .select(
-      "name, country, kvk_number, industry_code, vat_number, vat_exemption_reason, business_description, annual_reserve_fund_contributions, annual_reserve_fund_currency"
+      "name, country, kvk_number, industry_code, vat_number, vat_exemption_reason, business_description, annual_reserve_fund_contributions"
     )
     .eq("id", membership.organisation_id)
     .maybeSingle();
@@ -58,8 +59,8 @@ export default async function BusinessActivityStep({
   // saveBusinessActivity) — VvEs are asked for their *monthly*
   // contribution instead, so it's shown divided back down for them here.
   const storedAmount = org.annual_reserve_fund_contributions;
-  const prefillAmount =
-    storedAmount == null ? "" : (isVve ? Math.round(storedAmount / 12) : storedAmount).toString();
+  const enteredAmount = storedAmount == null ? null : isVve ? Math.round(storedAmount / 12) : storedAmount;
+  const prefillRange = enteredAmount == null ? "" : reserveFundRangeFor(enteredAmount);
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,11 +81,12 @@ export default async function BusinessActivityStep({
 
       <BusinessActivityForm
         isVve={isVve}
+        currency={companyCountryCurrency(org.country)}
         existing={{
           industryCode: isVve ? HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE : org.industry_code ?? "",
-          reserveFundCurrency:
-            org.annual_reserve_fund_currency ?? companyCountryCurrency(org.country),
-          annualReserveFundContributions: prefillAmount,
+          reserveFundRange: prefillRange,
+          reserveFundAmount:
+            prefillRange === "over100k" && enteredAmount != null ? enteredAmount.toString() : "",
           vatNumber: org.vat_number ?? "",
           // VvEs are VAT-exempt by definition — see isHomeownersAssociation
           // above — so this is fixed the same way industryCode is, rather

@@ -1,8 +1,9 @@
 import * as zod from 'zod';
 import { PASSWORD_REGEX, PASSWORD_HINT } from './password-policy';
-import { COUNTRY_CODES, COMPANY_COUNTRY_CODES, CURRENCY_CODES } from './onboarding/countries';
+import { COUNTRY_CODES, COMPANY_COUNTRY_CODES } from './onboarding/countries';
 import { provincesForCountry } from './onboarding/provinces';
 import { INDUSTRY_CODE_VALUES } from './onboarding/industry-codes';
+import { RESERVE_FUND_RANGE_IDS, RESERVE_FUND_OPEN_RANGE_MIN } from './onboarding/reserve-fund-ranges';
 
 export const signupSchema = zod.object({
     firstname: zod.string().min(1, { message: 'First name is required' }),
@@ -158,25 +159,15 @@ export const businessActivitySchema = zod.object({
     // createAdyenBusinessLine in src/lib/adyen/legalEntity.ts), replacing
     // the single fixed code every org used to get regardless of activity.
     industryCode: zod.enum(INDUSTRY_CODE_VALUES, { message: 'Select the industry your business is in.' }),
-    // Feeds Adyen's businessLine.sourceOfFunds (type "business") for the
-    // banking/issuing lines, and the organization legal entity's
-    // financialReports.annualTurnover — see createAdyenBusinessLine /
-    // createAdyenOrganization in src/lib/adyen/legalEntity.ts. Whole units
-    // of reserveFundCurrency — converted to minor units server-side.
-    reserveFundCurrency: zod.enum(CURRENCY_CODES, { message: 'Select a currency.' }),
-    // zod.coerce.number() alone would turn an empty string into 0 — a
-    // "valid" number — via `Number("")`, letting the client-side re-parse
-    // in business-activity-form.tsx call the (still-empty) required field
-    // valid, enable Continue, and hand off to the browser's own "Please
-    // fill out this field" bubble on submit. Route empty/blank input to
-    // undefined first so it fails coercion instead.
-    annualReserveFundContributions: zod.preprocess(
-        (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
-        zod.coerce
-            .number({ message: 'Enter the estimated annual reserve fund contributions.' })
-            .int({ message: 'Enter a whole number.' })
-            .min(0, { message: 'This can’t be negative.' })
-    ),
+    // Picked from fixed ranges (see src/lib/onboarding/reserve-fund-ranges.ts)
+    // instead of typed in. saveBusinessActivity turns it into the single
+    // figure Adyen needs — businessLine.sourceOfFunds and the organization's
+    // financialReports.annualTurnover (see src/lib/adyen/legalEntity.ts).
+    // Currency isn't asked: it follows the company's country.
+    reserveFundRange: zod.enum(RESERVE_FUND_RANGE_IDS, { message: 'Choose the option closest to your estimate.' }),
+    // Only used (and then required) when reserveFundRange is "over100k" —
+    // see the superRefine below.
+    reserveFundAmount: zod.string().trim().optional(),
     // Optional — most organisations here are VAT-exempt homeowners'
     // associations (see vatAbsenceReason in src/lib/adyen/legalEntity.ts).
     vatNumber: zod.string().trim().max(32, { message: 'VAT number is too long.' }).optional().or(zod.literal('')),
@@ -186,6 +177,19 @@ export const businessActivitySchema = zod.object({
     // Optional, free text — not sent to Adyen anywhere, just shown back to
     // the org later (see migration 0013).
     businessDescription: zod.string().trim().max(500, { message: 'Keep the description under 500 characters.' }).optional().or(zod.literal('')),
+}).superRefine((data, ctx) => {
+    // "More than 100,000" asks for the actual figure, which then replaces
+    // the range's fixed estimate (see saveBusinessActivity).
+    if (data.reserveFundRange !== 'over100k') return;
+    const raw = (data.reserveFundAmount ?? '').replace(/[\s.,]/g, '');
+    const amount = Number(raw);
+    if (raw === '') {
+        ctx.addIssue({ code: 'custom', path: ['reserveFundAmount'], message: 'Enter the amount.' });
+    } else if (!/^\d+$/.test(raw)) {
+        ctx.addIssue({ code: 'custom', path: ['reserveFundAmount'], message: 'Enter a whole number.' });
+    } else if (amount <= RESERVE_FUND_OPEN_RANGE_MIN) {
+        ctx.addIssue({ code: 'custom', path: ['reserveFundAmount'], message: 'Enter an amount above 100,000.' });
+    }
 });
 
 // Fourth (final) page of the "Organisation info" step — see

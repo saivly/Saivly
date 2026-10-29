@@ -201,7 +201,7 @@ export default function PasskeyPromptPage() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {FEATURES.map(({ icon: Icon, title, body }) => (
           <div key={title}>
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-white">
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-on-accent">
               <Icon className="h-[18px] w-[18px]" />
             </div>
             <p className="text-sm font-semibold">{title}</p>
@@ -227,7 +227,7 @@ export default function PasskeyPromptPage() {
         <button
           onClick={setUp}
           disabled={busy}
-          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {busy ? "Waiting for browser…" : "Set up a passkey"}
         </button>

@@ -16,6 +16,8 @@ import {
   HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE,
 } from "@/lib/adyen/legalEntity";
 import { finishContactDetails } from "./contact-details/finish";
+import { companyCountryCurrency } from "@/lib/onboarding/countries";
+import { reserveFundEstimate, parseReserveFundAmount } from "@/lib/onboarding/reserve-fund-ranges";
 
 /**
  * Thin RPC wrappers so the client form (company-form.tsx) can call the KVK
@@ -191,7 +193,7 @@ export async function saveBusinessActivity(formData: FormData) {
 
   const { data: org, error: orgReadError } = await supabase
     .from("organisations")
-    .select("kvk_number")
+    .select("kvk_number, country")
     .eq("id", organisationId)
     .maybeSingle();
 
@@ -213,9 +215,8 @@ export async function saveBusinessActivity(formData: FormData) {
 
   const parsed = businessActivitySchema.safeParse({
     industryCode: (formData.get("industryCode") as string) ?? "",
-    reserveFundCurrency: (formData.get("reserveFundCurrency") as string) ?? "",
-    annualReserveFundContributions:
-      (formData.get("annualReserveFundContributions") as string) ?? "",
+    reserveFundRange: (formData.get("reserveFundRange") as string) ?? "",
+    reserveFundAmount: (formData.get("reserveFundAmount") as string) ?? "",
     vatNumber: ((formData.get("vatNumber") as string) ?? "").trim(),
     vatExemptionReason: ((formData.get("vatExemptionReason") as string) ?? "").trim(),
     businessDescription: ((formData.get("businessDescription") as string) ?? "").trim(),
@@ -230,8 +231,8 @@ export async function saveBusinessActivity(formData: FormData) {
 
   const {
     industryCode: submittedIndustryCode,
-    reserveFundCurrency,
-    annualReserveFundContributions: enteredReserveFundAmount,
+    reserveFundRange,
+    reserveFundAmount,
     vatNumber,
     vatExemptionReason,
     businessDescription,
@@ -240,11 +241,17 @@ export async function saveBusinessActivity(formData: FormData) {
   // VvEs get industry locked server-side, not just disabled in the form —
   // a shopper can't override it by tampering with the request.
   const industryCode = isVve ? HOMEOWNERS_ASSOCIATION_INDUSTRY_CODE : submittedIndustryCode;
-  // VvEs are asked for their *monthly* contribution (see the "Expected
-  // Monthly contribution for this account" label in business-activity-
-  // form.tsx) — Adyen's annualTurnover/sourceOfFunds.amount both want a
-  // true annual figure, so it's annualised here before going anywhere
-  // near either. Everyone else's figure is already annual.
+  // Currency follows the company's country — not asked on the form.
+  const reserveFundCurrency = companyCountryCurrency(org.country);
+  // The picked range becomes one representative figure (see
+  // reserve-fund-ranges.ts). VvEs are asked per *month* — Adyen's
+  // annualTurnover/sourceOfFunds.amount both want a true annual figure,
+  // so it's annualised here. Everyone else's figure is already annual.
+  // "More than 100,000" comes with the actual figure typed in.
+  const enteredReserveFundAmount =
+    reserveFundRange === "over100k"
+      ? parseReserveFundAmount(reserveFundAmount)
+      : reserveFundEstimate(reserveFundRange);
   const annualReserveFundContributions = isVve
     ? enteredReserveFundAmount * 12
     : enteredReserveFundAmount;

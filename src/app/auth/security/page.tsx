@@ -272,7 +272,7 @@ function SecurityPrompt() {
           const done = key === "authenticator" ? authenticatorDone : passkeyDone;
           const row = (
             <>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-on-accent">
                 <Icon className="h-[18px] w-[18px]" />
               </span>
               <span className="min-w-0 flex-1">
@@ -324,7 +324,7 @@ function SecurityPrompt() {
         <button
           onClick={continueOnward}
           disabled={busy}
-          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {busy ? "Saving…" : "Next"}
         </button>

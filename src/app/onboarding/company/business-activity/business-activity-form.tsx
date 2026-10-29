@@ -5,7 +5,12 @@ import { useFormStatus } from "react-dom";
 import { flattenError } from "zod";
 import Link from "next/link";
 import { saveBusinessActivity } from "../actions";
-import { inputClasses, CurrencySelect, SelectChevron } from "../../form-controls";
+import { inputClasses, SelectChevron } from "../../form-controls";
+import { currencySymbol } from "@/lib/onboarding/countries";
+import {
+  RESERVE_FUND_RANGE_IDS,
+  reserveFundRangeLabel,
+} from "@/lib/onboarding/reserve-fund-ranges";
 import { INDUSTRY_CODE_GROUPS } from "@/lib/onboarding/industry-codes";
 import { businessActivitySchema, VAT_EXEMPTION_REASONS } from "@/lib/zod";
 
@@ -20,8 +25,8 @@ const HOMEOWNERS_ASSOCIATION_DESCRIPTION =
 
 type Existing = {
   industryCode: string;
-  reserveFundCurrency: string;
-  annualReserveFundContributions: string;
+  reserveFundRange: string;
+  reserveFundAmount: string;
   vatNumber: string;
   vatExemptionReason: string;
   businessDescription: string;
@@ -39,7 +44,7 @@ function ContinueButton({ formValid }: { formValid: boolean }) {
   return (
     <button
       disabled={pending || !formValid}
-      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="mt-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
     >
       {pending ? "Saving…" : "Continue"}
     </button>
@@ -49,6 +54,7 @@ function ContinueButton({ formValid }: { formValid: boolean }) {
 export default function BusinessActivityForm({
   existing,
   isVve,
+  currency,
 }: {
   existing: Existing;
   /** Whether this org's KVK rechtsvorm is "vereniging van eigenaars" — see
@@ -57,12 +63,12 @@ export default function BusinessActivityForm({
    * asks for; enforced server-side too (saveBusinessActivity), this is
    * just what makes that legible in the form itself. */
   isVve: boolean;
+  /** ISO 4217 code from the company's country — used in the range labels. */
+  currency: string;
 }) {
   const [industryCode, setIndustryCode] = useState(existing.industryCode);
-  const [reserveFundCurrency, setReserveFundCurrency] = useState(existing.reserveFundCurrency);
-  const [annualReserveFundContributions, setAnnualReserveFundContributions] = useState(
-    existing.annualReserveFundContributions
-  );
+  const [reserveFundRange, setReserveFundRange] = useState(existing.reserveFundRange);
+  const [reserveFundAmount, setReserveFundAmount] = useState(existing.reserveFundAmount);
   const [vatNumber, setVatNumber] = useState(existing.vatNumber);
   const [vatExemptionReason, setVatExemptionReason] = useState(existing.vatExemptionReason);
   const [businessDescription, setBusinessDescription] = useState(
@@ -79,8 +85,8 @@ export default function BusinessActivityForm({
   }
   const parsed = businessActivitySchema.safeParse({
     industryCode,
-    reserveFundCurrency,
-    annualReserveFundContributions,
+    reserveFundRange,
+    reserveFundAmount,
     vatNumber,
     vatExemptionReason,
     businessDescription,
@@ -153,48 +159,72 @@ export default function BusinessActivityForm({
         </label>
       </div>
 
-      <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-panel p-3 text-sm">
-        <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+      <fieldset
+        className="flex flex-col gap-1.5 rounded-lg border border-line bg-panel p-3 text-sm"
+        aria-invalid={!!fieldError("reserveFundRange")}
+      >
+        <legend className="sr-only">
+          {isVve ? "Expected monthly contribution" : "Estimated annual reserve fund contributions"}
+        </legend>
+        <span className="text-xs font-medium tracking-wide text-muted uppercase">
           {isVve
             ? "Expected Monthly contribution for this account"
             : "Estimated annual reserve fund contributions"}
         </span>
-        <div className="grid grid-cols-[1fr_3fr] gap-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="sr-only">Currency</span>
-            <CurrencySelect
-              name="reserveFundCurrency"
-              value={reserveFundCurrency}
-              onChange={setReserveFundCurrency}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="sr-only">Amount</span>
-            <input
-              type="number"
-              name="annualReserveFundContributions"
-              min="0"
-              step="1"
-              required
-              value={annualReserveFundContributions}
-              onChange={(e) => setAnnualReserveFundContributions(e.target.value)}
-              onBlur={() => touch("annualReserveFundContributions")}
-              aria-invalid={!!fieldError("annualReserveFundContributions")}
-              className={inputClasses}
-            />
-          </label>
+        <span className="pb-2 text-xs text-muted">Give your best estimate</span>
+        <div className="flex flex-col gap-2">
+          {RESERVE_FUND_RANGE_IDS.map((id) => (
+            <label
+              key={id}
+              className="flex cursor-pointer items-center gap-3 rounded-lg border border-line px-3 py-3 transition-colors hover:bg-accent-soft has-[:checked]:border-ink has-[:checked]:bg-accent-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+            >
+              <input
+                type="radio"
+                name="reserveFundRange"
+                value={id}
+                required
+                checked={reserveFundRange === id}
+                onChange={() => {
+                  setReserveFundRange(id);
+                  touch("reserveFundRange");
+                }}
+                className="h-4 w-4 shrink-0 accent-accent"
+              />
+              {reserveFundRangeLabel(id, currency)}
+            </label>
+          ))}
         </div>
-        {/* <span className="text-xs text-muted">
-          {isVve
-            ? "What the association collects from its homeowners each month."
-            : "Total the association's households pay in each year toward the reserve fund for future maintenance and restoration."}
-        </span> */}
-        {(fieldError("reserveFundCurrency") || fieldError("annualReserveFundContributions")) && (
-          <span className="text-xs text-danger">
-            {fieldError("reserveFundCurrency") ?? fieldError("annualReserveFundContributions")}
-          </span>
+        {reserveFundRange === "over100k" && (
+          <label className="mt-2 flex flex-col gap-1.5">
+            <span className="text-xs text-muted">
+              {isVve ? "Expected monthly amount" : "Expected annual amount"}
+            </span>
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
+                {currencySymbol(currency)}
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="reserveFundAmount"
+                autoFocus
+                placeholder="150,000"
+                value={reserveFundAmount}
+                onChange={(e) => setReserveFundAmount(e.target.value)}
+                onBlur={() => touch("reserveFundAmount")}
+                aria-invalid={!!fieldError("reserveFundAmount")}
+                className={`${inputClasses} w-full pl-8`}
+              />
+            </div>
+            {fieldError("reserveFundAmount") && (
+              <span className="text-xs text-danger">{fieldError("reserveFundAmount")}</span>
+            )}
+          </label>
         )}
-      </div>
+        {fieldError("reserveFundRange") && (
+          <span className="text-xs text-danger">{fieldError("reserveFundRange")}</span>
+        )}
+      </fieldset>
 
       <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel p-3 text-sm">
         <label className="flex flex-col gap-1.5 text-sm">

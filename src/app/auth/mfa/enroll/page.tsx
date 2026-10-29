@@ -144,7 +144,7 @@ export default function EnrollMfaPage() {
 
         <button
           onClick={finish}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90"
         >
           I saved them — continue
         </button>
@@ -229,7 +229,7 @@ export default function EnrollMfaPage() {
             />
             <button
               disabled={busy || code.length !== 6}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90 disabled:opacity-50"
             >
               {busy ? "Verifying…" : "Verify and continue"}
             </button>

@@ -49,7 +49,7 @@ export default async function ResetPasswordPage({
           />
           <span className="text-xs text-muted">{PASSWORD_HINT}</span>
         </label>
-        <button className="rounded-xl bg-accent px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-85">
+        <button className="rounded-xl bg-accent px-4 py-3 text-sm font-medium text-on-accent transition-opacity hover:opacity-85">
           Update password
         </button>
       </form>

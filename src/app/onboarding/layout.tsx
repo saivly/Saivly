@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus, ONBOARDING_STEPS } from "@/lib/onboarding/onboarding";
 import OnboardingSidebar from "./onboarding-sidebar";
+import OnboardingHeader from "./onboarding-header";
+import { getMessages } from "@/lib/i18n";
+import { getLocale, getTheme } from "@/lib/i18n-server";
 
 // stepDone (and the sidebar checkmarks it drives) is per-user, per-request
 // state — the App Router's client-side navigation cache would otherwise
@@ -48,14 +51,21 @@ export default async function TeamOnboardingLayout({
     "contact-details": status.companyDone,
   };
 
+  const [locale, theme] = await Promise.all([getLocale(), getTheme()]);
+  const t = getMessages(locale);
+
   return (
-    <main className="mx-auto flex min-h-dvh max-w-4xl flex-col gap-8 px-6 py-16 md:flex-row md:gap-16">
-      <OnboardingSidebar
-        steps={ONBOARDING_STEPS}
-        stepDone={stepDone}
-        subStepDone={subStepDone}
-      />
-      <div className="min-w-0 flex-1">{children}</div>
-    </main>
+    <div className="flex min-h-dvh flex-col">
+      <OnboardingHeader locale={locale} theme={theme} t={t} />
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-16 md:flex-row md:gap-16">
+        <OnboardingSidebar
+          steps={ONBOARDING_STEPS}
+          stepDone={stepDone}
+          subStepDone={subStepDone}
+          t={t}
+        />
+        <div className="min-w-0 flex-1">{children}</div>
+      </main>
+    </div>
   );
 }

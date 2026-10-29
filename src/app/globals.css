@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* `dark:` follows the .dark class on <html> (set from the theme cookie in
+   app/layout.tsx), not the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-surface: #fafafa;
   --color-panel: #ffffff;
@@ -8,8 +12,24 @@
   --color-muted: #71717a;
   --color-accent: #18181b;
   --color-accent-soft: #f4f4f5;
+  /* Text/icons placed on bg-accent or bg-ink. */
+  --color-on-accent: #ffffff;
   --color-danger: #dc2626;
   --color-success: #16a34a;
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-surface: #09090b;
+  --color-panel: #18181b;
+  --color-line: #27272a;
+  --color-ink: #fafafa;
+  --color-muted: #a1a1aa;
+  --color-accent: #fafafa;
+  --color-accent-soft: #27272a;
+  --color-on-accent: #18181b;
+  --color-danger: #f87171;
+  --color-success: #22c55e;
 }
 
 body {

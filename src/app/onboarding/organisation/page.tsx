@@ -92,7 +92,7 @@ export default async function OrganisationChoiceStep() {
             href={href}
             className="flex items-start gap-4 rounded-xl border border-line p-4 transition-colors hover:border-ink hover:bg-accent-soft"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-ink text-on-accent">
               <Icon className="h-5 w-5" />
             </div>
             <div>

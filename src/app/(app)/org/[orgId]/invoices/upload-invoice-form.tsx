@@ -96,7 +96,7 @@ export default function UploadInvoiceForm({ orgId }: { orgId: string }) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90"
           >
             Upload a file
           </button>
@@ -130,7 +130,7 @@ export default function UploadInvoiceForm({ orgId }: { orgId: string }) {
             type="button"
             onClick={submit}
             disabled={isPending}
-            className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:opacity-90 disabled:opacity-50"
           >
             {isPending ? "Uploading…" : "Upload"}
           </button>

@@ -103,7 +103,7 @@ function SubmitButton({ planName, disabled }: { planName: string; disabled: bool
   return (
     <button
       disabled={pending || disabled}
-      className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-opacity hover:opacity-90 disabled:opacity-50"
     >
       {pending ? "Saving…" : `Continue with ${planName}`}
     </button>
@@ -202,7 +202,7 @@ export default function PlanPicker({
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">{plan.name}</h2>
           {plan.badge && (
-            <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white">
+            <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-on-accent">
               {plan.badge}
             </span>
           )}

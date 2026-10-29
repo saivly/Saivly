@@ -58,7 +58,7 @@ export default async function ForgotPasswordPage({
             className="rounded-xl border border-line bg-panel px-4 py-3 outline-none transition-colors focus:border-ink"
           />
         </label>
-        <button className="rounded-xl bg-accent px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-85">
+        <button className="rounded-xl bg-accent px-4 py-3 text-sm font-medium text-on-accent transition-opacity hover:opacity-85">
           Send reset link
         </button>
       </form>
