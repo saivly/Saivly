@@ -24,7 +24,8 @@
  * by adyen_payment_webhook_events / adyen_configuration_webhook_events /
  * adyen_transfer_webhook_events (one table per Adyen webhook product) +
  * organisations gains an index on adyen_organization_legal_entity_id.
- * 0016_invoices.sql: invoices table + private "invoices" storage bucket.)
+ * 0016_invoices.sql: invoices table + private "invoices" storage bucket.
+ * 0018_vat_exemption_reason.sql: organisations.vat_exemption_reason.)
  * Once you have a live project, regenerate from the real schema with:
  *   npx supabase gen types typescript --project-id <ref> > src/types/database.types.ts
  */
@@ -144,13 +145,16 @@ export type Database = {
           relationship_type: string | null;
           industry_code: string | null;
           vat_number: string | null;
+          vat_exemption_reason: string | null;
           business_description: string | null;
           support_email: string | null;
           support_phone: string | null;
           annual_reserve_fund_contributions: number | null;
           annual_reserve_fund_currency: string | null;
           website: string | null;
-          plan: "free" | "pro" | "enterprise" | null;
+          plan: "starter" | "pro" | "enterprise" | null;
+          billing_interval: "monthly" | "yearly" | null;
+          terms_accepted_at: string | null;
           subscription_completed_at: string | null;
           created_at: string;
           updated_at: string;
@@ -173,13 +177,16 @@ export type Database = {
           relationship_type?: string | null;
           industry_code?: string | null;
           vat_number?: string | null;
+          vat_exemption_reason?: string | null;
           business_description?: string | null;
           support_email?: string | null;
           support_phone?: string | null;
           annual_reserve_fund_contributions?: number | null;
           annual_reserve_fund_currency?: string | null;
           website?: string | null;
-          plan?: "free" | "pro" | "enterprise" | null;
+          plan?: "starter" | "pro" | "enterprise" | null;
+          billing_interval?: "monthly" | "yearly" | null;
+          terms_accepted_at?: string | null;
           subscription_completed_at?: string | null;
         };
         Update: {
@@ -199,13 +206,16 @@ export type Database = {
           relationship_type?: string | null;
           industry_code?: string | null;
           vat_number?: string | null;
+          vat_exemption_reason?: string | null;
           business_description?: string | null;
           support_email?: string | null;
           support_phone?: string | null;
           annual_reserve_fund_contributions?: number | null;
           annual_reserve_fund_currency?: string | null;
           website?: string | null;
-          plan?: "free" | "pro" | "enterprise" | null;
+          plan?: "starter" | "pro" | "enterprise" | null;
+          billing_interval?: "monthly" | "yearly" | null;
+          terms_accepted_at?: string | null;
           subscription_completed_at?: string | null;
         };
         Relationships: [];

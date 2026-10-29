@@ -137,6 +137,12 @@ export const companyInfoSchema = zod
         }
     });
 
+// Mirrors Adyen's own vatAbsenceReason enum (see createAdyenOrganization in
+// src/lib/adyen/legalEntity.ts) — not wired through to that call yet for
+// non-VvE organisations, same as vatNumber itself, but kept in the same
+// shape so that's a smaller step later.
+export const VAT_EXEMPTION_REASONS = ['belowTaxThreshold', 'industryExemption'] as const;
+
 // Second half of the "Organisation info" step — /onboarding/company/business-
 // activity, shown right after a company's picked in the KVK register (or,
 // outside NL, its details are entered manually) on /onboarding/company.
@@ -174,6 +180,9 @@ export const businessActivitySchema = zod.object({
     // Optional — most organisations here are VAT-exempt homeowners'
     // associations (see vatAbsenceReason in src/lib/adyen/legalEntity.ts).
     vatNumber: zod.string().trim().max(32, { message: 'VAT number is too long.' }).optional().or(zod.literal('')),
+    // Optional — only meaningful when vatNumber is blank, surfaced in the
+    // form as a second dropdown right under it.
+    vatExemptionReason: zod.enum(VAT_EXEMPTION_REASONS).optional().or(zod.literal('')),
     // Optional, free text — not sent to Adyen anywhere, just shown back to
     // the org later (see migration 0013).
     businessDescription: zod.string().trim().max(500, { message: 'Keep the description under 500 characters.' }).optional().or(zod.literal('')),
@@ -196,9 +205,13 @@ export const contactDetailsSchema = zod.object({
         .regex(PHONE_PATTERN, { message: 'Enter a valid phone number.' }),
 });
 
-export const PLAN_OPTIONS = ['free', 'pro', 'enterprise'] as const;
+export const PLAN_OPTIONS = ['starter', 'pro', 'enterprise'] as const;
+
+export const BILLING_INTERVALS = ['monthly', 'yearly'] as const;
 
 export const subscriptionSchema = zod.object({
     plan: zod.enum(PLAN_OPTIONS, { message: 'Choose a plan.' }),
+    billingInterval: zod.enum(BILLING_INTERVALS, { message: 'Choose monthly or yearly billing.' }),
+    acceptTerms: zod.literal('on', { message: 'Please accept the Terms of Service to continue.' }),
 })
 

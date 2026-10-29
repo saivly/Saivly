@@ -4,7 +4,6 @@ import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 import { getKvkCompanyDetails } from "@/lib/onboarding/kvk";
 import { isHomeownersAssociation } from "@/lib/adyen/legalEntity";
 import ContactDetailsForm from "./contact-details-form";
-import { finishContactDetails } from "./finish";
 
 export default async function ContactDetailsStep({
   searchParams,
@@ -67,21 +66,6 @@ export default async function ContactDetailsStep({
       ).data?.phone_number ?? ""
     : "";
 
-  // Skip this page entirely rather than showing a form with nothing
-  // meaningful left to fill in. finishContactDetails always ends in a
-  // redirect (to /onboarding/adyen on success, or back here with
-  // ?error= on failure), so this never returns normally; gating on
-  // !error means a failed attempt falls through to the ordinary form
-  // below (pre-filled with the same owner details, error shown) instead
-  // of retrying — and failing — forever.
-  if (isVve && !error) {
-    await finishContactDetails(supabase, user, membership.organisation_id, {
-      website: "",
-      supportEmail: user.email ?? "",
-      supportPhone: ownerPhone,
-    });
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -104,9 +88,12 @@ export default async function ContactDetailsStep({
         existing={{
           companyCountry: org.country,
           website: isVve ? "" : org.website ?? "",
-          // The auto-skip above failed (hence rendering at all) — prefill
-          // with the same owner details it just tried, not whatever (if
-          // anything) happened to be saved from an earlier attempt.
+          // Homeowners' associations don't have a separate support
+          // contact to ask about — prefill with the owner's own details
+          // (already on file from personal-info) so there's nothing left
+          // to type, just something to check and confirm with Continue.
+          // Not locked server-side (see saveContactDetails) — editable
+          // like any other org's, this is only ever the starting value.
           supportEmail: isVve ? user.email ?? "" : org.support_email ?? "",
           supportPhone: isVve ? ownerPhone : org.support_phone ?? "",
         }}

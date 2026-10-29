@@ -217,6 +217,7 @@ export async function saveBusinessActivity(formData: FormData) {
     annualReserveFundContributions:
       (formData.get("annualReserveFundContributions") as string) ?? "",
     vatNumber: ((formData.get("vatNumber") as string) ?? "").trim(),
+    vatExemptionReason: ((formData.get("vatExemptionReason") as string) ?? "").trim(),
     businessDescription: ((formData.get("businessDescription") as string) ?? "").trim(),
   });
 
@@ -232,6 +233,7 @@ export async function saveBusinessActivity(formData: FormData) {
     reserveFundCurrency,
     annualReserveFundContributions: enteredReserveFundAmount,
     vatNumber,
+    vatExemptionReason,
     businessDescription,
   } = parsed.data;
 
@@ -257,6 +259,7 @@ export async function saveBusinessActivity(formData: FormData) {
       // the form — a shopper can't override it by tampering with the
       // request, same reasoning as industryCode just above.
       vat_number: isVve ? null : vatNumber || null,
+      vat_exemption_reason: isVve ? "industryExemption" : vatExemptionReason || null,
       business_description: businessDescription || null,
     })
     .eq("id", organisationId);

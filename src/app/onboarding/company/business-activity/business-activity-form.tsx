@@ -7,7 +7,12 @@ import Link from "next/link";
 import { saveBusinessActivity } from "../actions";
 import { inputClasses, CurrencySelect, SelectChevron } from "../../form-controls";
 import { INDUSTRY_CODE_GROUPS } from "@/lib/onboarding/industry-codes";
-import { businessActivitySchema } from "@/lib/zod";
+import { businessActivitySchema, VAT_EXEMPTION_REASONS } from "@/lib/zod";
+
+const VAT_EXEMPTION_REASON_LABELS: Record<(typeof VAT_EXEMPTION_REASONS)[number], string> = {
+  belowTaxThreshold: "Revenue below tax threshold",
+  industryExemption: "Industry exemption",
+};
 
 // Prefilled for VvEs so the user can just hit Continue — still editable.
 const HOMEOWNERS_ASSOCIATION_DESCRIPTION =
@@ -18,6 +23,7 @@ type Existing = {
   reserveFundCurrency: string;
   annualReserveFundContributions: string;
   vatNumber: string;
+  vatExemptionReason: string;
   businessDescription: string;
 };
 
@@ -58,6 +64,7 @@ export default function BusinessActivityForm({
     existing.annualReserveFundContributions
   );
   const [vatNumber, setVatNumber] = useState(existing.vatNumber);
+  const [vatExemptionReason, setVatExemptionReason] = useState(existing.vatExemptionReason);
   const [businessDescription, setBusinessDescription] = useState(
     existing.businessDescription || (isVve ? HOMEOWNERS_ASSOCIATION_DESCRIPTION : "")
   );
@@ -75,6 +82,7 @@ export default function BusinessActivityForm({
     reserveFundCurrency,
     annualReserveFundContributions,
     vatNumber,
+    vatExemptionReason,
     businessDescription,
   });
   const fieldErrors = parsed.success ? {} : flattenError(parsed.error).fieldErrors;
@@ -201,7 +209,7 @@ export default function BusinessActivityForm({
             onChange={(e) => setVatNumber(e.target.value)}
             onBlur={() => touch("vatNumber")}
             aria-invalid={!!fieldError("vatNumber")}
-            className={`${inputClasses} disabled:opacity-70`}
+            className={`${inputClasses} disabled:border-line disabled:bg-line/50 disabled:text-muted disabled:opacity-100`}
           />
           <span className="text-xs text-muted">
             {isVve
@@ -210,6 +218,51 @@ export default function BusinessActivityForm({
           </span>
           {fieldError("vatNumber") && (
             <span className="text-xs text-danger">{fieldError("vatNumber")}</span>
+          )}
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="pb-2 text-xs font-medium tracking-wide text-muted uppercase">
+            VAT exemption reason
+          </span>
+          {isVve ? (
+            <>
+              <input
+                type="text"
+                value={VAT_EXEMPTION_REASON_LABELS.industryExemption}
+                disabled
+                readOnly
+                className={`${inputClasses} border-line bg-line/50 text-muted opacity-100`}
+              />
+              <input type="hidden" name="vatExemptionReason" value="industryExemption" />
+            </>
+          ) : (
+            <div className="relative">
+              <select
+                name="vatExemptionReason"
+                value={vatExemptionReason}
+                onChange={(e) => setVatExemptionReason(e.target.value)}
+                onBlur={() => touch("vatExemptionReason")}
+                aria-invalid={!!fieldError("vatExemptionReason")}
+                className={`${inputClasses} w-full appearance-none pr-8`}
+              >
+                <option value="">Not exempt</option>
+                {VAT_EXEMPTION_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {VAT_EXEMPTION_REASON_LABELS[reason]}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+          )}
+          <span className="text-xs text-muted">
+            {isVve
+              ? "Fixed for homeowners' associations."
+              : "Only relevant if the organisation has no VAT number."}
+          </span>
+          {fieldError("vatExemptionReason") && (
+            <span className="text-xs text-danger">{fieldError("vatExemptionReason")}</span>
           )}
         </label>
       </div>
@@ -221,7 +274,7 @@ export default function BusinessActivityForm({
           </span>
           <textarea
             name="businessDescription"
-            rows={3}
+            rows={4}
             value={businessDescription}
             onChange={(e) => setBusinessDescription(e.target.value)}
             onBlur={() => touch("businessDescription")}

@@ -1,14 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
-import { PLAN_OPTIONS } from "@/lib/zod";
 import { saveSubscription } from "./actions";
-
-const PLANS: { id: (typeof PLAN_OPTIONS)[number]; name: string; description: string }[] = [
-  { id: "free", name: "Free", description: "For getting started and trying things out." },
-  { id: "pro", name: "Pro", description: "For growing teams that need more room to work." },
-  { id: "enterprise", name: "Enterprise", description: "For larger organizations with custom needs." },
-];
+import PlanPicker from "./plan-picker";
 
 export default async function SubscriptionStep({
   searchParams,
@@ -38,7 +32,7 @@ export default async function SubscriptionStep({
   const { data: existing } = membership
     ? await supabase
         .from("organisations")
-        .select("plan")
+        .select("plan, billing_interval")
         .eq("id", membership.organisation_id)
         .maybeSingle()
     : { data: null };
@@ -47,10 +41,10 @@ export default async function SubscriptionStep({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Choose a plan
+          Choose the plan that fits your business
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Step 4 of 4 — you can change this later from your account settings.
+          Step 4 of 4 — you can change your plan anytime from your dashboard.
         </p>
       </div>
 
@@ -60,30 +54,11 @@ export default async function SubscriptionStep({
         </p>
       )}
 
-      <form action={saveSubscription} className="flex flex-col gap-6">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {PLANS.map((p) => (
-            <label key={p.id} className="cursor-pointer">
-              <input
-                type="radio"
-                name="plan"
-                value={p.id}
-                required
-                defaultChecked={existing?.plan === p.id}
-                className="peer sr-only"
-              />
-              <div className="h-full rounded-xl border border-line p-4 transition-colors peer-checked:border-ink peer-checked:bg-accent-soft peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
-                <p className="font-medium">{p.name}</p>
-                <p className="mt-1 text-sm text-muted">{p.description}</p>
-              </div>
-            </label>
-          ))}
-        </div>
-
-        <button className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90">
-          Finish setup
-        </button>
-      </form>
+      <PlanPicker
+        action={saveSubscription}
+        initialPlan={existing?.plan ?? null}
+        initialInterval={existing?.billing_interval ?? null}
+      />
     </div>
   );
 }

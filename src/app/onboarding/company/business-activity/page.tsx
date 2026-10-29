@@ -40,7 +40,7 @@ export default async function BusinessActivityStep({
   const { data: org } = await supabase
     .from("organisations")
     .select(
-      "name, country, kvk_number, industry_code, vat_number, business_description, annual_reserve_fund_contributions, annual_reserve_fund_currency"
+      "name, country, kvk_number, industry_code, vat_number, vat_exemption_reason, business_description, annual_reserve_fund_contributions, annual_reserve_fund_currency"
     )
     .eq("id", membership.organisation_id)
     .maybeSingle();
@@ -86,6 +86,10 @@ export default async function BusinessActivityStep({
             org.annual_reserve_fund_currency ?? companyCountryCurrency(org.country),
           annualReserveFundContributions: prefillAmount,
           vatNumber: org.vat_number ?? "",
+          // VvEs are VAT-exempt by definition — see isHomeownersAssociation
+          // above — so this is fixed the same way industryCode is, rather
+          // than read from whatever (if anything) was last stored.
+          vatExemptionReason: isVve ? "industryExemption" : org.vat_exemption_reason ?? "",
           businessDescription: org.business_description ?? "",
         }}
       />

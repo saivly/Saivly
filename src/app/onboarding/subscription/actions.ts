@@ -30,6 +30,8 @@ export async function saveSubscription(formData: FormData) {
 
   const parsed = subscriptionSchema.safeParse({
     plan: formData.get("plan") as string,
+    billingInterval: formData.get("billingInterval") as string,
+    acceptTerms: formData.get("acceptTerms"),
   });
 
   if (!parsed.success) {
@@ -41,6 +43,8 @@ export async function saveSubscription(formData: FormData) {
     .from("organisations")
     .update({
       plan: parsed.data.plan,
+      billing_interval: parsed.data.billingInterval,
+      terms_accepted_at: new Date().toISOString(),
       subscription_completed_at: new Date().toISOString(),
     })
     .eq("id", membership.organisation_id);
