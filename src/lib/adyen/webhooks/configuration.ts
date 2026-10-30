@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ensurePrimaryBankAccount } from "../bank-accounts";
+import { markVerifiedIfReady } from "../verification";
 import { hashRawBody } from "./hmac";
 
 export type AdyenConfigurationWebhookEnvelope = {
@@ -180,7 +181,12 @@ export async function processConfigurationWebhookEvent(
           .select("organisation_id")
           .eq("id", eventId)
           .maybeSingle();
-        if (event?.organisation_id) await ensurePrimaryBankAccount(event.organisation_id);
+        if (event?.organisation_id) {
+          // First time everything is valid: unlocks the dashboard, emails
+          // the owners and issues the IBAN (see markVerifiedIfReady).
+          await markVerifiedIfReady(event.organisation_id);
+          await ensurePrimaryBankAccount(event.organisation_id);
+        }
         break;
       }
       default:

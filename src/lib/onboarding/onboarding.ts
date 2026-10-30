@@ -113,6 +113,10 @@ export type OnboardingStatus = {
   adyenDone: boolean;
   subscriptionDone: boolean;
   allDone: boolean;
+  // Adyen has approved every capability (organisations.adyen_verified_at,
+  // migration 0022). Separate from allDone: the wizard is finished, but
+  // the dashboard waits on this — see /verifying. Set once, never undone.
+  verified: boolean;
 };
 
 const ALL_DONE: OnboardingStatus = {
@@ -124,6 +128,7 @@ const ALL_DONE: OnboardingStatus = {
   adyenDone: true,
   subscriptionDone: true,
   allDone: true,
+  verified: true,
 };
 
 /**
@@ -193,13 +198,14 @@ export async function getOnboardingStatus(
       adyenDone,
       subscriptionDone: false,
       allDone: false,
+      verified: false,
     };
   }
 
   const { data: org, error: orgError } = await supabase
     .from("organisations")
     .select(
-      "relationship_type, industry_code, company_completed_at, subscription_completed_at"
+      "relationship_type, industry_code, company_completed_at, subscription_completed_at, adyen_verified_at"
     )
     .eq("id", membership.organisation_id)
     .maybeSingle();
@@ -226,6 +232,7 @@ export async function getOnboardingStatus(
     adyenDone,
     subscriptionDone,
     allDone: personalDone && companyDone && adyenDone && subscriptionDone,
+    verified: Boolean(org?.adyen_verified_at),
   };
 }
 

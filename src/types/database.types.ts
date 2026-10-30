@@ -159,6 +159,7 @@ export type Database = {
           billing_interval: "monthly" | "yearly" | null;
           terms_accepted_at: string | null;
           subscription_completed_at: string | null;
+          adyen_verified_at: string | null;
           default_currency: string;
           ip_allowlist_enabled: boolean;
           large_payment_alerts_enabled: boolean;
@@ -194,6 +195,7 @@ export type Database = {
           billing_interval?: "monthly" | "yearly" | null;
           terms_accepted_at?: string | null;
           subscription_completed_at?: string | null;
+          adyen_verified_at?: string | null;
           default_currency?: string;
           ip_allowlist_enabled?: boolean;
           large_payment_alerts_enabled?: boolean;
@@ -226,6 +228,7 @@ export type Database = {
           billing_interval?: "monthly" | "yearly" | null;
           terms_accepted_at?: string | null;
           subscription_completed_at?: string | null;
+          adyen_verified_at?: string | null;
           default_currency?: string;
           ip_allowlist_enabled?: boolean;
           large_payment_alerts_enabled?: boolean;

@@ -23,9 +23,12 @@ import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
  *     security nudge this session         either method — shown again
  *                                          every session until they do)
  *  5. Onboarding unfinished            -> /onboarding
- *  6. Onboarding done                  -> pass through (and bounce away
- *                                          from /onboarding itself, done
- *                                          is done)
+ *  6. Onboarding done, but Adyen       -> /verifying (waits until every
+ *     hasn't approved everything yet      capability is valid; once an org
+ *                                          is verified it never comes back)
+ *  7. Verified                         -> pass through (and bounce away
+ *                                          from /onboarding and /verifying,
+ *                                          done is done)
  *
  * Two-factor auth is OPTIONAL to *set up*, but every session still ends
  * up with a second factor of some kind: an authenticator app or a passkey
@@ -45,6 +48,7 @@ import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
 
 const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth", "/error"];
 const ONBOARDING_BASE = "/onboarding";
+const VERIFYING_PATH = "/verifying";
 const SECURITY_PROMPT_PATH = "/auth/security";
 const EMAIL_MFA_PATH = "/auth/mfa/email";
 
@@ -265,14 +269,22 @@ export async function updateSession(request: NextRequest) {
     //    flow itself (or every step would redirect to step 1).
     const onOnboardingPath =
       pathname === ONBOARDING_BASE || pathname.startsWith(ONBOARDING_BASE + "/");
+    // /verifying plus its re-verification hops (/verifying/adyen, /verifying/return).
+    const onVerifyingPath = pathname === VERIFYING_PATH || pathname.startsWith(VERIFYING_PATH + "/");
     const onboarding = await getOnboardingStatus(supabase, user.sub);
 
     if (!onboarding.allDone) {
       if (!onOnboardingPath) {
         return redirectTo(request, ONBOARDING_BASE, supabaseResponse);
       }
-    } else if (onOnboardingPath) {
-      // 6. Already onboarded -> no reason to revisit the wizard.
+    } else if (!onboarding.verified) {
+      // 6. Wizard done, Adyen still verifying -> wait screen only.
+      //    /verifying itself checks Adyen and moves them on.
+      if (!onVerifyingPath) {
+        return redirectTo(request, VERIFYING_PATH, supabaseResponse);
+      }
+    } else if (onOnboardingPath || onVerifyingPath) {
+      // 7. Verified -> no reason to revisit the wizard or the wait screen.
       return redirectTo(request, "/dashboard", supabaseResponse);
     }
   }
