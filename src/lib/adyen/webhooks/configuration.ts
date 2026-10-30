@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ensurePrimaryBankAccount } from "../bank-accounts";
 import { hashRawBody } from "./hmac";
 
 export type AdyenConfigurationWebhookEnvelope = {
@@ -170,9 +171,18 @@ export async function processConfigurationWebhookEvent(
 
   try {
     switch (body.type) {
-      // case "balancePlatform.accountHolder.updated":
-      //   await handleAccountHolderUpdated(...);
-      //   break;
+      case "balancePlatform.accountHolder.created":
+      case "balancePlatform.accountHolder.updated": {
+        // Capabilities (like issueBankAccount) turn valid here, usually a
+        // while after onboarding — the moment to issue the primary IBAN.
+        const { data: event } = await admin
+          .from("adyen_configuration_webhook_events")
+          .select("organisation_id")
+          .eq("id", eventId)
+          .maybeSingle();
+        if (event?.organisation_id) await ensurePrimaryBankAccount(event.organisation_id);
+        break;
+      }
       default:
         break;
     }

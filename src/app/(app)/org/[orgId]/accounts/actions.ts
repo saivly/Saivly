@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createBalanceAccount } from "@/lib/adyen/accounts";
+import { canIssueBankAccount, ensureBankAccount, issuingCountry } from "@/lib/adyen/bank-accounts";
 import { getOrgContext } from "@/lib/dashboard/org";
+import { bankAccountLimit } from "@/lib/plans";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 import { ACCOUNT_CURRENCIES } from "@/lib/dashboard/constants";
@@ -17,9 +20,10 @@ const OpenAccountSchema = z.object({
 export type OpenAccountState = { error?: string; ok?: boolean };
 
 /**
- * Opens an extra Adyen balance account under the org's existing account
- * holder, then records it in balance_accounts. Owners only (also
- * enforced by RLS on the insert).
+ * Opens an extra bank account: an Adyen balance account under the org's
+ * existing account holder, recorded in balance_accounts, with an IBAN
+ * issued on it. Owners only (also enforced by RLS on the insert), and
+ * capped per plan (see BANK_ACCOUNT_LIMITS).
  */
 export async function openAccount(_prev: OpenAccountState, formData: FormData): Promise<OpenAccountState> {
   const parsed = OpenAccountSchema.safeParse({
@@ -36,21 +40,49 @@ export async function openAccount(_prev: OpenAccountState, formData: FormData): 
   const accountHolderId = ctx.organisation.adyen_account_holder_id;
   if (!accountHolderId) return { error: "Finish Adyen verification before opening more accounts." };
 
+  const limit = bankAccountLimit(ctx.organisation.plan);
+  if (limit !== null && ctx.accounts.length >= limit) {
+    return {
+      error:
+        limit === 1
+          ? "Your plan includes 1 bank account. Upgrade to Pro for up to 5."
+          : "You've reached the maximum number of bank accounts for your plan.",
+    };
+  }
+  if (!(await canIssueBankAccount(accountHolderId))) {
+    return { error: "Adyen hasn't approved bank accounts for your organisation yet." };
+  }
+
   const adyenId = await createBalanceAccount(accountHolderId, `${name} — ${ctx.organisation.name}`, currency);
   if (!adyenId) return { error: "Adyen couldn't open the account. Try again in a moment." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("balance_accounts").insert({
-    organisation_id: orgId,
-    adyen_balance_account_id: adyenId,
-    name,
-    currency,
-  });
+  const { data: row, error } = await supabase
+    .from("balance_accounts")
+    .insert({
+      organisation_id: orgId,
+      adyen_balance_account_id: adyenId,
+      name,
+      currency,
+    })
+    .select("id, adyen_balance_account_id")
+    .single();
   if (error) {
     // The Adyen account exists but isn't linked — log the id so it can be
     // linked by hand rather than silently orphaned.
     console.error(`[accounts] Adyen balance account ${adyenId} created but not saved:`, error.message);
     return { error: "The account was opened but couldn't be saved. Contact support." };
+  }
+
+  const issued = await ensureBankAccount(
+    createAdminClient(),
+    row,
+    issuingCountry(ctx.organisation.country),
+    `${name} — ${ctx.organisation.name}`
+  );
+  if (issued === "failed") {
+    revalidatePath(`/org/${orgId}/accounts`);
+    return { error: "The account was opened, but Adyen couldn't issue its IBAN yet. Contact support." };
   }
 
   revalidatePath(`/org/${orgId}/accounts`);

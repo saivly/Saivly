@@ -9,7 +9,7 @@ import { Icon, buttonStyles } from "@/components/dashboard/ui";
 const NAV_ITEMS: { segment: string; label: string; icon: string }[] = [
   { segment: "dashboard", label: "Overview", icon: "space_dashboard" },
   { segment: "accounts", label: "Accounts", icon: "account_balance_wallet" },
-  { segment: "payments", label: "Payments & payouts", icon: "swap_horiz" },
+  { segment: "payments", label: "Transactions", icon: "swap_horiz" },
   { segment: "invoices", label: "Invoices", icon: "request_quote" },
   { segment: "reports", label: "Reports", icon: "bar_chart" },
   { segment: "settings", label: "Settings", icon: "settings" },

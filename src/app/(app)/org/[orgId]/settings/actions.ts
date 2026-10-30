@@ -3,8 +3,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { ACCOUNT_CURRENCIES } from "@/lib/dashboard/constants";
 import { getOrgContext } from "@/lib/dashboard/org";
+import { PLAN_ORDER, type Plan } from "@/lib/plans";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -20,28 +20,7 @@ async function requireOwner(orgId: string) {
   return { ctx } as const;
 }
 
-export type SettingsState = { error?: string; ok?: number };
-
-const OrgSchema = z.object({ orgId: z.uuid(), currency: z.enum(ACCOUNT_CURRENCIES) });
-
-export async function updateOrganisation(_prev: SettingsState, formData: FormData): Promise<SettingsState> {
-  const parsed = OrgSchema.safeParse({ orgId: formData.get("orgId"), currency: formData.get("currency") });
-  if (!parsed.success) return { error: "Invalid input." };
-  const owner = await requireOwner(parsed.data.orgId);
-  if ("error" in owner) return { error: owner.error };
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("organisations")
-    .update({ default_currency: parsed.data.currency })
-    .eq("id", parsed.data.orgId);
-  if (error) return { error: "Couldn't save. Try again." };
-
-  revalidatePath(`/org/${parsed.data.orgId}`, "layout");
-  return { ok: Date.now() };
-}
-
-const SECURITY_SETTINGS = ["ip_allowlist_enabled", "large_payment_alerts_enabled"] as const;
+const SECURITY_SETTINGS = ["large_payment_alerts_enabled"] as const;
 
 export async function setSecuritySetting(
   orgId: string,
@@ -55,15 +34,35 @@ export async function setSecuritySetting(
   const supabase = await createClient();
   const { error } = await supabase
     .from("organisations")
-    .update(
-      setting === "ip_allowlist_enabled"
-        ? { ip_allowlist_enabled: enabled }
-        : { large_payment_alerts_enabled: enabled }
-    )
+    .update({ large_payment_alerts_enabled: enabled })
     .eq("id", orgId);
   if (error) return { error: "Couldn't save. Try again." };
 
   revalidatePath(`/org/${orgId}/settings`);
+  return {};
+}
+
+/**
+ * Moves the organisation to a higher plan. Upgrades only — a downgrade
+ * could leave more bank accounts open than the new plan allows. There's
+ * no payment provider yet, so this only records the plan (same as the
+ * onboarding plan picker); billing follows the existing billing interval.
+ */
+export async function upgradePlan(orgId: string, plan: Plan): Promise<{ error?: string }> {
+  if (!PLAN_ORDER.includes(plan)) return { error: "Invalid input." };
+  const owner = await requireOwner(orgId);
+  if ("error" in owner) return { error: owner.error };
+
+  const current = owner.ctx.organisation.plan ?? "starter";
+  if (PLAN_ORDER.indexOf(plan) <= PLAN_ORDER.indexOf(current)) {
+    return { error: "You can only upgrade to a higher plan." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("organisations").update({ plan }).eq("id", orgId);
+  if (error) return { error: "Couldn't change your plan. Try again." };
+
+  revalidatePath(`/org/${orgId}`, "layout");
   return {};
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { ensurePrimaryBankAccount } from "@/lib/adyen/bank-accounts";
 import { checkAdyenVerificationStatus } from "@/lib/adyen/legalEntity";
 
 /**
@@ -77,6 +78,14 @@ export async function GET(request: Request) {
   // completion redirect — the client router cache can otherwise serve
   // a stale sidebar render after this.
   revalidatePath("/onboarding", "layout");
+
+  // Issue the primary IBAN now if Adyen already allows it; otherwise the
+  // account-holder webhook does it once the capability turns valid.
+  if (membership) {
+    await ensurePrimaryBankAccount(membership.organisation_id).catch((err) =>
+      console.error("[adyen] couldn't issue primary bank account after onboarding:", err)
+    );
+  }
 
   return NextResponse.redirect(new URL("/onboarding", request.url));
 }

@@ -43,23 +43,20 @@ function Row({
 
 /**
  * Two-factor authentication is per user (a Supabase TOTP factor) and is
- * read live; the other two are organisation settings in the database.
+ * read live; large payment alerts is an organisation setting in the database.
  */
 export default function SecuritySettings({
   orgId,
-  ipAllowlist,
   largePaymentAlerts,
   disabled,
 }: {
   orgId: string;
-  ipAllowlist: boolean;
   largePaymentAlerts: boolean;
   disabled: boolean;
 }) {
   const { t } = useT();
   const router = useRouter();
   const [mfa, setMfa] = useState<{ on: boolean; factorId?: string } | null>(null);
-  const [ip, setIp] = useState(ipAllowlist);
   const [alerts, setAlerts] = useState(largePaymentAlerts);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -91,13 +88,12 @@ export default function SecuritySettings({
     setMfa({ on: false });
   }
 
-  function toggleOrgSetting(setting: "ip_allowlist_enabled" | "large_payment_alerts_enabled", next: boolean) {
-    const set = setting === "ip_allowlist_enabled" ? setIp : setAlerts;
-    set(next);
+  function toggleAlerts(next: boolean) {
+    setAlerts(next);
     startTransition(async () => {
-      const result = await setSecuritySetting(orgId, setting, next);
+      const result = await setSecuritySetting(orgId, "large_payment_alerts_enabled", next);
       if (result.error) {
-        set(!next);
+        setAlerts(!next);
         setError(t(result.error));
       } else setError(null);
     });
@@ -112,18 +108,11 @@ export default function SecuritySettings({
         onToggle={toggleMfa}
       />
       <Row
-        title={t("IP allowlist")}
-        description={t("Only accept API requests from approved IP addresses.")}
-        on={ip}
-        disabled={disabled || pending}
-        onToggle={() => toggleOrgSetting("ip_allowlist_enabled", !ip)}
-      />
-      <Row
         title={t("Large payment alerts")}
         description={t("Notify owners about unusually large payments.")}
         on={alerts}
         disabled={disabled || pending}
-        onToggle={() => toggleOrgSetting("large_payment_alerts_enabled", !alerts)}
+        onToggle={() => toggleAlerts(!alerts)}
       />
       {error && <p className="mt-3 text-sm text-db-danger">{error}</p>}
     </div>

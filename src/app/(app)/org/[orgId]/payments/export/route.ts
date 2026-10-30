@@ -1,15 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { toCsv } from "@/lib/dashboard/csv";
 import { toMajor } from "@/lib/dashboard/format";
-import { TAB_STATES, parsePaymentFilters, rangeStart, searchExpression } from "@/lib/dashboard/payments-filters";
+import { TAB_STATES, TYPE_KINDS, parsePaymentFilters, rangeStart, searchExpression } from "@/lib/dashboard/payments-filters";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_ROWS = 10_000;
 const BATCH = 1000; // PostgREST's default max rows per request
 
 /**
- * CSV of the Payments table with the same filters as the page
- * (?status=&q=&range=). Runs as the signed-in user, so RLS limits it to
+ * CSV of the Transactions table with the same filters as the page
+ * (?type=&status=&q=&range=). Runs as the signed-in user, so RLS limits it to
  * organisations they belong to.
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ orgId: string }> }) {
@@ -29,9 +29,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   for (let from = 0; from < MAX_ROWS; from += BATCH) {
     let query = supabase
       .from("transfers")
-      .select("adyen_created_at, counterparty_name, description, reference, adyen_transfer_id, state, amount_value, currency")
+      .select("adyen_created_at, kind, counterparty_name, counterparty_account, description, reference, adyen_transfer_id, state, amount_value, currency")
       .eq("organisation_id", orgId)
-      .eq("kind", "payment");
+      .in("kind", TYPE_KINDS[filters.type]);
     if (since) query = query.gte("adyen_created_at", since);
     if (search) query = query.or(search);
     if (states) query = query.in("state", states);
@@ -41,23 +41,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     for (const r of data) {
       rows.push([
         r.adyen_created_at,
-        r.counterparty_name ?? r.description,
+        r.kind === "payout" ? "Payout" : "Incoming payment",
+        r.counterparty_name ?? r.counterparty_account ?? r.description,
         r.reference,
         r.adyen_transfer_id,
         r.state,
-        toMajor(r.amount_value, r.currency),
+        // Payouts leave the account, so they're negative.
+        (r.kind === "payout" ? -1 : 1) * toMajor(r.amount_value, r.currency),
         r.currency,
       ]);
     }
     if (data.length < BATCH) break;
   }
 
-  const csv = toCsv(["Date", "Customer", "Reference", "Adyen transfer ID", "Status", "Amount", "Currency"], rows);
+  const csv = toCsv(["Date", "Type", "Counterparty", "Reference", "Adyen transfer ID", "Status", "Amount", "Currency"], rows);
   const date = new Date().toISOString().slice(0, 10);
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="payments-${date}.csv"`,
+      "Content-Disposition": `attachment; filename="transactions-${date}.csv"`,
       "Cache-Control": "no-store",
     },
   });

@@ -139,6 +139,6 @@ export async function payOut(_prev: PayoutState, formData: FormData): Promise<Pa
     }
   }
 
-  revalidatePath(`/org/${orgId}/payments/payouts`);
+  revalidatePath(`/org/${orgId}/payments`);
   return { ok: true };
 }

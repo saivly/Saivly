@@ -1,11 +1,21 @@
 /**
- * URL query params for the Payments table (?status=&q=&range=&page=),
+ * URL query params for the Transactions table (?type=&status=&q=&range=&page=),
  * parsed once and shared by the page and its CSV export, so both always
  * show the same rows. Filtering happens in the database query.
  */
 
 export const PAYMENT_TABS = ["all", "succeeded", "pending", "failed"] as const;
 export type PaymentTab = (typeof PAYMENT_TABS)[number];
+
+/** Which transactions to list: everything, only incoming payments, or only payouts. */
+export const TRANSACTION_TYPES = ["all", "payments", "payouts"] as const;
+export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+
+export const TYPE_KINDS: Record<TransactionType, ("payment" | "payout")[]> = {
+  all: ["payment", "payout"],
+  payments: ["payment"],
+  payouts: ["payout"],
+};
 
 export const PAYMENT_RANGES = ["7d", "30d", "90d", "all"] as const;
 export type PaymentRange = (typeof PAYMENT_RANGES)[number];
@@ -17,16 +27,18 @@ export const TAB_STATES: Record<PaymentTab, ("pending" | "in_transit" | "succeed
   failed: ["failed"],
 };
 
-export type PaymentFilters = { tab: PaymentTab; q: string; range: PaymentRange; page: number };
+export type PaymentFilters = { type: TransactionType; tab: PaymentTab; q: string; range: PaymentRange; page: number };
 
 type Raw = Record<string, string | string[] | undefined>;
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 export function parsePaymentFilters(raw: Raw): PaymentFilters {
+  const type = first(raw.type).toLowerCase();
   const tab = first(raw.status).toLowerCase();
   const range = first(raw.range);
   const page = Number.parseInt(first(raw.page), 10);
   return {
+    type: (TRANSACTION_TYPES as readonly string[]).includes(type) ? (type as TransactionType) : "all",
     tab: (PAYMENT_TABS as readonly string[]).includes(tab) ? (tab as PaymentTab) : "all",
     // Characters with meaning inside a PostgREST or()/ilike filter are dropped.
     q: first(raw.q).replace(/[,()*%\\:"]/g, " ").trim().slice(0, 80),
@@ -49,6 +61,7 @@ export function searchExpression(q: string): string | null {
 
 export function filtersToQuery(f: Partial<PaymentFilters>): string {
   const params = new URLSearchParams();
+  if (f.type && f.type !== "all") params.set("type", f.type);
   if (f.tab && f.tab !== "all") params.set("status", f.tab);
   if (f.q) params.set("q", f.q);
   if (f.range && f.range !== "30d") params.set("range", f.range);

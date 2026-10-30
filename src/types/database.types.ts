@@ -429,6 +429,9 @@ export type Database = {
           currency: string;
           is_primary: boolean;
           created_at: string;
+          adyen_payment_instrument_id: string | null;
+          iban: string | null;
+          bank_account_claimed_at: string | null;
         };
         Insert: {
           id?: string;
@@ -438,9 +441,15 @@ export type Database = {
           currency?: string;
           is_primary?: boolean;
           created_at?: string;
+          adyen_payment_instrument_id?: string | null;
+          iban?: string | null;
+          bank_account_claimed_at?: string | null;
         };
         Update: {
           name?: string;
+          adyen_payment_instrument_id?: string | null;
+          iban?: string | null;
+          bank_account_claimed_at?: string | null;
         };
         Relationships: [];
       };

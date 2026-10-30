@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { PLAN_OPTIONS, BILLING_INTERVALS } from "@/lib/zod";
 import { useT } from "@/app/i18n-provider";
+import { PLAN_DETAILS } from "@/lib/plans";
 
 type PlanId = (typeof PLAN_OPTIONS)[number];
 type BillingInterval = (typeof BILLING_INTERVALS)[number];
@@ -42,8 +43,8 @@ const PLANS: Plan[] = [
     name: "Starter",
     description:
       "Your business finances, simplified. Manage payments, receipts, and everyday banking in one place.",
-    price: 9,
-    yearlyPrice: 99,
+    price: PLAN_DETAILS.starter.price,
+    yearlyPrice: PLAN_DETAILS.starter.yearlyPrice,
     badge: "Most popular",
     features: [
       FREE_MONTH,
@@ -59,8 +60,8 @@ const PLANS: Plan[] = [
     name: "Pro",
     description:
       "Give your team the tools to spend smarter, automate admin, and stay in control of every transaction.",
-    price: 19,
-    yearlyPrice: 215,
+    price: PLAN_DETAILS.pro.price,
+    yearlyPrice: PLAN_DETAILS.pro.yearlyPrice,
     includesFrom: "Starter",
     features: [
       FREE_MONTH,
@@ -76,8 +77,8 @@ const PLANS: Plan[] = [
     name: "Enterprise",
     description:
       "Run the finances of multiple legal entities on one platform, with one login. Switch between entities instantly and see everything in one consolidated view.",
-    price: 250,
-    yearlyPrice: 2850,
+    price: PLAN_DETAILS.enterprise.price,
+    yearlyPrice: PLAN_DETAILS.enterprise.yearlyPrice,
     includesFrom: "Pro",
     features: [
       FREE_MONTH,

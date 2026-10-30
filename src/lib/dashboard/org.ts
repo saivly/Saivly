@@ -18,7 +18,7 @@ export const getOrgContext = cache(async (orgId: string) => {
     supabase
       .from("organisations")
       .select(
-        "id, name, country, kvk_number, default_currency, ip_allowlist_enabled, large_payment_alerts_enabled, adyen_account_holder_id"
+        "id, name, country, plan, billing_interval, kvk_number, default_currency, large_payment_alerts_enabled, adyen_account_holder_id"
       )
       .eq("id", orgId)
       .maybeSingle(),
@@ -31,7 +31,7 @@ export const getOrgContext = cache(async (orgId: string) => {
     supabase.from("profiles").select("full_name, first_name").eq("id", user.id).maybeSingle(),
     supabase
       .from("balance_accounts")
-      .select("id, adyen_balance_account_id, name, currency, is_primary, created_at")
+      .select("id, adyen_balance_account_id, name, currency, is_primary, created_at, iban")
       .eq("organisation_id", orgId)
       .order("is_primary", { ascending: false })
       .order("created_at", { ascending: true }),

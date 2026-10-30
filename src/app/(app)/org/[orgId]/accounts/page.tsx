@@ -4,6 +4,7 @@ import { getBalanceAccount, getBalanceAccountIban, primaryBalance } from "@/lib/
 import { formatMoney } from "@/lib/dashboard/format";
 import { getOrgContext } from "@/lib/dashboard/org";
 import { getLocale, getT } from "@/lib/i18n-server";
+import { bankAccountLimit } from "@/lib/plans";
 import OpenAccountButton from "./open-account-dialog";
 
 const CURRENCY_TONE: Record<string, ChipTone> = { EUR: "blue", USD: "green", GBP: "violet" };
@@ -18,25 +19,39 @@ export default async function AccountsPage({ params }: { params: Promise<{ orgId
 
   const accounts = await Promise.all(
     ctx.accounts.map(async (account) => {
-      const [adyen, iban] = await Promise.all([
+      const [adyen, liveIban] = await Promise.all([
         getBalanceAccount(account.adyen_balance_account_id),
-        getBalanceAccountIban(account.adyen_balance_account_id),
+        account.iban ? Promise.resolve(null) : getBalanceAccountIban(account.adyen_balance_account_id),
       ]);
-      return { ...account, adyen, iban, balance: primaryBalance(adyen, account.currency) };
+      const iban = account.iban ? account.iban.replace(/(.{4})/g, "$1 ").trim() : liveIban;
+      return { ...account, iban, adyen, balance: primaryBalance(adyen, account.currency) };
     })
   );
 
+  const limit = bankAccountLimit(ctx.organisation.plan);
+  const atLimit = limit !== null && ctx.accounts.length >= limit;
   const disabledReason = !ctx.isOwner
     ? t("Only organisation owners can open accounts.")
     : !ctx.organisation.adyen_account_holder_id
       ? t("Finish Adyen verification before opening more accounts.")
-      : undefined;
+      : atLimit
+        ? limit === 1
+          ? t("Your plan includes 1 bank account. Upgrade to Pro for up to 5.")
+          : t("You've reached the maximum number of bank accounts for your plan.")
+        : undefined;
 
   return (
     <>
       <PageHeader
         title={t("Accounts")}
-        subtitle={t("Balances are shown live from your Adyen balance accounts.")}
+        subtitle={
+          limit === null
+            ? t("Balances are shown live from your Adyen balance accounts.")
+            : t("{used} of {limit} bank accounts on your plan. Balances are shown live from Adyen.", {
+                used: ctx.accounts.length,
+                limit,
+              })
+        }
         actions={<OpenAccountButton orgId={orgId} disabledReason={disabledReason} />}
       />
 
@@ -59,7 +74,14 @@ export default async function AccountsPage({ params }: { params: Promise<{ orgId
                     {account.currency}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="truncate text-[15px] font-semibold text-db-ink">{account.name}</h2>
+                    <h2 className="flex items-center gap-2 text-[15px] font-semibold text-db-ink">
+                      <span className="truncate">{t(account.name)}</span>
+                      {account.is_primary && (
+                        <span className="shrink-0 rounded bg-db-tint px-1.5 py-0.5 text-[11px] font-semibold text-db-primary">
+                          {t("Primary")}
+                        </span>
+                      )}
+                    </h2>
                     <p className="truncate font-mono text-xs text-db-muted">{account.iban ?? t("No IBAN issued yet")}</p>
                   </div>
                   {status ? (
