@@ -1,6 +1,7 @@
 import { APP_TIME_ZONE } from "@/lib/dashboard/format";
 import type { ReportPeriod } from "@/lib/dashboard/constants";
 import { intlLocale, type Locale } from "@/lib/i18n";
+import { formatWithCapitalMonth } from "@/lib/dates";
 
 /** Offset (ms) of APP_TIME_ZONE from UTC at a given instant. */
 function zoneOffset(at: number): number {
@@ -60,7 +61,7 @@ export function periodLabel(period: ReportPeriod, startIso: string, locale: Loca
   const start = new Date(startIso);
   const { year, month } = localYearMonth(start);
   if (period === "this_month" || period === "last_month") {
-    return new Intl.DateTimeFormat(intlLocale(locale), { timeZone: APP_TIME_ZONE, month: "long", year: "numeric" }).format(start);
+    return formatWithCapitalMonth(new Intl.DateTimeFormat(intlLocale(locale), { timeZone: APP_TIME_ZONE, month: "long", year: "numeric" }), start);
   }
   if (period === "this_quarter" || period === "last_quarter") return `Q${Math.floor(month / 3) + 1} ${year}`;
   return `${year} ${ytdText}`;

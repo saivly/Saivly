@@ -11,6 +11,7 @@ import Select from "@/components/select";
 import { personalInfoSchema } from "@/lib/zod";
 import { intlLocale } from "@/lib/i18n";
 import { useT } from "@/app/i18n-provider";
+import { formatWithCapitalMonth } from "@/lib/dates";
 
 type Existing = {
   dateOfBirth: string;
@@ -51,7 +52,7 @@ function splitStreetAndHouseNumber(combined: string): { street: string; houseNum
 /** Month names in the given language, January first. */
 function monthNames(locale: string): string[] {
   const fmt = new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" });
-  return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(Date.UTC(2000, i, 1))));
+  return Array.from({ length: 12 }, (_, i) => formatWithCapitalMonth(fmt, new Date(Date.UTC(2000, i, 1))));
 }
 
 const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1));

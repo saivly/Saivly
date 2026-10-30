@@ -3,6 +3,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useT } from "@/app/i18n-provider";
 import { intlLocale, type Locale } from "@/lib/i18n";
+import { formatWithCapitalMonth } from "@/lib/dates";
 
 const INCOMING = "var(--color-db-bar-in)";
 const OUTGOING = "var(--color-db-bar-out)";
@@ -12,9 +13,9 @@ type Point = { month: string; incoming: number; outgoing: number };
 export default function VolumeChart({ data, currency, locale }: { data: Point[]; currency: string; locale: Locale }) {
   const { t } = useT();
   const tag = intlLocale(locale);
-  const month = (iso: string) => new Intl.DateTimeFormat(tag, { month: "short", timeZone: "UTC" }).format(new Date(iso));
+  const month = (iso: string) => formatWithCapitalMonth(new Intl.DateTimeFormat(tag, { month: "short", timeZone: "UTC" }), new Date(iso));
   const monthYear = (iso: string) =>
-    new Intl.DateTimeFormat(tag, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
+    formatWithCapitalMonth(new Intl.DateTimeFormat(tag, { month: "long", year: "numeric", timeZone: "UTC" }), new Date(iso));
   const money = (value: number, compact = false) =>
     new Intl.NumberFormat(tag, {
       style: "currency",

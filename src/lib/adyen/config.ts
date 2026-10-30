@@ -3,7 +3,7 @@
 // Transfers, ... are separate products), so config is keyed per service
 // rather than assuming one global apiKey/baseUrl pair.
 
-export type AdyenServiceName = "legalEntity" | "balancePlatform";
+export type AdyenServiceName = "legalEntity" | "balancePlatform" | "transfers";
 
 type AdyenServiceDef = {
   sandboxApiKey: string;
@@ -28,7 +28,15 @@ const ADYEN_SERVICES: Record<AdyenServiceName, AdyenServiceDef> = {
     sandboxBaseUrl: "https://balanceplatform-api-test.adyen.com/bcl/v2",
     productionBaseUrl: "https://balanceplatform-api-live.adyen.com/bcl/v2",
   },
-  // transfers: { apiKeyEnv: "ADYEN_TRANSFERS_API_KEY", ... },
+  // Transfers API — moves money out of a balance account (payouts).
+  // Shares the Balance Platform API credential, which needs the
+  // "TransferService Webservice Initiate role" in the Customer Area.
+  transfers: {
+    sandboxApiKey: "ADYEN_SANDBOX_BALANCEPLATFORM_API_KEY",
+    productionApiKey: "ADYEN_PRODUCTION_BALANCEPLATFORM_API_KEY",
+    sandboxBaseUrl: "https://balanceplatform-api-test.adyen.com/btl/v4",
+    productionBaseUrl: "https://balanceplatform-api-live.adyen.com/btl/v4",
+  },
 };
 
 export const ADYEN_BALANCE_PLATFORM_NAME = process.env.ADYEN_BALANCE_PLATFORM_NAME;

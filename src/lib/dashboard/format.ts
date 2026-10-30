@@ -1,4 +1,5 @@
 import { intlLocale, type Locale } from "@/lib/i18n";
+import { formatWithCapitalMonth } from "@/lib/dates";
 
 /**
  * Dates on the dashboard are shown in the organisation's local time.
@@ -40,7 +41,7 @@ export function formatMoney(
 }
 
 function fmt(iso: string, locale: Locale, options: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), { timeZone: APP_TIME_ZONE, ...options }).format(new Date(iso));
+  return formatWithCapitalMonth(new Intl.DateTimeFormat(intlLocale(locale), { timeZone: APP_TIME_ZONE, ...options }), new Date(iso));
 }
 
 /** "28 Oct 09:41" */

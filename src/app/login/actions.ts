@@ -12,6 +12,7 @@ import {
 } from "@/lib/rate-limit";
 import { isStrongPassword, PASSWORD_HINT } from "@/lib/password-policy";
 import { loginSchema, signupSchema } from "@/lib/zod";
+import { capitalizeFirst } from "@/lib/names";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -81,8 +82,8 @@ export async function signup(formData: FormData) {
   // Client-side live validation (auth-panels.tsx) mirrors this schema;
   // never trust the client.
   const parsed = signupSchema.safeParse({
-    firstname: (formData.get("first_name") as string).trim(),
-    lastname: (formData.get("last_name") as string).trim(),
+    firstname: capitalizeFirst((formData.get("first_name") as string).trim()),
+    lastname: capitalizeFirst((formData.get("last_name") as string).trim()),
     email: formData.get("email") as string,
     password: formData.get("password") as string,
   });
