@@ -45,7 +45,6 @@ const PLANS: Plan[] = [
       "Your business finances, simplified. Manage payments, receipts, and everyday banking in one place.",
     price: PLAN_DETAILS.starter.price,
     yearlyPrice: PLAN_DETAILS.starter.yearlyPrice,
-    badge: "Most popular",
     features: [
       FREE_MONTH,
       { icon: "bank", title: "One business IBAN" },
@@ -62,6 +61,7 @@ const PLANS: Plan[] = [
       "Give your team the tools to spend smarter, automate admin, and stay in control of every transaction.",
     price: PLAN_DETAILS.pro.price,
     yearlyPrice: PLAN_DETAILS.pro.yearlyPrice,
+    badge: "Most popular",
     includesFrom: "Starter",
     features: [
       FREE_MONTH,
@@ -170,7 +170,7 @@ export default function PlanPicker({
             >
               {p.name}
               {p.badge && (
-                <span className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold leading-tight text-on-accent">
+                <span className="pointer-events-none absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold leading-tight text-on-accent">
                   {t(p.badge)}
                 </span>
               )}
@@ -184,7 +184,7 @@ export default function PlanPicker({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">{plan.name}</h2>
           {/* Billing interval toggle */}
-          <div role="radiogroup" aria-label={t("Billing")} className="inline-flex gap-0.5 rounded-full bg-accent-soft p-0.5">
+          <div role="radiogroup" aria-label={t("Billing")} className="inline-flex -translate-y-0.5 gap-0.5 rounded-full bg-accent-soft p-0.5">
             {BILLING_INTERVALS.map((i) => {
               const active = i === interval;
               return (
