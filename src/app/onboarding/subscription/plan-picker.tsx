@@ -149,34 +149,6 @@ export default function PlanPicker({
         </div>
       </div>
 
-      {/* Billing interval toggle */}
-      <div className="flex justify-center">
-        <div role="radiogroup" aria-label={t("Billing")} className="inline-flex gap-1 rounded-full bg-accent-soft p-1">
-          {BILLING_INTERVALS.map((i) => {
-            const active = i === interval;
-            return (
-              <button
-                key={i}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setBillingInterval(i)}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                  active ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"
-                }`}
-              >
-                {i === "monthly" ? t("Monthly") : t("Yearly")}
-                {i === "yearly" && (
-                  <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-xs font-medium text-success">
-                    {t("Save up to {percent}%", { percent: MAX_YEARLY_DISCOUNT })}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Segmented plan switcher */}
       <div
         role="tablist"
@@ -192,11 +164,16 @@ export default function PlanPicker({
               role="tab"
               aria-selected={active}
               onClick={() => setSelected(p.id)}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+              className={`relative rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                 active ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"
               }`}
             >
               {p.name}
+              {p.badge && (
+                <span className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold leading-tight text-on-accent">
+                  {t(p.badge)}
+                </span>
+              )}
             </button>
           );
         })}
@@ -204,13 +181,33 @@ export default function PlanPicker({
 
       {/* Plan card */}
       <div role="tabpanel" className="rounded-xl border border-line bg-panel p-6">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">{plan.name}</h2>
-          {plan.badge && (
-            <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-on-accent">
-              {t(plan.badge)}
-            </span>
-          )}
+          {/* Billing interval toggle */}
+          <div role="radiogroup" aria-label={t("Billing")} className="inline-flex gap-0.5 rounded-full bg-accent-soft p-0.5">
+            {BILLING_INTERVALS.map((i) => {
+              const active = i === interval;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setBillingInterval(i)}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                    active ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {i === "monthly" ? t("Monthly") : t("Yearly")}
+                  {i === "yearly" && (
+                    <span className="rounded-full bg-success/10 px-1.5 py-px text-[10px] font-medium text-success">
+                      {t("Save up to {percent}%", { percent: MAX_YEARLY_DISCOUNT })}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <p className="mt-2 text-sm text-muted">{t(plan.description)}</p>
 
