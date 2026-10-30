@@ -31,7 +31,6 @@ const TYPE_LABELS: Record<TransactionType, { label: string; icon: string }> = {
 const TAB_LABELS: Record<PaymentTab, string> = {
   all: "All",
   succeeded: "Succeeded",
-  pending: "Pending",
   failed: "Failed",
 };
 

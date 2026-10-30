@@ -4,7 +4,7 @@
  * show the same rows. Filtering happens in the database query.
  */
 
-export const PAYMENT_TABS = ["all", "succeeded", "pending", "failed"] as const;
+export const PAYMENT_TABS = ["all", "succeeded", "failed"] as const;
 export type PaymentTab = (typeof PAYMENT_TABS)[number];
 
 /** Which transactions to list: everything, only incoming payments, or only payouts. */
@@ -23,7 +23,6 @@ export type PaymentRange = (typeof PAYMENT_RANGES)[number];
 export const TAB_STATES: Record<PaymentTab, ("pending" | "in_transit" | "succeeded" | "failed")[] | null> = {
   all: null,
   succeeded: ["succeeded"],
-  pending: ["pending", "in_transit"],
   failed: ["failed"],
 };
 
