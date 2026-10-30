@@ -34,15 +34,22 @@ export default function PayoutButton({
   sources,
   locale,
   disabledReason,
+  defaultSourceId,
+  variant = "primary",
+  className,
 }: {
   orgId: string;
   sources: PayoutSource[];
   locale: string; // BCP 47 tag
   disabledReason?: string;
+  /** Account to preselect, e.g. when opened from that account's card. */
+  defaultSourceId?: string;
+  variant?: "primary" | "secondary";
+  className?: string;
 }) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
-  const [sourceId, setSourceId] = useState(sources[0]?.id ?? "");
+  const [sourceId, setSourceId] = useState(defaultSourceId ?? sources[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [speed, setSpeed] = useState<PayoutSpeed>("standard");
   // New key per dialog opening: a double click on "Pay out" reuses it
@@ -60,6 +67,7 @@ export default function PayoutButton({
 
   function openDialog() {
     setIdempotencyKey(crypto.randomUUID());
+    setSourceId(defaultSourceId ?? sources[0]?.id ?? "");
     setAmount("");
     setSpeed("standard");
     setOpen(true);
@@ -92,15 +100,17 @@ export default function PayoutButton({
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant={variant}
+        icon="north_east"
         onClick={openDialog}
         disabled={Boolean(disabledReason)}
         title={disabledReason}
-        className="inline-flex items-center gap-2 rounded-lg bg-db-bright px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-white disabled:cursor-not-allowed disabled:opacity-50"
+        className={`whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50 ${className ?? ""}`}
       >
-        {t("Pay out now")}
-      </button>
+        {t("Pay out")}
+      </Button>
       {open && source && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-[rgba(15,27,45,.45)] p-4"

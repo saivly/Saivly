@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
-import { ButtonLink, Card, PageHeader, StatusPill, buttonStyles, chipToneClass, type ChipTone } from "@/components/dashboard/ui";
+import { ButtonLink, Card, PageHeader, StatusPill, chipToneClass, type ChipTone } from "@/components/dashboard/ui";
 import { getBalanceAccount, getBalanceAccountIban, primaryBalance } from "@/lib/adyen/accounts";
 import { formatMoney } from "@/lib/dashboard/format";
 import { getOrgContext } from "@/lib/dashboard/org";
+import { intlLocale } from "@/lib/i18n";
 import { getLocale, getT } from "@/lib/i18n-server";
 import { bankAccountLimit } from "@/lib/plans";
+import { getPayoutButtonData } from "../payments/payouts/payout-button-data";
+import PayoutButton from "../payments/payouts/payout-dialog";
 import OpenAccountButton from "./open-account-dialog";
 
 const CURRENCY_TONE: Record<string, ChipTone> = { EUR: "blue", USD: "green", GBP: "violet" };
@@ -17,7 +20,9 @@ export default async function AccountsPage({ params }: { params: Promise<{ orgId
   const [ctx, t, locale] = await Promise.all([getOrgContext(orgId), getT(), getLocale()]);
   if (!ctx) notFound();
 
-  const accounts = await Promise.all(
+  const [payoutButton, accounts] = await Promise.all([
+    getPayoutButtonData(ctx, t, locale),
+    Promise.all(
     ctx.accounts.map(async (account) => {
       const [adyen, liveIban] = await Promise.all([
         getBalanceAccount(account.adyen_balance_account_id),
@@ -26,7 +31,8 @@ export default async function AccountsPage({ params }: { params: Promise<{ orgId
       const iban = account.iban ? account.iban.replace(/(.{4})/g, "$1 ").trim() : liveIban;
       return { ...account, iban, adyen, balance: primaryBalance(adyen, account.currency) };
     })
-  );
+    ),
+  ]);
 
   const limit = bankAccountLimit(ctx.organisation.plan);
   const atLimit = limit !== null && ctx.accounts.length >= limit;
@@ -97,14 +103,20 @@ export default async function AccountsPage({ params }: { params: Promise<{ orgId
                   </p>
                 </div>
                 <div className="mt-auto grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled
-                    title={t("Transfers between accounts are coming soon.")}
-                    className={buttonStyles.secondary}
-                  >
-                    {t("Transfer")}
-                  </button>
+                  <PayoutButton
+                    orgId={orgId}
+                    sources={payoutButton.sources}
+                    locale={intlLocale(locale)}
+                    defaultSourceId={account.adyen_balance_account_id}
+                    variant="secondary"
+                    className="w-full justify-center"
+                    disabledReason={
+                      payoutButton.blockedReason ??
+                      (payoutButton.sources.some((s) => s.id === account.adyen_balance_account_id)
+                        ? undefined
+                        : t("There's no available balance to pay out."))
+                    }
+                  />
                   <ButtonLink variant="secondary" href={`/org/${orgId}/reports?account=${account.id}`}>
                     {t("Statements")}
                   </ButtonLink>

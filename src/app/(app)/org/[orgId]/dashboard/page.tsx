@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ButtonLink, Card, CardTitle, IconChip, PageHeader, type ChipTone } from "@/components/dashboard/ui";
+import { Card, CardTitle, IconChip, PageHeader, type ChipTone } from "@/components/dashboard/ui";
 import { getBalanceAccount, primaryBalance } from "@/lib/adyen/accounts";
 import { formatDateTime, formatMoney, localHour, toMajor } from "@/lib/dashboard/format";
 import { getOrgContext } from "@/lib/dashboard/org";
 import { getLocale, getT } from "@/lib/i18n-server";
-import { createT } from "@/lib/i18n";
+import { createT, intlLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
+import { getPayoutButtonData } from "../payments/payouts/payout-button-data";
+import PayoutButton from "../payments/payouts/payout-dialog";
 import VolumeChart from "./volume-chart";
 
 function pctChange(current: number, previous: number): number | null {
@@ -54,7 +56,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ orgId
   const currency = organisation.default_currency;
   const supabase = await createClient();
 
-  const [{ data: stats }, { data: volume }, { data: recent }, balances] = await Promise.all([
+  const [{ data: stats }, { data: volume }, { data: recent }, balances, payoutButton] = await Promise.all([
     supabase.rpc("transfer_stats", { org_id: orgId, p_currency: currency }),
     supabase.rpc("transfer_monthly_volume", { org_id: orgId, p_currency: currency }),
     supabase
@@ -68,6 +70,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ orgId
         .filter((a) => a.currency === currency)
         .map(async (a) => primaryBalance(await getBalanceAccount(a.adyen_balance_account_id), currency))
     ),
+    getPayoutButtonData(ctx, t, locale),
   ]);
 
   const s = stats?.[0];
@@ -113,9 +116,12 @@ export default async function OverviewPage({ params }: { params: Promise<{ orgId
         title={firstName ? t(greeting, { name: firstName }) : t("Overview")}
         subtitle={t("Here's what's happening with {org} today.", { org: organisation.name })}
         actions={
-          <ButtonLink href={`/org/${orgId}/payments`} icon="add">
-            {t("New payment")}
-          </ButtonLink>
+          <PayoutButton
+            orgId={orgId}
+            sources={payoutButton.sources}
+            locale={intlLocale(locale)}
+            disabledReason={payoutButton.disabledReason}
+          />
         }
       />
 

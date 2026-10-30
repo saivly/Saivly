@@ -18,11 +18,8 @@ import {
   type PaymentTab,
   type TransactionType,
 } from "@/lib/dashboard/payments-filters";
-import { intlLocale } from "@/lib/i18n";
 import { getLocale, getT } from "@/lib/i18n-server";
 import { createClient } from "@/lib/supabase/server";
-import { getPayoutButtonData } from "./payouts/payout-button-data";
-import PayoutButton from "./payouts/payout-dialog";
 import RangeSelect from "./range-select";
 
 const COLUMNS = "1.2fr 1.1fr 1.5fr 1.2fr 0.9fr 1fr";
@@ -74,8 +71,7 @@ export default async function TransactionsPage({
   );
   if (states) list = list.in("state", states);
 
-  const [payoutButton, listResult, ...counts] = await Promise.all([
-    getPayoutButtonData(ctx, t, locale),
+  const [listResult, ...counts] = await Promise.all([
     list.order("adyen_created_at", { ascending: false }).range(from, from + PAYMENTS_PAGE_SIZE - 1),
     ...PAYMENT_TABS.map((tab) => {
       const s = TAB_STATES[tab];
@@ -110,26 +106,29 @@ export default async function TransactionsPage({
         title={t("Transactions")}
         subtitle={t("Incoming payments and payouts to bank accounts.")}
         actions={
-          <PayoutButton
-            orgId={orgId}
-            sources={payoutButton.sources}
-            locale={intlLocale(locale)}
-            disabledReason={payoutButton.disabledReason}
-          />
-        }
-      />
-
-      <Card className="!p-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
           <Segmented>
             {TRANSACTION_TYPES.map((type) => (
               <SegmentLink
                 key={type}
                 href={href({ type, page: 1 })}
                 active={filters.type === type}
+                size="lg"
                 icon={TYPE_LABELS[type].icon}
               >
                 {t(TYPE_LABELS[type].label)}
+              </SegmentLink>
+            ))}
+          </Segmented>
+        }
+      />
+
+      <Card className="!p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+          <Segmented>
+            {PAYMENT_TABS.map((tab) => (
+              <SegmentLink key={tab} href={href({ tab, page: 1 })} active={filters.tab === tab}>
+                {t(TAB_LABELS[tab])}
+                <span className="text-db-faint">{countByTab[tab]}</span>
               </SegmentLink>
             ))}
           </Segmented>
@@ -157,18 +156,6 @@ export default async function TransactionsPage({
               {t("Export")}
             </a>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 border-t border-db-row px-4 py-3 sm:px-5">
-          <span className="text-[13px] text-db-muted">{t("Status")}</span>
-          <Segmented>
-            {PAYMENT_TABS.map((tab) => (
-              <SegmentLink key={tab} href={href({ tab, page: 1 })} active={filters.tab === tab}>
-                {t(TAB_LABELS[tab])}
-                <span className="text-db-faint">{countByTab[tab]}</span>
-              </SegmentLink>
-            ))}
-          </Segmented>
         </div>
 
         <Table
