@@ -46,7 +46,9 @@ import { getOnboardingStatus } from "@/lib/onboarding/onboarding";
  * still have nothing stronger than the email fallback.
  */
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth", "/error"];
+// /terms and /privacy must stay reachable mid-onboarding (linked from the
+// subscription step) and for logged-out visitors.
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth", "/error", "/terms", "/privacy"];
 const ONBOARDING_BASE = "/onboarding";
 const VERIFYING_PATH = "/verifying";
 const SECURITY_PROMPT_PATH = "/auth/security";

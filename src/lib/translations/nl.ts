@@ -568,4 +568,6 @@ export const NL: Record<string, string> = {
   "Only accept API requests from approved IP addresses.": "Accepteer alleen API-verzoeken van goedgekeurde IP-adressen.",
   "Large payment alerts": "Meldingen bij grote betalingen",
   "Notify owners about unusually large payments.": "Breng eigenaren op de hoogte van ongebruikelijk grote betalingen.",
+  "Last updated: {date}": "Laatst bijgewerkt: {date}",
+  "This document is currently available in English only.": "Dit document is momenteel alleen in het Engels beschikbaar.",
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { PLAN_OPTIONS, BILLING_INTERVALS } from "@/lib/zod";
 import { useT } from "@/app/i18n-provider";
@@ -96,10 +97,6 @@ const MAX_YEARLY_DISCOUNT = Math.floor(
   Math.max(...PLANS.map((p) => (1 - p.yearlyPrice / (p.price * 12)) * 100))
 );
 
-// TODO: point these at the real documents once they're published.
-const TERMS_URL = "/terms";
-const PRIVACY_URL = "/privacy";
-
 function SubmitButton({ planName, disabled }: { planName: string; disabled: boolean }) {
   const { pending } = useFormStatus();
   const { t } = useT();
@@ -132,6 +129,9 @@ export default function PlanPicker({
   const fullYearly = plan.price * 12;
   const yearlyTotal = plan.yearlyPrice;
   const yearlySaving = fullYearly - yearlyTotal;
+  // Legal pages link back here with the current choice, so it survives the round trip.
+  const legalHref = (path: string) =>
+    `${path}?back=${encodeURIComponent(`/onboarding/subscription?plan=${plan.id}&interval=${interval}`)}`;
 
   return (
     <form noValidate action={action} className="flex flex-col gap-5">
@@ -263,13 +263,13 @@ export default function PlanPicker({
         />
         <span>
           {t("I agree to the")}{" "}
-          <a href={TERMS_URL} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
+          <Link href={legalHref("/terms")} className="font-medium text-ink underline underline-offset-2">
             {t("Terms of Service")}
-          </a>{" "}
+          </Link>{" "}
           {t("and")}{" "}
-          <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
+          <Link href={legalHref("/privacy")} className="font-medium text-ink underline underline-offset-2">
             {t("Privacy Policy")}
-          </a>
+          </Link>
           .
         </span>
       </label>
