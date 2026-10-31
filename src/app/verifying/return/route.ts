@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (profile?.adyen_legal_entity_id) {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://saivly.com";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://banking.saivly.com";
     const url = await createAdyenOnboardingLink(profile.adyen_legal_entity_id, `${siteUrl}/verifying`);
     if (url) return NextResponse.redirect(url);
     console.error("[verifying] couldn't create the individual's onboarding link", profile.adyen_legal_entity_id);

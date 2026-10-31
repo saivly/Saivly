@@ -25,7 +25,7 @@ const jetBrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://saivly.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://banking.saivly.com";
 
 // Tells search engines which image is the Saivly logo (Google shows it in
 // results). Files in public/brand are the public, stable brand URLs.

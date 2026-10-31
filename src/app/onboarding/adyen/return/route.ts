@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   const individualLegalEntityId = profile?.adyen_legal_entity_id;
 
   if (individualLegalEntityId) {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://saivly.com";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://banking.saivly.com";
     const url = await createAdyenOnboardingLink(
       individualLegalEntityId,
       `${siteUrl}/onboarding/adyen/return/individual`

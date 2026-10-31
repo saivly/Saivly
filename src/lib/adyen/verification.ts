@@ -100,7 +100,7 @@ async function emailOwners(admin: ReturnType<typeof createAdminClient>, organisa
 
   const { data: profiles } = await admin.from("profiles").select("id, first_name").in("id", ownerIds);
   const firstNames = new Map((profiles ?? []).map((p) => [p.id, p.first_name]));
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.saivly.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://banking.saivly.com";
 
   await Promise.all(
     ownerIds.map(async (userId) => {

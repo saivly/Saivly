@@ -32,7 +32,7 @@ export async function startReverification() {
     : { data: null };
 
   const legalEntityId = org?.adyen_organization_legal_entity_id;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://saivly.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://banking.saivly.com";
   const url = legalEntityId ? await createAdyenOnboardingLink(legalEntityId, `${siteUrl}/verifying/return`) : null;
 
   if (!url) {
